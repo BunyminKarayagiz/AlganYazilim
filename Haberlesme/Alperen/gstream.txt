@@ -1,0 +1,19 @@
+GSTREAMER 1 PC CODES
+
+TRANSMITTER CMD CODE: gst-launch-1.0 mfvideosrc device-index=0 !  video/x-raw,width=640,height=480 ! queue ! x264enc tune=zerolatency byte-stream=true  bitrate=3000 threads=2 !  h264parse config-interval=1 !  rtph264pay ! queue ! udpsink host=(PC IP) port=5004
+
+RECEIVER CMD CODE:
+gst-launch-1.0 udpsrc port=5004 ! application/x-rtp,encoding-name=H264,
+payload=96 ! rtph264depay ! h264parse ! avdec_h264 ! autovideosink
+
+
+GSTREAMER 2 PC'S CODES:
+
+SEND DESKTOP LIVE SCREEN VIDEO:
+gst-launch-1.0 -v d3d11screencapturesrc  ! queue  ! videoconvert !  video/x-raw,format=I420 ! jpegenc ! rtpjpegpay ! queue ! udpsink host=(ip address of the PC you are streaming to) port=5000
+
+RECEIVE Video Streaming:
+gst-launch-1.0 -e -v udpsrc port=5000 ! application/x-rtp, encoding-name=JPEG,payload=26 ! rtpjitterbuffer ! rtpjpegdepay ! jpegparse ! jpegdec ! autovideosink
+
+
+go to this page before running the codes:C:\gstreamer\1.0\x86_64\bin 
