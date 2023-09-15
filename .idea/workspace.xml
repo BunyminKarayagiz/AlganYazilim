@@ -1,32 +1,186 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="2443621c-792a-41bd-894b-d6e912139352" name="Changes" comment="" />
+    <list default="true" id="2443621c-792a-41bd-894b-d6e912139352" name="Changes" comment="added business">
+      <change afterPath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Yer_istasyonu.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Savasan-iha/Bünyamin/path.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Savasan-iha/Bünyamin/İha.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/.idea/Haberlesme.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/client_to_server_udp/clientTCP.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/client_to_server_udp/serverTCP.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/oop_Udp/udp.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/server_to_client_udp/client.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/server_to_client_udp/server.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/tcp/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/tcp/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/tcp/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/tcp/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/tcp/.idea/tcp.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/tcp/client.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme/tcp/server.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savasan-iha/Bünyamin/pass.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="sevinc" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;BunyminKarayagiz&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="2094e3ab-a8bd-471c-97d0-7472398a2074" />
+        <option name="url" value="https://github.com/BunyminKarayagiz/AlganYazilim.git" />
+      </UrlAndAccount>
+    </option>
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Haberlesme/Bünyamin/oop_Udp/udp.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="2VFk0gfjqtQE76AcIAj9UtzLPYU" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/bunya/Desktop/AlganYazilim&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;project.propVCSSupport.DirectoryMappings&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "bunyamin",
+    "last_opened_file_path": "C:/Users/bunya/Desktop/AlganYazilim",
+    "settings.editor.selected.configurable": "reference.settings.ide.settings.new.ui"
   }
-}</component>
+}]]></component>
+  <component name="RunManager" selected="Python.İha">
+    <configuration name="Haberlesme" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="AlganYazilim" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Savasan-iha/Bünyamin" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Savasan-iha/Bünyamin/Haberlesme.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Yer_istasyonu" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="AlganYazilim" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Savasan-iha/Bünyamin" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Savasan-iha/Bünyamin/Yer_istasyonu.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="İha" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="AlganYazilim" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Savasan-iha/Bünyamin" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Savasan-iha/Bünyamin/İha.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="udp" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="AlganYazilim" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Haberlesme/Bünyamin/oop_Udp" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Haberlesme/Bünyamin/oop_Udp/udp.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.İha" />
+        <item itemvalue="Python.Yer_istasyonu" />
+        <item itemvalue="Python.Haberlesme" />
+        <item itemvalue="Python.udp" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -36,11 +190,53 @@
       <option name="presentableId" value="Default" />
       <updated>1694438994551</updated>
     </task>
+    <task id="LOCAL-00001" summary="added business">
+      <option name="closed" value="true" />
+      <created>1694456102692</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1694456102692</updated>
+    </task>
+    <task id="LOCAL-00002" summary="added business">
+      <option name="closed" value="true" />
+      <created>1694456115536</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1694456115536</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="HEAD" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <ignored-roots>
       <path value="$PROJECT_DIR$" />
     </ignored-roots>
+    <MESSAGE value="added business" />
+    <option name="LAST_COMMIT_MESSAGE" value="added business" />
   </component>
 </project>
