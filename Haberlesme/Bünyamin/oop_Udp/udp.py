@@ -59,8 +59,19 @@ class Udp_Client(UDP):
             message = base64.b64encode(buffer)
             self.Main_socket.sendto(message, (self.host, self.port))
 
+class Udp_Bussiness():
+    def __init__(self,host):
+        self.server=Udp_Server()
+        self.client=Udp_Client(host)
 
-if __name__ == '__main__':
+    def __call__(self, *args, **kwargs):
+        self.server.create_server()
+        while True:
+            self.client.send_video()
+            frame = self.server.recv_from_client()
+            self.server.show(frame)
+
+"""if __name__ == '__main__':
     server = Udp_Server()
     client = Udp_Client("192.168.1.30")
 
@@ -69,4 +80,7 @@ if __name__ == '__main__':
     while True:
         client.send_video()
         frame = server.recv_from_client()
-        server.show(frame)
+        server.show(frame)"""
+
+bussiness=Udp_Bussiness("192.168.1.30")
+bussiness()
