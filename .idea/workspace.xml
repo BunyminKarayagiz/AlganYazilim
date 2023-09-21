@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2443621c-792a-41bd-894b-d6e912139352" name="Changes" comment="added business">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Haberlesme/Bünyamin/tcp/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/Haberlesme/Bünyamin/tcp/client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Haberlesme/Bünyamin/tcp/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/Haberlesme/Bünyamin/tcp/server.py" afterDir="false" />
-    </list>
+    <list default="true" id="2443621c-792a-41bd-894b-d6e912139352" name="Changes" comment="added business" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
