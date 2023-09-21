@@ -1,6 +1,6 @@
 import socket
 
-HOST = "10.80.1.106"  # The server's hostname or IP address
+HOST = "10.241.167.40"  # The server's hostname or IP address
 PORT = 9000  # The port used by the server
 
 tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
