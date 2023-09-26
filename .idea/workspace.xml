@@ -4,6 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
+    <list default="true" id="65d58935-8064-49a9-a990-75f03d9377fe" name="Changes" comment="added business">
+      <change afterPath="$PROJECT_DIR$/Haberlesme/Bünyamin/tcp/tcp_chat/client.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Haberlesme/Bünyamin/tcp/tcp_chat/main.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Haberlesme/Bünyamin/tcp/tcp_chat/server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/AlganYazilim.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/AlganYazilim.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AlganYazilim" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -123,14 +133,13 @@
     </configuration>
     <recent_temporary>
       <list>
-
       </list>
     </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="2443621c-792a-41bd-894b-d6e912139352" name="Changes" comment="" />
+      <changelist id="65d58935-8064-49a9-a990-75f03d9377fe" name="Changes" comment="" />
       <created>1694438994551</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
