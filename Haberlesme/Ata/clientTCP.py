@@ -1,4 +1,6 @@
 import socket
+import json
+
 
 class Client:
     def __init__(self, server, port):
@@ -20,9 +22,11 @@ class Client:
         self.client.send(send_length)
         self.client.send(message)
 
+
 if __name__ == "__main__":
-    SERVER_IP = "192.168.0.6"
+    SERVER_IP = "10.241.140.222"
     PORT = 5050
 
     client = Client(SERVER_IP, PORT)
     client.send("ALGAN IHA")
+

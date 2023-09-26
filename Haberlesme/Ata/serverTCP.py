@@ -1,16 +1,18 @@
 import socket
 import threading
+import json
+
 
 class Server:
     def __init__(self):
-        self.HEADER = 64
+        self.HEADER = 64  #gonderilen haberlesmenin boyutu
         self.PORT = 5050
-        self.SERVER = socket.gethostbyname(socket.gethostname())
+        self.SERVER = socket.gethostbyname(socket.gethostname()) #otomatik bilgisayardan IP aliyor
         self.ADDR = (self.SERVER, self.PORT)
         self.FORMAT = 'utf-8'
         self.DISCONNECT_MESSAGE = "!DISCONNECT"
 
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #server olusturuyor family ve type
         self.server.bind(self.ADDR)
 
     def handle_client(self, conn, addr):
@@ -42,3 +44,4 @@ if __name__ == "__main__":
     print("[BASLATILIYOR] Server baslatiliyor...")
     server = Server()
     server.start()
+
