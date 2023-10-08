@@ -1,27 +1,31 @@
-import tcp
+from main import TCP
 import time
 import json
 
-tcp = tcp.TCP
 
-
-class Client_Tcp(tcp):
+class Client_Tcp(TCP):
 
     def __init__(self):
+        "main.py dosyasındaki TCP classındaki constructure u buraya aktarır."
         super().__init__()
 
-    def connect_to_server(self,to_server_host):
-        self.Main_Tcp.connect((to_server_host,self.PORT))
+    def connect_to_server(self, to_server_host):
+        "IP'sini aldığımız servera connect atar."
+        self.Main_Tcp.connect((to_server_host, self.PORT))
 
-    def send_message_to_server(self,message):
+    def send_message_to_server(self, message):
+        "message adlı metni gönderir."
         self.Main_Tcp.send(message.encode("utf-8"))
 
-    def recv_message(self):
-        self.data=self.Main_Tcp.recv(1024)
+    def client_recv_message(self):
+        "Sunucudan gelen veriyi -max 1024 byte- alır ve ekrana yazdırır."
+        self.data = self.Main_Tcp.recv(1024)
         print(self.data)
 
     def __call__(self, *args, **kwargs):
-        self.connect_to_server("10.241.165.166")
+        "Belirtilen IP adresine saniyede bir kez message gönderilir."
+        to_server_host = "10.241.165.166"
+        self.connect_to_server(to_server_host)
         telemetri = {'takim_numarasi': 4,
                      'iha_enlem': 0.0,
                      'iha_boylam': 0.0,
@@ -43,6 +47,7 @@ class Client_Tcp(tcp):
         while True:
             self.send_message_to_server(message)
             time.sleep(1)
+
 
 client = Client_Tcp()
 client()

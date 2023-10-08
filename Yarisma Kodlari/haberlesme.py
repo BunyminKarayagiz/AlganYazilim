@@ -19,7 +19,7 @@ class server_TCP():
         super(server_TCP, self).__init__()
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.bagli = 0
-        #self.ses = requests.Session()
+        # self.ses = requests.Session()
 
     def baglan(self, host, port):
         self.s.bind((host, port))
@@ -34,11 +34,11 @@ class server_TCP():
         self.c.send(self.mesaj.encode("utf-8"))
 
     def telemetri_al(self):
-        #self.c.settimeout(3)
+        # self.c.settimeout(3)
         try:
             self.yanit = self.c.recv(512)
-            #GUIRun.GUIRun.ui.labelBaglanti.setText("Bağlantı Kuruldu!")
-            #GUIRun.GUIRun.ui.labelBaglanti.setStyleSheet("background-color: rgb(0,180,0);")
+            # GUIRun.GUIRun.ui.labelBaglanti.setText("Bağlantı Kuruldu!")
+            # GUIRun.GUIRun.ui.labelBaglanti.setStyleSheet("background-color: rgb(0,180,0);")
         except Exception as err:
             print("An exception is occurred in \"haberlesme\" code!")
             print("ConnectionResetError: ", err)
@@ -46,13 +46,14 @@ class server_TCP():
             GUIRun.GUIRun.ui.labelBaglanti.setStyleSheet("background-color: rgb(180, 180, 0)")
             Yer_istasyonu.YerIstasyonu.server_socket_TCP.s.close()
             Yer_istasyonu.YerIstasyonu.server_socket_TCP = server_TCP()
-            Yer_istasyonu.YerIstasyonu.server_socket_TCP.baglan(Yer_istasyonu.YerIstasyonu.host, Yer_istasyonu.YerIstasyonu.port_TCP)
+            Yer_istasyonu.YerIstasyonu.server_socket_TCP.baglan(Yer_istasyonu.YerIstasyonu.host,
+                                                                Yer_istasyonu.YerIstasyonu.port_TCP)
             GUIRun.GUIRun.ui.labelBaglanti.setText("Baglanti Tekrar Kuruldu!")
             GUIRun.GUIRun.ui.labelBaglanti.setStyleSheet("background-color: rgb(0,180,0);")
-            #GUIRun.GUIRun.ui.labelBaglanti.setText("Yeniden Bağlanılıyor!!")
-            #GUIRun.GUIRun.ui.labelBaglanti.setStyleSheet("background-color: rgb(180,180,0);")
+            # GUIRun.GUIRun.ui.labelBaglanti.setText("Yeniden Bağlanılıyor!!")
+            # GUIRun.GUIRun.ui.labelBaglanti.setStyleSheet("background-color: rgb(180,180,0);")
 
-        #GUIRun.GUIRun.ui.labelBaglanti.setText(str(self.c.gettimeout()))
+        # GUIRun.GUIRun.ui.labelBaglanti.setText(str(self.c.gettimeout()))
 
         """if(elapsedTime > 3):
             GUIRun.GUIRun.ui.labelBaglanti.setText(str(elapsedTime))
@@ -178,7 +179,7 @@ class server_UDP():
         self.data = base64.b64decode(self.video_z, ' /')
         self.npdata = np.fromstring(self.data, dtype=np.uint8)
         self.frame = cv2.imdecode(self.npdata, 3)
-        self.frame = cv2.flip(self.frame, 0) #IHA İÇİN
+        self.frame = cv2.flip(self.frame, 0)  # IHA İÇİN
 
         return self.frame
 

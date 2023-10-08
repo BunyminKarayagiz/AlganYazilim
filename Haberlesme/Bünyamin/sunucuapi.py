@@ -4,11 +4,11 @@ from flask import json
 
 class sunucuApi():
 
-    def __init__(self,url):
-        self.url=url
+    def __init__(self, url):
+        self.url = url
         self.ses = requests.Session()
 
-    def sunucuya_postala(self,mesaj):
+    def sunucuya_postala(self, mesaj):
         self.headers = {
             'Content-type': 'application/json',
             'Accept': 'application/json'
@@ -36,7 +36,7 @@ class sunucuApi():
             print(f"There is an error in \"haberlesme, kilitlenme_postala\" with: {err}")
         return self.kilit.status_code
 
-    def kamikaze_gonder(self,mesaj):
+    def kamikaze_gonder(self, mesaj):
         self.headers = {
             'Content-type': 'application/json',
             'Accept': 'application/json'
