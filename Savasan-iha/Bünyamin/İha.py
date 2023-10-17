@@ -1,11 +1,15 @@
 import Haberlesme
 import argparse
 import path
-
+import cv2
+import Client_Tcp
+import Client_Udp
 class İha():
     def __init__(self,host):
         self.host=host
-        self.Client=Haberlesme.Udp_Client(self.host)
+        self.Client_Tcp = Client_Tcp.Client(host)
+        self.Client_Udp = Client_Udp.Client(host)
+        self.Client_Tcp.connect_to_server()
 
     def IHA_MissionPlanner_Connect(self,tcp):
 
@@ -17,9 +21,13 @@ class İha():
         return path.Plane(connection_string)
 
 if __name__ == '__main__':
-    iha_obj=İha("192.168.222.180")
+    iha_obj=İha("10.241.237.125")
     iha=iha_obj.IHA_MissionPlanner_Connect(5762)
-    print("a")
+
     while True:
-        print(iha.get_ap_mode())
-        iha_obj.Client.send_video()
+        try:
+            iha_obj.Client_Tcp.send_message_to_server("Telemetri Gonderildi.")
+            iha_obj.Client_Udp.send_video()
+            print("Frame Gönderildi...")
+        except Exception as e:
+            print(e)
