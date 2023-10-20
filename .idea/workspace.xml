@@ -49,6 +49,7 @@
     </option>
   </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Calismalar/Sevinç/Excelle veri girişi/excelverigirme.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Haberlesme/Bünyamin/oop_Udp/udp.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
@@ -133,6 +134,7 @@
     </configuration>
     <recent_temporary>
       <list>
+
       </list>
     </recent_temporary>
   </component>
