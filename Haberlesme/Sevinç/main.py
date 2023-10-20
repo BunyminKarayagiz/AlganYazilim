@@ -1,6 +1,4 @@
 import argparse
-from argparse import ArgumentParser
-
 import path
 import time
 try:
