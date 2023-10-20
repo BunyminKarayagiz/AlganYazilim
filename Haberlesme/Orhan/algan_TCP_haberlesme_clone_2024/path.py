@@ -40,7 +40,7 @@ class Plane():
             self._connect(connection_string)
         else:
             raise ("ERROR: a valid dronekit vehicle or a connection string must be supplied")
-            return
+
 
         self._setup_listeners()
 
@@ -94,7 +94,7 @@ class Plane():
         Input:
             connection_string   - connection string (mavproxy style)
         """
-        self.vehicle = connect(connection_string, baud=115200, heartbeat_timeout=60)
+        self.vehicle = connect(connection_string, baud=115200, wait_ready=True, heartbeat_timeout=60)
         # self.master = self.vehicle.alganrc
         self._setup_listeners()
 
@@ -160,7 +160,7 @@ class Plane():
                 self.gps_time = datetime.datetime.strptime(gpstime, '%Y-%m-%d %H:%M:%S:%f')
 
         return (self.vehicle)
-        print(">> Connection Established")
+    print(">> Connection Established")
 
     def _get_location_metres(self, original_location, dNorth, dEast, is_global=False):
         """
@@ -300,7 +300,7 @@ class Plane():
             altitude    - altitude at which the takeoff is concluded
             pitch_deg   - pitch angle during takeoff
         """
-        self.mission_add_takeoff(takeoff_altitude=1.5 * altitude, takeoff_pitch=pitch_deg)
+        self.mission_add_takeoff(takeoff_altitude=1 * altitude, takeoff_pitch=pitch_deg)
         print("Takeoff mission ready")
 
         while not self.vehicle.is_armable:
@@ -525,13 +525,13 @@ class Plane():
         }
         return self.mesaj
 
-    def arm_mavlink(self):
+    """def arm_mavlink(self):
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
             0,
-            1, 0, 0, 0, 0, 0, 0)
+            1, 0, 0, 0, 0, 0, 0)"""
 
     def set_rc_channel_mavlink(self, rc_chan, value_us=0):  # --- Overrides a rc channel (call with no value to reset)
         """
@@ -541,12 +541,12 @@ class Plane():
             rc_chan     - rc channel number
             value_us    - pwm value
         """
-        rc_channel_values = [65535 for _ in range(8)]
-        rc_channel_values[rc_chan - 1] = value_us
-        self.master.mav.rc_channels_override_send(
-            self.master.target_system,  # target_system
-            self.master.target_component,  # target_component
-            *rc_channel_values)
+        #rc_channel_values = [65535 for _ in range(8)]
+        #rc_channel_values[rc_chan - 1] = value_us
+        #self.master.mav.rc_channels_override_send(
+        #    self.master.target_system,  # target_system
+        #    self.master.target_component,  # target_component
+        #    *rc_channel_values)
 
 
 """
