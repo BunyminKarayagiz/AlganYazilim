@@ -55,15 +55,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/svnck/OneDrive/Masaüstü/Algan Yazılım/AlganYazilim/Calismalar/Sevinç/Excelle veri girişi&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.new.ui&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "sevinc",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/svnck/OneDrive/Masaüstü/Algan Yazılım/AlganYazilim/Calismalar/Sevinç/Excelle veri girişi",
+    "settings.editor.selected.configurable": "reference.settings.ide.settings.new.ui"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\svnck\OneDrive\Masaüstü\Algan Yazılım\AlganYazilim\Calismalar\Sevinç\Excelle veri girişi" />
@@ -242,16 +243,5 @@
     </ignored-roots>
     <MESSAGE value="added business" />
     <option name="LAST_COMMIT_MESSAGE" value="added business" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Calismalar/Sevinç/Excelle veri girişi/excelveriatma.py</url>
-          <line>18</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
