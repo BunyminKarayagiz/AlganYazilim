@@ -5,10 +5,10 @@ import json
 
 class Client(TCP):
 
-    def __init__(self,host):
+    def __init__(self, host):
         "main.py dosyasındaki TCP classındaki constructure u buraya aktarır."
         super().__init__()
-        self.to_server_host=host
+        self.to_server_host = host
 
     def connect_to_server(self):
         "IP'sini aldığımız servera connect atar."
@@ -49,4 +49,3 @@ class Client(TCP):
             self.send_message_to_server(message)
             time.sleep(1)
 """
-
