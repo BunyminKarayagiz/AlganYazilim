@@ -18,7 +18,6 @@ from pymavlink import mavutil
 
 
 class Plane():
-
     def __init__(self, connection_string=None, vehicle=None):
         """ Initialize the object
         Use either the provided vehicle object or the connections tring to connect to the autopilot

@@ -6,6 +6,7 @@ import numpy as np
 
 from udp import UDP
 
+
 class Server(UDP):
 
     def __init__(self):
@@ -20,7 +21,6 @@ class Server(UDP):
 
     def recv_frame_from_client(self):
         msg, client_adress = self.Main_socket.recvfrom(self.BUFF_SIZE)
-        print("mesaj alındı : ", client_adress)
         data = base64.b64decode(msg, ' /')
         npdata = np.fromstring(data, dtype=np.uint8)
         frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
@@ -31,4 +31,3 @@ class Server(UDP):
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             self.Main_socket.close()
-

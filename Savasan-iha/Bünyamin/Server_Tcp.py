@@ -15,9 +15,9 @@ class Server(TCP):
 
     def recv_tcp_message(self):
         self.data = self.conn.recv(1024)
-        self.data=self.data.decode()
+        self.data = self.data.decode()
         print(self.data)
+        return self.data
 
     def send_data_to_client(self, message):
         self.conn.sendall(message)
-
