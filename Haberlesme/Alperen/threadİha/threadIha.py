@@ -1,13 +1,12 @@
 import argparse
 import json
-
+import threading
 import path
-import cv2
 import Client_Tcp
 import Client_Udp
 
 
-class İha():
+class Iha():
     def __init__(self, host):
         self.host = host
         self.Client_Tcp = Client_Tcp.Client(host)
@@ -55,8 +54,16 @@ class İha():
         }
         return self.telemetri_verisi
 
-    def send_telemetri_verisi(self, telemetri_verisi):
-        return json.dumps(telemetri_verisi)
+    def send_telemetri_thread(self):
+        while True:
+            try:
+                telemetri_verisi = self.get_telemetri_verisi(iha)
+                self.Client_Tcp.send_message_to_server(json.dumps(telemetri_verisi))
+                # Adjust the sleep time based on how often you want to send telemetry
+                threading.Event().wait(5)  # sleep for 5 seconds
+            except Exception as e:
+                print(e)
+
 
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
@@ -70,20 +77,23 @@ class İha():
 
 
 if __name__ == '__main__':
-    iha_obj = İha("10.241.181.111")
+    iha_obj = Iha("10.241.181.111")
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
+
+    # Start telemetry thread
+    telemetry_thread = threading.Thread(target=iha_obj.send_telemetri_thread, name='telemetry_thread')
+    telemetry_thread.start()
 
     while True:
         try:
-            iha_obj.Client_Tcp.send_message_to_server(iha_obj.send_telemetri_verisi(iha_obj.get_telemetri_verisi(iha)))
             iha_obj.Client_Udp.send_video()
-            if iha.servo6 > 1600 and iha.servo7 > 1600:  # ch6: High, ch8: High
+            if iha.servo6 > 1600 and iha.servo7 > 1600:
                 iha_obj.change_mod("AUTO", iha)
-
-            if (iha.servo6 > 1400 and iha.servo6 < 1600) and iha.servo7 > 1600:  # ch6: Mid, ch8: High
-                iha_obj.change_mod("RTL",iha)
-
-            if iha.servo6 < 1400 and iha.servo7 > 1600:  # ch6: Low, ch8: High
-                iha_obj.change_mod("FBWA",iha)
+            elif 1400 < iha.servo6 < 1600 and iha.servo7 > 1600:
+                iha_obj.change_mod("RTL", iha)
+            elif iha.servo6 < 1400 and iha.servo7 > 1600:
+                iha_obj.change_mod("FBWA", iha)
         except Exception as e:
             print(e)
+
+
