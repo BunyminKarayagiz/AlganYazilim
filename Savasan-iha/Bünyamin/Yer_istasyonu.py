@@ -41,12 +41,23 @@ if __name__ == '__main__':
     server_udp = yer_istasyonu.Server_udp
     server_tcp = yer_istasyonu.Server_tcp
 
-    "Ana Sunucuya giriş yapıyor."
-    giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
+    try:
+        "Ana Sunucuya giriş yapıyor."
+        giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
 
+        " Server oluşturuluyor"
+        yer_istasyonu.creat_servers()
 
-    " Server oluşturuluyor"
-    yer_istasyonu.creat_servers()
+    except (ConnectionError , Exception) as e:
+        print("Anasunucu veya Server oluşturma hatası: ", e)
+
+        #Eğer Bağlantı hatası olursa While içinde tekrar bağlanmayı deneyecek
+        connection=False
+        while not connection:
+
+            giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
+            yer_istasyonu.creat_servers()
+            connection=True
 
     while True:
         data = server_tcp.recv_tcp_message()

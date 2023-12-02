@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 
 import path
 import cv2
@@ -55,8 +56,6 @@ class İha():
         }
         return self.telemetri_verisi
 
-    def send_telemetri_verisi(self, telemetri_verisi):
-        return json.dumps(telemetri_verisi)
 
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
@@ -70,12 +69,14 @@ class İha():
 
 
 if __name__ == '__main__':
-    iha_obj = İha("10.241.181.111")
+    iha_obj = İha("10.80.1.32")
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
 
+    print("3 Sn bekleniyor...")
+    time.sleep(3) #Tüm Bağlantıların Yerine Oturması için 3 sn bekleniyor
     while True:
         try:
-            iha_obj.Client_Tcp.send_message_to_server(iha_obj.send_telemetri_verisi(iha_obj.get_telemetri_verisi(iha)))
+            iha_obj.Client_Tcp.send_message_to_server(json.dumps(iha_obj.get_telemetri_verisi(iha)))
             iha_obj.Client_Udp.send_video()
             if iha.servo6 > 1600 and iha.servo7 > 1600:  # ch6: High, ch8: High
                 iha_obj.change_mod("AUTO", iha)
@@ -86,4 +87,4 @@ if __name__ == '__main__':
             if iha.servo6 < 1400 and iha.servo7 > 1600:  # ch6: Low, ch8: High
                 iha_obj.change_mod("FBWA",iha)
         except Exception as e:
-            print(e)
+            print("Hata: Video / Telemetri Gönderimi Kopmuş Olabilir:  ",e)
