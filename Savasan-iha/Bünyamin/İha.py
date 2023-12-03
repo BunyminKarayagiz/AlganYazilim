@@ -72,8 +72,8 @@ if __name__ == '__main__':
     iha_obj = İha("10.80.1.32")
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
 
-    print("3 Sn bekleniyor...")
-    time.sleep(3) #Tüm Bağlantıların Yerine Oturması için 3 sn bekleniyor
+    print("2 Sn bekleniyor...")
+    time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 3 sn bekleniyor
     while True:
         try:
             iha_obj.Client_Tcp.send_message_to_server(json.dumps(iha_obj.get_telemetri_verisi(iha)))
