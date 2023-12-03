@@ -1,6 +1,8 @@
 import argparse
 import json
 import threading
+import time
+
 import path
 import Client_Tcp
 import Client_Udp
@@ -55,12 +57,14 @@ class Iha():
         return self.telemetri_verisi
 
     def send_telemetri_thread(self):
+        print("2 saniye bekleniyor...")
+        time.sleep(2)
         while True:
             try:
                 telemetri_verisi = self.get_telemetri_verisi(iha)
                 self.Client_Tcp.send_message_to_server(json.dumps(telemetri_verisi))
                 # Adjust the sleep time based on how often you want to send telemetry
-                threading.Event().wait(5)  # sleep for 5 seconds
+                threading.Event().wait(1)  # sleep for 5 seconds
             except Exception as e:
                 print(e)
 
