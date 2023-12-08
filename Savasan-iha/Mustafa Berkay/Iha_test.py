@@ -11,8 +11,19 @@ import threading
 
 
 class Iha():
-    def __init__(self):
-        pass
+    def __init__(self,host_ip) -> None:
+
+        # UDP Configurations
+        self.udp_host = host_ip
+        self.udp_port = 9999
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        
+        # TCP Configurations
+        self.tcp_host = host_ip
+        self.tcp_port = 9000
+        self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_socket.connect((self.tcp_host, self.tcp_port))
+        print('Connected to TCP server...')
 
     def IHA_MissionPlanner_Connect(self, tcp_port):
         parser = argparse.ArgumentParser()
@@ -65,88 +76,83 @@ class Iha():
         if iha.get_ap_mode() != str(mod_kodu):
             iha.set_ap_mode(str(mod_kodu))
 
+    def capture_n_send_video(self):
 
+        vid = cv2.VideoCapture(0,cv2.CAP_DSHOW)
 
+        while True:
+            try:
+                if vid.isOpened():
+                    ret, frame = vid.read()
+                    frame = imutils.resize(frame, width=640, height=480) # 950X950 ve üzeri çözünürlükte UDP kaldırmıyor. max = (950 * 950 = 902500) 
+                    encoded_frame, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                    data = base64.b64encode(buffer)
+                    self.udp_socket.sendto(data, (self.udp_host , self.udp_port) )
 
-# UDP
-udp_host = socket.gethostbyname(socket.gethostname())
-udp_port = 9998
-udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                
+                    #------ Sadece Test için; Sonrasında silinebilir.
+                    cv2.imshow('Iha video', frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                    #-----
+                    
+            except Exception as e :
+                print(e)
 
-# TCP,
-tcp_host = socket.gethostbyname(socket.gethostname())
-tcp_port = 9001
-tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcp_socket.connect((tcp_host, tcp_port))
-print('Connected to TCP server...')
+        vid.release()
+        cv2.destroyAllWindows()
 
+    def get_n_send_json(self,seconds=1):
+        next_send_time = time.time()+seconds
 
-def send_video():
-    vid = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+        while True:
 
-    while True:
-        try:
-            if vid.isOpened():
-                ret, frame = vid.read()
-                frame = imutils.resize(frame, width=640, height=480)
-                encoded_frame, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                data = base64.b64encode(buffer)
-                udp_socket.sendto(data, (udp_host, udp_port))
+            raw_data = iha_obj.get_telemetri_verisi(iha_path)
+            json_string_encoded = json.dumps(raw_data).encode('utf-8')
 
-                cv2.imshow('Video from Client', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        except Exception as e :
-            print(e)
+            # Json verisi gönderilir.
+            self.tcp_socket.send(json_string_encoded)
+            print(iha_obj.get_telemetri_verisi(iha_path))
 
-    vid.release()
-    cv2.destroyAllWindows()
+            # n saniye bekler
+            while time.time() < next_send_time:
+                pass
 
-# Function to send JSON data via TCP at one-second intervals
-def send_json():
-    next_send_time = time.time()+1
+            next_send_time += seconds
+            print(f"{seconds} second passed...")
 
-    while True:
-
-        raw_data = iha_obj.get_telemetri_verisi(iha_path)
-        json_string_encoded = json.dumps(raw_data).encode('utf-8')
-
-        # 1 saniye geçene kadar burada dönecek.
-        while time.time() < next_send_time:
-            pass
-
-        # Json verisi gönderilir.
-        tcp_socket.send(json_string_encoded)
-        print(iha_obj.get_telemetri_verisi(iha_path))
-
-        next_send_time += 1
-        print("1 second passed...")
+    def close_sockets(self):
+        self.udp_socket.close()
+        self.tcp_socket.close()
 
 
 if __name__ == '__main__':
-    iha_obj = Iha()
+
+    Host_ip = socket.gethostbyname(socket.gethostname())
+
+    iha_obj = Iha(Host_ip)
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762)
+
+
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
 
-    print(iha_obj.get_telemetri_verisi(iha_path))
 
-    # Start UDP video sending thread
-    video_thread = threading.Thread(target=send_video)
+    # Start UDP video thread
+    video_thread = threading.Thread(target=iha_obj.capture_n_send_video)
     video_thread.start()
 
-    # Start TCP JSON data sending thread
 
-    json_thread = threading.Thread(target=send_json,args=())
+    # Start TCP thread
+    json_thread = threading.Thread(target=iha_obj.get_n_send_json)
     json_thread.start()
 
     video_thread.join()
     json_thread.join()
     
-    # Clean up the sockets
-    udp_socket.close()
-    tcp_socket.close()
+    # Clean up
+    iha_obj.close_sockets()
 
 
     while True:

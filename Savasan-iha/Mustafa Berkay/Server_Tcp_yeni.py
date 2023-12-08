@@ -3,7 +3,7 @@ import socket
 class TCP():
     def __init__(self):
         self.server_ip = socket.gethostbyname(socket.gethostname())
-        self.PORT = 9001
+        self.PORT = 9000
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
