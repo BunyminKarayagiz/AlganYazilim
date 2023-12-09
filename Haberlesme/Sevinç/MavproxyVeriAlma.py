@@ -1,8 +1,7 @@
-from pymavlink import mavutil
+from pymavlink import mavutil #gerekli olan kütüphane yüklenir
 
-# os.system('dronekit-sitl plane --out tcp:127.0.0.1:5762')
-
-master = mavutil.mavlink_connection('tcp:127.0.0.1:5762')
+master = mavutil.mavlink_connection('tcp:127.0.0.1:5762') #Bağlantı kurar
+#Başlangıç olarak hepsine 0 değeri veririz
 telemetri = {
     'enlem': 0.0,
     'boylam': 0.0,
@@ -14,7 +13,7 @@ telemetri = {
     'yaw': 0.0,
     'mode': 'Bilinmiyor'
 }
-
+#biz modunu istediğimizde bize sayılar dönüyor burada hangi sayının hangi mod olduğunu tanımlıyoruz
 mode_mapping = {
     0: "MANUAL",
     1: "CIRCLE",
@@ -41,10 +40,10 @@ mode_mapping = {
     23: "QACRO",
     24: "THERMAL"
 }
-
+#sürekli mesajı alıp değerleri kaydetmek için while .true içine kuruyoruz
 while True:
 
-    msg = master.recv_match(blocking=True)
+    msg = master.recv_match(blocking=True) #Burada mesajı tanımlıyoruz bu mesajlar bize farklı typelarda geliyor gelen typelara göre istediğimiz veriyi alıyoruz
     if msg.get_type() == 'GPS_RAW_INT':
         enlem = msg.lat / 10000000
         boylam = msg.lon / 10000000
