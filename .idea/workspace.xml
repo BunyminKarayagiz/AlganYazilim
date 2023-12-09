@@ -4,14 +4,6 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="65d58935-8064-49a9-a990-75f03d9377fe" name="Changes" comment="added business">
-      <change afterPath="$PROJECT_DIR$/Yarisma Kodlari/haberlesme.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Yarisma Kodlari/iha_yarisma_kodu.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Yarisma Kodlari/path.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Yarisma Kodlari/sunucuapi.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Yarisma Kodlari/tot4nihai.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_21_09_2023_17_07_[Changes]/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_21_09_2023_17_07__Changes_.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -64,7 +56,6 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-
       <module name="AlganYazilim" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
