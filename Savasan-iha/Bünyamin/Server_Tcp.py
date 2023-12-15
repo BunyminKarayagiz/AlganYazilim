@@ -20,4 +20,4 @@ class Server(TCP):
         return self.data
 
     def send_data_to_client(self, message):
-        self.conn.sendall(message)
+        self.conn.send(message.encode("utf-8"))
