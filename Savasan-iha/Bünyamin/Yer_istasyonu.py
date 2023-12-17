@@ -1,13 +1,18 @@
+import json
+
 import Server_Udp
 import Server_Tcp
 from path import Plane
 import ana_sunucu_islemleri
+import yolov5_deploy
+import cv2
 
 
 class Yerİstasyonu():
 
     def __init__(self):
         "Server Udp ve Tcp'nin objesini oluşturuyor"
+        self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name="bestuçak.pt")
         self.Server_udp = Server_Udp.Server()
         self.Server_tcp = Server_Tcp.Server()
         self.ana_sunucuya_giris_durumu = False
@@ -44,24 +49,33 @@ if __name__ == '__main__':
     try:
         "Ana Sunucuya giriş yapıyor."
         giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
-
         " Server oluşturuluyor"
         yer_istasyonu.creat_servers()
 
-    except (ConnectionError , Exception) as e:
+    except (ConnectionError, Exception) as e:
         print("Anasunucu veya Server oluşturma hatası: ", e)
 
-        #Eğer Bağlantı hatası olursa While içinde tekrar bağlanmayı deneyecek
-        connection=False
+        # Eğer Bağlantı hatası olursa While içinde tekrar bağlanmayı deneyecek
+        connection = False
         while not connection:
-
             giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
             yer_istasyonu.creat_servers()
-            connection=True
+            connection = True
 
     while True:
+        "İhadan gelen görüntü ve telemetri verisini alıyor."
         data = server_tcp.recv_tcp_message()
         frame = server_udp.recv_frame_from_client()
+
+        "Gelen frame yolo modeline sokuluyor"
+        results,frame=yer_istasyonu.yolo_model.get_results(frame)
+        xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
+
+        "Modelden gelen değerler ile pwm değeri hesaplanıyor"
+        pwm_verileri=yer_istasyonu.yolo_model.coordinates_to_pwm(xCord,yCord)
+
+        "Pwm değerleri İha'ya gönderiliyor."
+        server_tcp.send_data_to_client(json.dumps(pwm_verileri))
 
         "Ana sunucuya clientten aldığımız data verisini postalıyor"
         yer_istasyonu.ana_sunucu.sunucuya_postala(data)

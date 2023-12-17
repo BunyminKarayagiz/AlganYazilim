@@ -11,7 +11,7 @@ class Server():
         self.BUFF_SIZE = 65536   # Kullanılabilecek veri bellek boyutu
         self.udp_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)  # UDP için temel tanımlama 
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)  # UDP için temel tanımlama
-        self.port = 9998
+        self.port = 9999
 
         self.host_name = socket.gethostname()
         self.host_ip = socket.gethostbyname(self.host_name)
@@ -28,7 +28,7 @@ class Server():
         return frame
 
     def show(self, frame):
-        cv2.imshow("server Video", frame)
+        cv2.imshow("Yer_istasyonu Video", frame)
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             self.udp_socket.close()

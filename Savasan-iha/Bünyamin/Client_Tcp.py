@@ -22,6 +22,8 @@ class Client(TCP):
         "Sunucudan gelen veriyi -max 1024 byte- alır ve ekrana yazdırır."
         self.data = self.Main_Tcp.recv(1024)
         print(self.data)
+        print("Data Alındı")
+        return self.data
 
     """def __call__(self, *args, **kwargs):
         "Belirtilen IP adresine saniyede bir kez message gönderilir."

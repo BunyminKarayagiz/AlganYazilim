@@ -6,7 +6,7 @@ import path
 import cv2
 import Client_Tcp
 import Client_Udp
-
+import yolov5_deploy
 
 class İha():
     def __init__(self, host):
@@ -14,6 +14,7 @@ class İha():
         self.Client_Tcp = Client_Tcp.Client(host)
         self.Client_Udp = Client_Udp.Client(host)
         self.Client_Tcp.connect_to_server()
+        self.yolo_deploy=yolov5_deploy.Detection
 
     def IHA_MissionPlanner_Connect(self, tcp):
         parser = argparse.ArgumentParser()
@@ -69,15 +70,16 @@ class İha():
 
 
 if __name__ == '__main__':
-    iha_obj = İha("10.80.1.32")
+    iha_obj = İha("10.241.63.152")
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
 
-    print("3 Sn bekleniyor...")
-    time.sleep(3) #Tüm Bağlantıların Yerine Oturması için 3 sn bekleniyor
+    print("2 Sn bekleniyor...")
+    time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 3 sn bekleniyor
     while True:
         try:
             iha_obj.Client_Tcp.send_message_to_server(json.dumps(iha_obj.get_telemetri_verisi(iha)))
             iha_obj.Client_Udp.send_video()
+            pwm_verileri=iha_obj.Client_Tcp.client_recv_message()
             if iha.servo6 > 1600 and iha.servo7 > 1600:  # ch6: High, ch8: High
                 iha_obj.change_mod("AUTO", iha)
 
