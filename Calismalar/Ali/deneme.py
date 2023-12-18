@@ -1,0 +1,1 @@
+print("denem 1")
