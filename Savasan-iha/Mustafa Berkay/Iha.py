@@ -88,13 +88,6 @@ class Iha():
                     encoded_frame, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
                     data = base64.b64encode(buffer)
                     self.udp_socket.sendto(data, (self.udp_host , self.udp_port) )
-
-                
-                    #------ Sadece Test için; Sonrasında silinebilir.
-                    cv2.imshow('Iha video', frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-                    #-----
                     
             except Exception as e :
                 print(e)
@@ -147,12 +140,6 @@ if __name__ == '__main__':
     # Start TCP thread
     json_thread = threading.Thread(target=iha_obj.get_n_send_json)
     json_thread.start()
-
-    video_thread.join()
-    json_thread.join()
-    
-    # Clean up
-    iha_obj.close_sockets()
 
 
     while True:
