@@ -6,6 +6,7 @@ import threading
 import cv2
 import yolov5_deploy
 import json
+import time
 
 
 class Yerİstasyonu():
@@ -44,9 +45,16 @@ class Yerİstasyonu():
             data = self.Server_tcp.recv_tcp_message()
             function(data)
 
-    def TCP_send(self,message):
-        self.Server_tcp.send_data_to_client(message)
+    def yolov5_frame(self,frame):
+        
+        "Gelen frame yolo modeline sokuluyor"
+        results,frame=yer_istasyonu.yolo_model.get_results(frame)
+        xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
 
+        "Modelden gelen değerler ile pwm değeri hesaplanıyor"
+        pwm_verileri=yer_istasyonu.yolo_model.coordinates_to_pwm(xCord,yCord)
+
+        return frame,lockedOrNot,pwm_verileri
 
     def UDP_connection_handler(self):
         Server_udp = Server_Udp_yeni.Server()
@@ -59,9 +67,49 @@ class Yerİstasyonu():
             while not connection:
                 Server_udp.create_server()
                 connection=True
+                
+        kilitlenme_bilgisi=False
+        locked_prev=0
+        is_locked=0
+        sent_once=0
         
         while True:
-            frame = Server_udp.recv_frame_from_client()
+            frame= Server_udp.recv_frame_from_client()
+            frame,lockedOrNot,pwm_verileri = self.yolov5_frame(frame)
+
+            "Rakip kilitlenme"
+            if lockedOrNot == 1 and locked_prev== 0:
+                start_time=time.time()
+                cv2.putText(img=frame,text="ENEMY ON SIGHT",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                locked_prev=1
+
+            if lockedOrNot == 0 and locked_prev== 1:
+                cv2.putText(img=frame,text="ENEMY LOST",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                locked_prev=0
+                is_locked=0 
+                sent_once = 0
+
+            if lockedOrNot == 1 and locked_prev== 1:
+                elapsed_time= time.time()-start_time
+                cv2.putText(img=frame,text=str(round(elapsed_time,3)),org=(50,400),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                
+                if is_locked == 0:
+                    cv2.putText(img=frame,text="LOCKING",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+
+                if elapsed_time >= 4.0:
+                    cv2.putText(img=frame,text="LOCKED",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                    kilitlenme_bilgisi=True
+                    is_locked=1
+                
+                if is_locked == 1 and sent_once == 0:
+                    self.ana_sunucu.sunucuya_postala(kilitlenme_bilgisi)
+                    sent_once = 1
+
+                
+
+            "Pwm değerleri İha'ya gönderiliyor." #TODO
+            #self.Server_tcp.send_data_to_client(pwm_verileri.encode())
+
             Server_udp.show(frame)
     
 
@@ -87,21 +135,3 @@ if __name__ == '__main__':
     Tcp_thread.start()
     Udp_thread.start()
 
-    while True:
-
-        "Gelen frame yolo modeline sokuluyor"
-        results,frame=yer_istasyonu.yolo_model.get_results(frame)
-        xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
-
-        "Modelden gelen değerler ile pwm değeri hesaplanıyor"
-        pwm_verileri=yer_istasyonu.yolo_model.coordinates_to_pwm(xCord,yCord)
-
-        "Pwm değerleri İha'ya gönderiliyor."
-        yer_istasyonu.send_data_to_client(json.dumps(pwm_verileri))
-
-
-    import time_and_thread_utilities
-
-    manager = time_and_thread_utilities.time_manager
-
-    manager.repeat_on_seconds
