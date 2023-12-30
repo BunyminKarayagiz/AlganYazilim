@@ -1,16 +1,11 @@
 import socket
 
-class TCP():
-    def __init__(self):
+class Server():
+
+    def __init__(self,PORT):
         self.server_ip = socket.gethostbyname(socket.gethostname())
-        self.PORT = 9000
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-
-class Server(TCP):
-
-    def __init__(self):
-        super().__init__()
+        self.PORT = PORT
 
     def creat_server(self):
         self.tcp_socket.bind((self.server_ip, self.PORT))

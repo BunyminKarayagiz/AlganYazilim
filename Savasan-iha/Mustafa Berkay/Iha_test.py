@@ -8,6 +8,7 @@ import imutils
 import base64
 import time
 import threading
+import Client_Tcp,Client_Udp
 
 
 class Iha():
@@ -16,14 +17,20 @@ class Iha():
         # UDP Configurations
         self.udp_host = host_ip
         self.udp_port = 9999
-        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.Capture_obj=Client_Udp.Client(self.udp_host,self.udp_port)
         
-        # TCP Configurations
-        self.tcp_host = host_ip
+        # TCP JSON Configurations
         self.tcp_port = 9000
-        self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_socket.connect((self.tcp_host, self.tcp_port))
+        self.TCP_json = Client_Tcp.Client(host_ip,self.tcp_port)
+        self.TCP_json.connect_to_server()
         print('Connected to TCP server...')
+
+        # TCP PWM Configurations
+        self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
+        self.TCP_pwm.connect_to_server()
+        print('Connected to TCP_pwm server...')
+
+        
 
     def IHA_MissionPlanner_Connect(self, tcp_port):
         parser = argparse.ArgumentParser()
@@ -76,54 +83,38 @@ class Iha():
         if iha.get_ap_mode() != str(mod_kodu):
             iha.set_ap_mode(str(mod_kodu))
 
-    def capture_n_send_video(self):
-
-        vid = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-
+    def send_video(self):
         while True:
-            try:
-                if vid.isOpened():
-                    ret, frame = vid.read()
-                    frame = imutils.resize(frame, width=640, height=480) # 950X950 ve üzeri çözünürlükte UDP kaldırmıyor. max = (950 * 950 = 902500) 
-                    encoded_frame, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                    data = base64.b64encode(buffer)
-                    self.udp_socket.sendto(data, (self.udp_host , self.udp_port) )
-                    
-            except Exception as e :
-                print(e)
+            self.Capture_obj.send_video()
 
-        vid.release()
-        cv2.destroyAllWindows()
 
-    def get_n_send_json(self,seconds=1):
-        next_send_time = time.time()+seconds
-
+    def get_n_send_json(self,seconds=1.0):
+        start_time = time.time()
         while True:
-
+            elapsed_time=time.time() - start_time
+            
             raw_data = iha_obj.get_telemetri_verisi(iha_path)
-            json_string_encoded = json.dumps(raw_data).encode('utf-8')
+            json_string_encoded = json.dumps(raw_data)
 
-            # Json verisi gönderilir.
-            self.tcp_socket.send(json_string_encoded)
-            print(iha_obj.get_telemetri_verisi(iha_path))
+                # Json verisi gönderilir.
+            if elapsed_time >=seconds:
+                self.TCP_json.send_message_to_server(json_string_encoded)
+                print(iha_obj.get_telemetri_verisi(iha_path))
+                start_time = time.time()
 
-            # n saniye bekler
-            while time.time() < next_send_time:
-                pass
-
-            next_send_time += seconds
-            print(f"{seconds} second passed...")
+    def recv_pwm(self):
+        while True:
+            pwm_verileri=self.TCP_pwm.client_recv_message()
 
     def close_sockets(self):
-        self.udp_socket.close()
-        self.tcp_socket.close()
+        self.TCP_json.close()
+        self.TCP_pwm.close()
+        self.Capture_obj.close()
 
 
 if __name__ == '__main__':
 
-    Host_ip = socket.gethostbyname(socket.gethostname())
-
-    iha_obj = Iha(Host_ip)
+    iha_obj = Iha("192.168.1.236")
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762)
 
 
@@ -133,7 +124,7 @@ if __name__ == '__main__':
 
 
     # Start UDP video thread
-    video_thread = threading.Thread(target=iha_obj.capture_n_send_video)
+    video_thread = threading.Thread(target=iha_obj.send_video)
     video_thread.start()
 
 
@@ -141,7 +132,18 @@ if __name__ == '__main__':
     json_thread = threading.Thread(target=iha_obj.get_n_send_json)
     json_thread.start()
 
+    # Start PWM thread
+    pwm_thread = threading.Thread(target=iha_obj.recv_pwm)
+    pwm_thread.start()
 
+    pwm_thread.join()
+    video_thread.join()
+    json_thread.join()
+    
+    # Clean up
+    iha_obj.close_sockets()
+
+    
     while True:
         try:
             if iha_path.servo6 > 1600 and iha_path.servo7 > 1600:

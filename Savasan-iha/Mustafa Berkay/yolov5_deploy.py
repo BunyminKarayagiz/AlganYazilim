@@ -57,7 +57,7 @@ class Detection:
 
                 if row[4] >= 0.735:
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 1)
-                    
+
                     if (disx1 < x1 and disy1 < y1 and disx2 > x2 and disy2 > y2) and self.class_to_label(
                             labels[i]) != "":
                         disx1, disx2, disy1, disy2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75), int(
@@ -80,8 +80,8 @@ class Detection:
             pwm_x = 1500
             pwm_y = 1500
 
-        print("PWM Signal for X-Axis:", pwm_x)
-        print("PWM Signal for Y-Axis:", pwm_y)
+        #print("PWM Signal for X-Axis:", pwm_x)
+        #print("PWM Signal for Y-Axis:", pwm_y)
         pwm_verileri = {'pwmx': pwm_x,
                         'pwmy': pwm_y}
         return pwm_verileri
