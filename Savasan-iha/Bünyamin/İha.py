@@ -70,7 +70,7 @@ class İha():
 
 
 if __name__ == '__main__':
-    iha_obj = İha("10.241.63.152")
+    iha_obj = İha("10.241.167.94")
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
 
     print("2 Sn bekleniyor...")
