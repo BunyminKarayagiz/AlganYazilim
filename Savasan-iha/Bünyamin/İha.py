@@ -8,13 +8,14 @@ import Client_Tcp
 import Client_Udp
 import yolov5_deploy
 
+
 class İha():
     def __init__(self, host):
         self.host = host
         self.Client_Tcp = Client_Tcp.Client(host)
         self.Client_Udp = Client_Udp.Client(host)
         self.Client_Tcp.connect_to_server()
-        self.yolo_deploy=yolov5_deploy.Detection
+        self.yolo_deploy = yolov5_deploy.Detection
 
     def IHA_MissionPlanner_Connect(self, tcp):
         parser = argparse.ArgumentParser()
@@ -53,40 +54,54 @@ class İha():
                 "dakika": iha.gps_time.minute,  # datetime.datetime.now().minute,
                 "saniye": iha.gps_time.second,  # datetime.datetime.now().second,
                 "milisaniye": iha.gps_time.microsecond // 1000,  # int(datetime.datetime.now().microsecond//1000)
-            }
+            },
+            "iha_mod": " "
         }
         return self.telemetri_verisi
 
-
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
-        print(mod_kodu)
         if mod_kodu == "FBWA":
             telemetri["iha_otonom"] = 0
         else:
             telemetri["iha_otonom"] = 1
         if iha.get_ap_mode() != str(mod_kodu):
+            print(mod_kodu)
             iha.set_ap_mode(str(mod_kodu))
 
 
 if __name__ == '__main__':
-    iha_obj = İha("10.241.63.152")
+    iha_obj = İha("10.80.1.71")
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
 
     print("2 Sn bekleniyor...")
-    time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 3 sn bekleniyor
+    time.sleep(2)  # Tüm Bağlantıların Yerine Oturması için 3 sn bekleniyor
     while True:
         try:
-            iha_obj.Client_Tcp.send_message_to_server(json.dumps(iha_obj.get_telemetri_verisi(iha)))
-            iha_obj.Client_Udp.send_video()
-            pwm_verileri=iha_obj.Client_Tcp.client_recv_message()
+            telemetri_verisi = iha_obj.get_telemetri_verisi(iha)
+
             if iha.servo6 > 1600 and iha.servo7 > 1600:  # ch6: High, ch8: High
                 iha_obj.change_mod("AUTO", iha)
+                mod = "AUTO"
+                telemetri_verisi["iha_mod"] = mod
 
             if (iha.servo6 > 1400 and iha.servo6 < 1600) and iha.servo7 > 1600:  # ch6: Mid, ch8: High
-                iha_obj.change_mod("RTL",iha)
+                iha_obj.change_mod("RTL", iha)
+                mod = "RTL"
+                telemetri_verisi["iha_mod"] = mod
 
             if iha.servo6 < 1400 and iha.servo7 > 1600:  # ch6: Low, ch8: High
-                iha_obj.change_mod("FBWA",iha)
+                iha_obj.change_mod("FBWA", iha)
+                mod = "FBWA"
+                telemetri_verisi["iha_mod"] = mod
+
+            if iha.servo6 > 1600 and (iha.servo7 > 1400 and iha.servo7 < 1600):  # ch6: High , ch8: Mid
+                mod = "savasan_iha"
+                telemetri_verisi["iha_mod"] = mod
+
+            iha_obj.Client_Tcp.send_message_to_server(json.dumps(telemetri_verisi))
+            iha_obj.Client_Udp.send_video()
+            pwm_verileri = iha_obj.Client_Tcp.client_recv_message()
+
         except Exception as e:
-            print("Hata: Video / Telemetri Gönderimi Kopmuş Olabilir:  ",e)
+            print("Hata: Video / Telemetri Gönderimi Kopmuş Olabilir:  ", e)

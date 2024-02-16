@@ -83,8 +83,8 @@ class Detection:
             pwm_x = 1500
             pwm_y = 1500
 
-        print("PWM Signal for X-Axis:", pwm_x)
-        print("PWM Signal for Y-Axis:", pwm_y)
+        """print("PWM Signal for X-Axis:", pwm_x)
+        print("PWM Signal for Y-Axis:", pwm_y)"""
         pwm_verileri = {'pwmx': pwm_x,
                         'pwmy': pwm_y}
         return pwm_verileri

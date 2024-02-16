@@ -12,7 +12,7 @@ class Yerİstasyonu():
 
     def __init__(self):
         "Server Udp ve Tcp'nin objesini oluşturuyor"
-        self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name="bestuçak.pt")
+        self.yolo_model = yolov5_deploy.Detection(capture_index=0, model_name="bestuçak.pt")
         self.Server_udp = Server_Udp.Server()
         self.Server_tcp = Server_Tcp.Server()
         self.ana_sunucuya_giris_durumu = False
@@ -35,6 +35,13 @@ class Yerİstasyonu():
             print(f"\x1b[{31}m{'Ana Sunucuya Bağlanıldı: ' + durum_kodu}\x1b[0m")  # Ana sunucya girerkenki durum kodu.
             self.ana_sunucuya_giris_durumu = True
         return self.ana_sunucuya_giris_durumu
+
+    "telemetri verisinde İHA'dan mod değişkeni geliyor. Bu mod değişkeni kullanılmak üzere ayrılıyor"
+    def data_ayirici(self, data):
+        mod = data["iha_mod"]
+        data.popitem()
+        telemetri = data
+        return telemetri, mod
 
 
 if __name__ == '__main__':
@@ -65,18 +72,23 @@ if __name__ == '__main__':
     while True:
         "İhadan gelen görüntü ve telemetri verisini alıyor."
         data = server_tcp.recv_tcp_message()
+        telemetri, mod = yer_istasyonu.data_ayirici(data)
         frame = server_udp.recv_frame_from_client()
 
-        "Gelen frame yolo modeline sokuluyor"
-        results,frame=yer_istasyonu.yolo_model.get_results(frame)
-        xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
+        if mod == "savasan_iha":
+            "Gelen frame yolo modeline sokuluyor"
+            results, frame = yer_istasyonu.yolo_model.get_results(frame)
+            xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
 
-        "Modelden gelen değerler ile pwm değeri hesaplanıyor"
-        pwm_verileri=yer_istasyonu.yolo_model.coordinates_to_pwm(xCord,yCord)
+            "Modelden gelen değerler ile pwm değeri hesaplanıyor"
+            pwm_verileri = yer_istasyonu.yolo_model.coordinates_to_pwm(xCord, yCord)
 
-        "Pwm değerleri İha'ya gönderiliyor."
-        server_tcp.send_data_to_client(json.dumps(pwm_verileri))
+            "Pwm değerleri İha'ya gönderiliyor."
+            server_tcp.send_data_to_client(json.dumps(pwm_verileri))
+
+        elif mod == "kamikaze":
+            pass
 
         "Ana sunucuya clientten aldığımız data verisini postalıyor"
-        yer_istasyonu.ana_sunucu.sunucuya_postala(data)
+        yer_istasyonu.ana_sunucu.sunucuya_postala(telemetri)
         server_udp.show(frame)
