@@ -1,3 +1,5 @@
+import json
+
 from tcp import TCP
 
 
@@ -16,8 +18,7 @@ class Server(TCP):
     def recv_tcp_message(self):
         self.data = self.conn.recv(1024)
         self.data = self.data.decode()
-        print(self.data)
-        return self.data
+        return json.loads(self.data)
 
     def send_data_to_client(self, message):
         self.conn.send(message.encode("utf-8"))
