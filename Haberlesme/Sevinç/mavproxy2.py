@@ -46,7 +46,8 @@ class MAVProxy:
             23: "QACRO",
             24: "THERMAL"
         }
-
+"""burada öncelikle bağlanacağımız mision plannerdan ctrl-f yaparak açtığımız pencereden mavlink kısmına giriyoruz. oradan tcp host 14550 yi seçip altından da baudrate i seçiyoruz.
+uzaktaki bilgisayara bağlanmak istediğimiz için write access kutucuğunu işaretleyip bağlan kısmına tıklıyoruz."""
     def connect(self, port='tcp:10.80.1.31:14550'):
         self.master = mavutil.mavlink_connection(port)
 
