@@ -47,8 +47,9 @@ class MAVProxy:
             24: "THERMAL"
         }
 
-    def connect(self, port='tcp:127.0.0.1:5762'):
+    def connect(self, port='tcp:10.80.1.31:14550'):
         self.master = mavutil.mavlink_connection(port)
+
 
     def veri_kaydetme(self):
         while True:
@@ -87,7 +88,6 @@ class MAVProxy:
 try:
     maVProxy = MAVProxy()
     maVProxy.connect()
-    time.sleep(3)
     maVProxy.veri_kaydetme()
 except KeyboardInterrupt:
     pass
