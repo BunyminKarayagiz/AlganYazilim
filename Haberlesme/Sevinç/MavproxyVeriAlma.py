@@ -1,7 +1,7 @@
 import time
 
 from pymavlink import mavutil  # gerekli olan kütüphane yüklenir
-class MAVProxy:
+class MAVLink:
     def __init__(self):
         self.telemetri = None
         self.mod = None
@@ -47,7 +47,7 @@ class MAVProxy:
             24: "THERMAL"
         }
 
-    def connect(self, port='tcp:127.0.0.1:5762'):
+    def connect(self, port='tcp:10.80.1.18:14550'):
         self.master = mavutil.mavlink_connection(port)
 
     def veri_kaydetme(self):
@@ -85,10 +85,10 @@ class MAVProxy:
             print(self.telemetri)
 
 try:
-    maVProxy = MAVProxy()
-    maVProxy.connect()
+    MAVLink = MAVLink()
+    MAVLink.connect()
     time.sleep(3)
-    maVProxy.veri_kaydetme()
+    MAVLink.veri_kaydetme()
 except KeyboardInterrupt:
     pass
 finally:

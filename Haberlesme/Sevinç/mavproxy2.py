@@ -1,7 +1,7 @@
 import time
 
 from pymavlink import mavutil  # gerekli olan kütüphane yüklenir
-class MAVProxy:
+class MAVLink:
     def __init__(self):
         self.telemetri = None
         self.mod = None
@@ -46,8 +46,8 @@ class MAVProxy:
             23: "QACRO",
             24: "THERMAL"
         }
-"""burada öncelikle bağlanacağımız mision plannerdan ctrl-f yaparak açtığımız pencereden mavlink kısmına giriyoruz. oradan tcp host 14550 yi seçip altından da baudrate i seçiyoruz.
-uzaktaki bilgisayara bağlanmak istediğimiz için write access kutucuğunu işaretleyip bağlan kısmına tıklıyoruz."""
+    """burada öncelikle bağlanacağımız mision plannerdan ctrl-f yaparak açtığımız pencereden mavlink kısmına giriyoruz. oradan tcp host 14550 yi seçip altından da baudrate i seçiyoruz.
+    uzaktaki bilgisayara bağlanmak istediğimiz için write access kutucuğunu işaretleyip bağlan kısmına tıklıyoruz."""
     def connect(self, port='tcp:10.80.1.31:14550'):
         self.master = mavutil.mavlink_connection(port)
 
@@ -87,9 +87,9 @@ uzaktaki bilgisayara bağlanmak istediğimiz için write access kutucuğunu işa
             print(self.telemetri)
 
 try:
-    maVProxy = MAVProxy()
-    maVProxy.connect()
-    maVProxy.veri_kaydetme()
+    maVLink = MAVLink()
+    maVLink.connect()
+    maVLink.veri_kaydetme()
 except KeyboardInterrupt:
     pass
 finally:
