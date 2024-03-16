@@ -1,71 +1,106 @@
-import os
-from pymavlink import mavutil
+# ALGAN Takımı tarafından oluşturulan basit test sunucu API dosyası
+import datetime
+import random
+import flask
+from flask import jsonify, request
+import json
 
-# os.system('dronekit-sitl plane --out tcp:127.0.0.1:5762')
+app = flask.Flask(__name__)
+app.config["DEBUG"] = True
 
-master = mavutil.mavlink_connection('tcp:127.0.0.1:5762')
 
-mode_mapping = {
-    0: "MANUAL",
-    1: "CIRCLE",
-    2: "STABILIZE",
-    3: "TRAINING",
-    4: "ACRO",
-    5: "FBWA",
-    6: "FBWB",
-    7: "CRUISE",
-    8: "AUTOTUNE",
-    10: "AUTO",
-    11: "RTL",
-    12: "LOITER",
-    13: "TAKEOFF",
-    14: "AVOID_ADSB",
-    15: "GUIDED",
-    16: "INITIALISING",
-    17: "QSTABILIZE",
-    18: "QHOVER",
-    19: "QLOITER",
-    20: "QLAND",
-    21: "QRTL",
-    22: "QAUTOTUNE",
-    23: "QACRO",
-    24: "THERMAL"
+def durum(cls, kod):
+    if kod == 200:
+        return "İstek başarılı"
+    elif kod == 204:
+        return "Gonderilen paketin Formati Yanlis"
+    elif kod == 400:
+        return "Istek hatali veya gecersiz."
+    elif kod == 401:
+        return "Kimliksiz erisim denemesi. Oturum acmaniz gerekmektedir."
+    elif kod == 403:
+        return "Yetkisiz erisim denemesi."
+    elif kod == 404:
+        return "Gecersiz URL."
+    elif kod == 500:
+        return "Sunucu ici hata."
+
+
+sunucusaati = {"saat": datetime.datetime.now().hour,
+               "dakika": datetime.datetime.now().minute,
+               "saniye": datetime.datetime.now().second,
+               "milisaniye": datetime.datetime.now().microsecond * 1000
+               }  # Test verileri
+
+qr_koordinati = {
+    "qrEnlem": -35.3549662,
+    "qrBoylam": 149.1613770
 }
 
-while True:
-    msg = master.recv_match(blocking=True)
-    print(type(msg))
-    if msg.get_type() == 'GPS_RAW_INT':
-        enlem = msg.lat / 10000000
-        boylam = msg.lon / 10000000
-        """print("enlem",enlem)
-        print("boylam", boylam)
-        print("msg", msg)"""
+girisveri = {"kadi": "algan", "sifre": "53SnwjQ2sQ"}
 
-    """elif msg.get_type() == 'GLOBAL_POSITION_INT':
-        yukseklik = msg.relative_alt / 1000
-    elif msg.get_type() == 'VFR_HUD':
-        yer_hizi = msg.groundspeed
-        hava_hizi = msg.airspeed
-    elif msg.get_type() == 'SYS_STATUS':
-        batarya = msg.battery_remaining
-    elif msg.get_type() == 'ATTITUDE':
-        roll = msg.roll
-        pitch = msg.pitch
-        yaw = msg.yaw
-    elif msg.get_type() == 'HEARTBEAT':
-        custom_mode = msg.custom_mode
-        mod = mode_mapping.get(custom_mode, str(custom_mode))
-        break"""
 
-"""telemetri = {
-    "Emlen:": float(enlem),
-    "Boylam": float(boylam),
-    "Yükseklik": float(yukseklik),
-    "Yer_Hızı": float(yer_hizi),
-    "hava hızı": float(hava_hizi),
-    "roll": float(roll),
-    "pitch": float(pitch),
-    "yaw": float(yaw),
-    "mode":str(mod)
-}"""
+@app.route('/api/giris', methods=["POST"])
+def giris():
+    # gelen değişkeni kullanıcı adını ve sifreyi döndürüyor.
+    gelen = json.loads(request.data)
+    if girisveri == gelen:
+        print(gelen["kadi"].upper() + " Giris Yapti")
+        return "200"
+    else:
+        print("basarisiz giris")
+        return "403"
+
+
+@app.route('/api/qr_koordinati', methods=["GET"])
+def getqrData():
+    return jsonify(qr_koordinati)
+
+
+@app.route('/api/telemetri_gonder', methods=["POST"])
+def tele():
+    gelen = json.loads(request.data)
+    print(gelen)
+    gelenveri = {
+        "sistemSaati": {
+            "saat": 6,
+            "dakika": 53,
+            "saniye": 42,
+            "milisaniye": 500
+        },
+        "konumBilgileri": [
+            {
+                "takim_numarasi": 1,
+                "iha_enlem": -35.1864710,
+                "iha_boylam": 149.1420221,
+                "iha_irtifa": 50,
+                "iha_dikilme": 5,
+                "iha_yonelme": 256,
+                "iha_yatis": 0,
+                "zaman_farki": 93
+            },
+            {
+                "takim_numarasi": 2,
+                "iha_enlem": -35.1827881,
+                "iha_boylam": 149.1362715,
+                "iha_irtifa": 60,
+                "iha_dikilme": 5,
+                "iha_yonelme": 256,
+                "iha_yatis": 0,
+                "zaman_farki": 74
+            },
+            {
+                "takim_numarasi": 3,
+                "iha_enlem": -35.1939238,
+                "iha_boylam": 149.1358852,
+                "iha_irtifa": 70,
+                "iha_dikilme": 5,
+                "iha_yonelme": 256,
+                "iha_yatis": 0,
+                "zaman_farki": 43
+            }
+        ]
+    }  # Test verileri
+    return jsonify(gelenveri)
+
+app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
