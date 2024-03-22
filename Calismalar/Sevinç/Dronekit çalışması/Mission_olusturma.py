@@ -37,6 +37,7 @@ mission_items.add(mission_item)
 print("do jump eklendi ")
 
 mission_items.upload()
+
 #uploaded mission
 
 #start mission
