@@ -61,6 +61,7 @@ class İha():
 
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
+
         if mod_kodu == "FBWA":
             telemetri["iha_otonom"] = 0
         else:
@@ -69,9 +70,14 @@ class İha():
             print(mod_kodu)
             iha.set_ap_mode(str(mod_kodu))
 
+    def add_mod_data_to_telemetri(self, mod_kodu):
+        self.mod = mod_kodu
+        self.telemetri_verisi["iha_modu"] = self.mod
+
 
 if __name__ == '__main__':
-    iha_obj = İha("10.80.1.71")
+    host="10.241.177.142"
+    iha_obj = İha(host)
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
 
     print("2 Sn bekleniyor...")
@@ -79,29 +85,39 @@ if __name__ == '__main__':
     while True:
         try:
             telemetri_verisi = iha_obj.get_telemetri_verisi(iha)
+            iha_obj.Client_Udp.send_video()
 
             if iha.servo6 > 1600 and iha.servo7 > 1600:  # ch6: High, ch8: High
                 iha_obj.change_mod("AUTO", iha)
-                mod = "AUTO"
-                telemetri_verisi["iha_mod"] = mod
+                iha_obj.add_mod_data_to_telemetri("AUTO")
 
             if (iha.servo6 > 1400 and iha.servo6 < 1600) and iha.servo7 > 1600:  # ch6: Mid, ch8: High
                 iha_obj.change_mod("RTL", iha)
-                mod = "RTL"
-                telemetri_verisi["iha_mod"] = mod
+                iha_obj.add_mod_data_to_telemetri("RTL")
 
             if iha.servo6 < 1400 and iha.servo7 > 1600:  # ch6: Low, ch8: High
                 iha_obj.change_mod("FBWA", iha)
-                mod = "FBWA"
-                telemetri_verisi["iha_mod"] = mod
+                iha_obj.add_mod_data_to_telemetri("FBWA")
 
             if iha.servo6 > 1600 and (iha.servo7 > 1400 and iha.servo7 < 1600):  # ch6: High , ch8: Mid
-                mod = "savasan_iha"
-                telemetri_verisi["iha_mod"] = mod
+                iha_obj.add_mod_data_to_telemetri("savasan_iha")
+
+            if iha.servo6 > 1600 and iha.servo7 < 1400:  # ch6: High , ch8: Low
+                iha_obj.add_mod_data_to_telemetri("savasan_iha")
 
             iha_obj.Client_Tcp.send_message_to_server(json.dumps(telemetri_verisi))
-            iha_obj.Client_Udp.send_video()
-            pwm_verileri = iha_obj.Client_Tcp.client_recv_message()
+            """pwm_verileri = iha_obj.Client_Tcp.client_recv_message()"""
 
-        except Exception as e:
-            print("Hata: Video / Telemetri Gönderimi Kopmuş Olabilir:  ", e)
+        except Exception as err:
+            connection = False
+            iha_obj.Client_Tcp.Main_Tcp.close()
+            iha_TCP_obj=Client_Tcp.Client(host)
+            while not connection:
+                try:
+                    connection = True
+                    iha_TCP_obj.connect_to_server()
+                    iha_TCP_obj.Main_Tcp.settimeout(0.001)
+                except Exception as err:
+                    print("Hata: Video / Telemetri Gönderimi Kopmuş Olabilir:  ", err)
+                    time.sleep(1)
+                    pass
