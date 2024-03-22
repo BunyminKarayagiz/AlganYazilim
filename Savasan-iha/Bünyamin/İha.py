@@ -76,7 +76,7 @@ class İha():
 
 
 if __name__ == '__main__':
-    host="10.80.1.32"
+    host="10.241.177.142"
     iha_obj = İha(host)
     iha = iha_obj.IHA_MissionPlanner_Connect(5762)
 

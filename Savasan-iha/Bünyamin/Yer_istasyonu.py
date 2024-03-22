@@ -7,6 +7,7 @@ from path import Plane
 import ana_sunucu_islemleri
 import yolov5_deploy
 import cv2
+"""import hesaplamalar"""
 
 
 class Yerİstasyonu():
@@ -96,7 +97,8 @@ if __name__ == '__main__':
 
             "Ana sunucuya clientten aldığımız data verisini postalıyor"
             status_code, rakip_telemetri_verileri = yer_istasyonu.ana_sunucu.sunucuya_postala(telemetri)
-            print("Rakip Telemetri : ", rakip_telemetri_verileri)
+            """print("Rakip Telemetri : ", rakip_telemetri_verileri)"""
+            """hesaplamalar.mesafe_hesaplama(rakip_telemetri_verileri)"""
             server_udp.show(frame)
 
         except Exception as err:
