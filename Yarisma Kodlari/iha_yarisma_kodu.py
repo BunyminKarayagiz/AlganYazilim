@@ -8,10 +8,9 @@ import cv2
 import haberlesme
 import json
 from dronekit import LocationGlobalRelative
-import datetime
+
 import ast
 import os
-#import ipConfig
 
 host = "10.80.1.116"
 port = 8888
