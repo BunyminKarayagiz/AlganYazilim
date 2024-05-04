@@ -1,17 +1,17 @@
 from multiprocessing.pool import ThreadPool
-
 from vincenty import vincenty
 import path
 import time
 import argparse
 import cv2
-import hesaplamalar, haberlesme
+#import hesaplamalar
+import haberlesme
 import json
 from dronekit import LocationGlobalRelative
 import datetime
 import ast
 import os
-import ipConfig
+#import ipConfig
 
 host = "10.80.1.116"
 port = 8888
@@ -42,7 +42,7 @@ parser.add_argument('--connect', default='tcp:127.0.0.1:5762')
 args = parser.parse_args()
 connection_string = args.connect
 
-#10.0.0.101
+# 10.0.0.101
 # -- Tuygun Bağlantı
 iha = path.Plane(connection_string)
 
@@ -63,6 +63,7 @@ sure = time.time()
 iha_tele.s.settimeout(0.001)
 x_right, x_left, y_up, y_down = 0, 0, 0, 0
 mod = "AUTO"
+
 
 def send_video():
     global x_right, x_left, y_up, y_down, iha_haber2
@@ -136,6 +137,7 @@ counter_FBWA = time.time()
 time_difference_FBWA = 0
 hiz_pwm = 1100
 
+
 def hiz_ayarla(input_value):
     if input_value < 614:
         return 1900
@@ -143,6 +145,7 @@ def hiz_ayarla(input_value):
         return 1100
     else:
         return int(1750 - ((input_value - 614) / 120000) * 600)
+
 
 while True:
     try:
@@ -152,7 +155,7 @@ while True:
         # gelen_kilit_onay = pool.apply(recv_kilit_onay_tcp)
         # print(gelen_kilit_onay)
 
-        #print("SERVO6:", iha.servo6, "SERVO7:", iha.servo7)
+        # print("SERVO6:", iha.servo6, "SERVO7:", iha.servo7)
         if gelen_rakip_verisi != None:
             rakip = gelen_rakip_verisi
             # print("none ise:",rakip)
@@ -205,19 +208,19 @@ while True:
                         bekle = time.time()
                         zamanlistesi2.append(bekle)
                         try:
-                           """ lat, lon, alt = rakip[0], rakip[1], rakip[2]
-                            git = LocationGlobalRelative(lat, lon, int(alt))"""
+                            """ lat, lon, alt = rakip[0], rakip[1], rakip[2]
+                             git = LocationGlobalRelative(lat, lon, int(alt))"""
 
-                           """ if iha.get_ap_mode() != 'GUIDED':
-                                iha.set_ap_mode('GUIDED')
-                                zamanlistesi2 = []"""
+                            """ if iha.get_ap_mode() != 'GUIDED':
+                                 iha.set_ap_mode('GUIDED')
+                                 zamanlistesi2 = []"""
 
-                           if iha.get_ap_mode() != 'AUTO':
-                               iha.set_ap_mode('AUTO')
-                               zamanlistesi2 = []
-                            #iha.set_rc_channel(3, 1500)
-                           #iha.goto(git)
-                           zamanlistesi2 = []
+                            if iha.get_ap_mode() != 'AUTO':
+                                iha.set_ap_mode('AUTO')
+                                zamanlistesi2 = []
+                            # iha.set_rc_channel(3, 1500)
+                            # iha.goto(git)
+                            zamanlistesi2 = []
                         except Exception as e:
                             print(e)
                             zamanlistesi2 = []
@@ -233,7 +236,7 @@ while True:
 
                         x, y, width, height = pwm_verileri['center'][0], pwm_verileri['center'][1], pwm_verileri[
                             'width'], \
-                                              pwm_verileri['height']
+                            pwm_verileri['height']
                         mesaj['hedef_merkez_X'] = x
                         mesaj['hedef_merkez_Y'] = y
                         mesaj['hedef_genislik'] = width
@@ -249,7 +252,7 @@ while True:
                                 circlesayac = []
                         else:
                             circlesayac = []
-                        #print(pwm_verileri)
+                        # print(pwm_verileri)
 
                         if iha.get_ap_mode() != "FBWA" and loiter == 0 and time_difference_FBWA > time_difference_value_FBWA:
                             iha.set_ap_mode("FBWA")
@@ -295,11 +298,11 @@ while True:
                         counter_FBWA = time.time()
 
             # KAMİKAZE
-            if iha.servo6 > 1600 and iha.servo7 < 1400 :  # ch6: High, ch8: LOW
+            if iha.servo6 > 1600 and iha.servo7 < 1400:  # ch6: High, ch8: LOW
                 mod = "kamikaze"
                 mesaj['iha_otonom'] = 1
                 try:
-                    #qr_enlem, qr_boylam = rakip[3]['qrEnlem'], rakip[3]['qrBoylam']
+                    # qr_enlem, qr_boylam = rakip[3]['qrEnlem'], rakip[3]['qrBoylam']
                     qr_enlem, qr_boylam = 40.2319867, 29.0033913
                     qr_mesafe = vincenty([iha.pos_lat, iha.pos_lon], [qr_enlem, qr_boylam], 80)
                     print("QR MESAFE", qr_mesafe)

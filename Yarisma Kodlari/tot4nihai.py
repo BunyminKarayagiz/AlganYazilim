@@ -1,13 +1,13 @@
 import os
 from datetime import datetime
-
 import torch
 import numpy as np
 import cv2
 import time
 import re
 from pyzbar import pyzbar
-import hesaplamalar
+#import hesaplamalar
+
 
 class Detector:
     detectorObj = None
@@ -53,7 +53,6 @@ class Detector:
         centerOfRecty = int((disy1 + disy2) / 2)
         centerOfRect = (int((disx1 + disx2) / 2), int((disy1 + disy2) / 2))
 
-
         n = len(labels)
         x_shape, y_shape = frame.shape[1], frame.shape[0]
         maximum_alan = 0
@@ -75,7 +74,7 @@ class Detector:
 
             if (width > 32 or height > 24):
                 if row[4] >= 0.735 and alan >= maximum_alan:
-                    #print(alan)
+                    # print(alan)
                     maximum_alan = alan
                     counterCoefficient = 0
                     xCord = (int(x1 + width / 2))
@@ -105,11 +104,12 @@ class Detector:
             , int(imgOriginal.shape[0] * 0.10), int(
             imgOriginal.shape[0] * 0.90)  # Gelen videoya dikdörtgen çizmek için koordinat almaktadır
 
-        roi = imgOriginal[y1:y2,x1:x2]  # Roi değişkeni orijinal resim içine çizilen dörtgenin arasındaki görüntüyü alır.
+        roi = imgOriginal[y1:y2,
+              x1:x2]  # Roi değişkeni orijinal resim içine çizilen dörtgenin arasındaki görüntüyü alır.
 
-        #qr_code_list = pyzbar.decode(roi)
+        # qr_code_list = pyzbar.decode(roi)
 
-        qr_code_list=pyzbar.decode(imgOriginal)  #640x480 için
+        qr_code_list = pyzbar.decode(imgOriginal)  # 640x480 için
 
         cv2.rectangle(imgOriginal, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Gelen videoya dikdörtgen çizmektedir
 
@@ -118,12 +118,12 @@ class Detector:
             print(data)
             pts = np.array([qr_code.polygon], np.int32)
             pts = pts.reshape((-1, 1, 2))
-            #cv2.polylines(roi, [pts], True, (255, 0, 255), 5)
+            # cv2.polylines(roi, [pts], True, (255, 0, 255), 5)
             cv2.polylines(imgOriginal, [pts], True, (255, 0, 255), 5)
             pts2 = qr_code.rect
 
             cv2.putText(imgOriginal, data, (pts2[0], pts2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 255), 2)
-            #cv2.putText(roi, data, (pts2[0], pts2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 255), 2)
+            # cv2.putText(roi, data, (pts2[0], pts2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 255), 2)
 
             if data != None:
                 x1, x2, y1, y2 = int(imgOriginal.shape[1] * 0.25), int(imgOriginal.shape[1] * 0.75) \
@@ -155,9 +155,9 @@ class Detector:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 results = self.score_frame(frame)
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                aaaa,center, xxx, yyy, width, height, frame,boul = self.plot_boxes(results, frame)
+                aaaa, center, xxx, yyy, width, height, frame, boul = self.plot_boxes(results, frame)
                 print(str(xxx) + " pwm     " + str(yyy) + " pwm")
-                #_, frame = self.qr_detection(frame)
+                # _, frame = self.qr_detection(frame)
                 # cv2.imshow("vid_out", frame)
                 pwmX, pwmY = hesaplamalar.yonver(xxx, yyy, width, height, 100)
 
