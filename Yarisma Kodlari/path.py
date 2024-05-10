@@ -12,7 +12,6 @@ initialize plane = Plane(vehicle), so that you can use the object in your own pr
 import datetime
 import math
 import time
-
 from dronekit import connect, VehicleMode, LocationGlobalRelative, Command, LocationGlobal
 from pymavlink import mavutil
 
