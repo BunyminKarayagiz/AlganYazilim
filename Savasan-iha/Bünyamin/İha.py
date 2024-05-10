@@ -103,7 +103,7 @@ if __name__ == '__main__':
                 iha_obj.add_mod_data_to_telemetri("savasan_iha")
 
             if iha.servo6 > 1600 and iha.servo7 < 1400:  # ch6: High , ch8: Low
-                iha_obj.add_mod_data_to_telemetri("savasan_iha")
+                iha_obj.add_mod_data_to_telemetri("kamikaze")
 
             iha_obj.Client_Tcp.send_message_to_server(json.dumps(telemetri_verisi))
             """pwm_verileri = iha_obj.Client_Tcp.client_recv_message()"""
