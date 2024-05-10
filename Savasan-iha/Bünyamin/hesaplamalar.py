@@ -1,6 +1,7 @@
 from vincenty import vincenty
 import math
 
+# 7A7B85
 rakip = {
     "konumBilgileri": [
         {
@@ -57,8 +58,10 @@ class Hesaplamalar():
         self.rakip_indexleri = []
         self.rakip_mesafeler = []
 
-    def radyan_hesapla(self, rakip, bizim):
-        bizim_acimiz = math.radians(bizim["iha_yonelme"])
+    def get_bizim_yonelim_acimiz(self, bizim_yonelim):
+        return bizim_yonelim["iha_yonelme"]
+    def radyan_hesapla(self, rakip,bizim):  # Rakibin yönelim açısını bizim yönelim açısı ile karşılaştırıyor ve aradaki farkı dönderiyor
+        bizim_acimiz = math.radians(self.get_bizim_yonelim_acimiz(bizim))
         radyanlar = self.rakip_radyanlari(rakip)
         for i in radyanlar:
             radyan_farklari = abs(bizim_acimiz - i)
@@ -70,33 +73,34 @@ class Hesaplamalar():
                 self.derece_farklari.append(derece_fark)
         return self.derece_farklari
 
-    def rakip_radyanlari(self, rakip):
+    def rakip_radyanlari(self, rakip):  # Aradaki açıyı doğru bulmak için radyan hesabı yapıyor
         rakip_acilar = self.yonelim_acısı(rakip)
         for i in rakip_acilar:
             self.rakip_radyanlar.append(math.radians(i))
         return self.rakip_radyanlar
 
-    def get_enlem_boylam(self, konum_bilgileri):
+    def get_enlem_boylam(self, konum_bilgileri):  # Rakibin enlem boylam bilgisini çekiyor
         for i in konum_bilgileri["konumBilgileri"]:
             self.rakip_boylamlar.append(i["iha_boylam"])
             self.rakip_enlemler.append(i["iha_enlem"])
         return self.rakip_boylamlar, self.rakip_enlemler
 
-    def yonelim_acısı(self, konum_bilgileri):
+    def yonelim_acısı(self, konum_bilgileri):  # Rakibin Yönelim açısını alıyor
         for i in konum_bilgileri["konumBilgileri"]:
             self.rakip_acilar.append(i["iha_yonelme"])
         return self.rakip_acilar
 
-    def rakip_sec(self, konum_bilgileri, bizim_veriler):
-        rakip_yonelim_acileri = self.yonelim_acısı(konum_bilgileri)
-        bizim_acimiz = bizim_veriler["iha_yonelme"]
-        for i in rakip_yonelim_acileri:
-            if (bizim_acimiz <= i + 60) and (
-                    bizim_acimiz >= i - 60):  # 60 derecelik bir hata payı bırakıldı ama eksik çalışıyor. Sebebi örn rakip 360 biz 1 olabiliriz bu durumda aynı açıda olmamıza rağmen düzgün çalışmayacak
-                self.rakip_indexleri.append(rakip_yonelim_acileri.index(i))
+    def rakip_acisina_gore_indexleri(self, konum_bilgileri,
+                                     bizim_veriler):  # Rakip ile aramızdaki açı farkı +-60 derece ise o rakibi muhtemel hedef olarak seçiyor
+        rakip_yonelim_acilari_farklari = self.radyan_hesapla(konum_bilgileri,
+                                                             self.get_bizim_yonelim_acimiz(bizim_veriler))
+        for i in rakip_yonelim_acilari_farklari:
+            if (i < 60) and (
+                    i > 60):  # 60 derecelik bir hata payı bırakıldı ama eksik çalışıyor. Sebebi örn rakip 360 biz 1 olabiliriz bu durumda aynı açıda olmamıza rağmen düzgün çalışmayacak
+                self.rakip_indexleri.append(rakip_yonelim_acilari_farklari.index(i))
         return self.rakip_indexleri
 
-    def mesafe_hesaplama(self, konum_bilgileri, bizim_veriler):
+    def mesafe_hesaplama(self, konum_bilgileri, bizim_veriler):  # Rakip ile aramızdaki mesafeyi ölçüyoır
         enlem = bizim_veriler["iha_enlem"]
         boylam = bizim_veriler["iha_boylam"]
         boylamlar, enlemler = self.get_enlem_boylam(konum_bilgileri)
@@ -105,6 +109,10 @@ class Hesaplamalar():
             self.rakip_mesafeler.append(vincenty((enlemler[i], boylamlar[i]), (enlem, boylam)))
         return self.rakip_mesafeler
 
+    def rakip_sec(self):
+
+        print(self.radyan_hesapla(rakip, bizim))
+
 
 hesap = Hesaplamalar()
-print(hesap.radyan_hesapla(rakip, bizim))
+print(hesap.get_bizim_yonelim_acimiz(bizim))
