@@ -72,6 +72,12 @@ class MAVLink:
             elif self.msg.get_type() == 'HEARTBEAT':
                 self.custom_mode = self.msg.custom_mode
                 self.mod = self.mode_mapping.get(self.custom_mode, str(self.custom_mode))
+            elif self.msg.get_type() == 'GPS_TIME':
+                self.gps_saat = self.msg.time
+                self.gps_dakika = self.msg.date
+                self.gps_saniye = self.msg.time
+                self.gps_milisaniye = self.msg.time
+
 
 
             self.telemetri_verisi = {
@@ -92,10 +98,10 @@ class MAVLink:
                 "hedef_yukseklik": 0,
                 "gps_saati": {
                     #Bu düzenlenecektir.
-                    "saat": datetime.datetime.now().hour,
-                    "dakika": datetime.datetime.now().minute,
-                    "saniye": datetime.datetime.now().second,
-                    "milisaniye": int(datetime.datetime.now().microsecond//1000)
+                    "saat": self.gps_saat,
+                    "dakika": self.gps_dakika,
+                    "saniye": self.gps_saniye,
+                    "milisaniye": self.gps_milisaniye
                                       },
                 "iha_mode": self.mod,
             }
