@@ -1,4 +1,5 @@
 import time
+import datetime
 
 from pymavlink import mavutil  # gerekli olan kütüphane yüklenir
 class MAVLink:
@@ -47,7 +48,7 @@ class MAVLink:
             24: "THERMAL"
         }
 
-    def connect(self, port='tcp:10.80.1.18:14550'):
+    def connect(self, port='tcp:10.80.1.95:14550'):
         self.master = mavutil.mavlink_connection(port)
 
     def veri_kaydetme(self):
@@ -71,18 +72,34 @@ class MAVLink:
             elif self.msg.get_type() == 'HEARTBEAT':
                 self.custom_mode = self.msg.custom_mode
                 self.mod = self.mode_mapping.get(self.custom_mode, str(self.custom_mode))
-            self.telemetri = {
-                "Emlen:": float(self.enlem),
-                "Boylam": float(self.boylam),
-                "Yükseklik": float(self.yukseklik),
-                "Yer_Hızı": float(self.yer_hizi),
-                "hava hızı": float(self.hava_hizi),
-                "roll": float(self.roll),
-                "pitch": float(self.pitch),
-                "yaw": float(self.yaw),
-                "mode": str(self.mod)
+
+
+            self.telemetri_verisi = {
+                "takim_numarasi": 1,
+                "iha_enlem": float("{:.7f}".format(self.enlem)),
+                "iha_boylam": float("{:.7f}".format(self.boylam)),
+                "iha_irtifa": float("{:.2f}".format(self.yukseklik)),
+                "iha_dikilme": float("{:.2f}".format(self.pitch)),
+                "iha_yonelme": float("{:.2f}".format(self.yaw)),
+                "iha_yatis": float("{:.2f}".format(self.roll)),
+                "iha_hiz": float("{:.2f}".format(self.yer_hizi)),
+                "iha_batarya": self.batarya,
+                "iha_otonom": 0,
+                "iha_kilitlenme": 0,
+                "hedef_merkez_X": 0,
+                "hedef_merkez_Y": 0,
+                "hedef_genislik": 0,
+                "hedef_yukseklik": 0,
+                "gps_saati": {
+                    #Bu düzenlenecektir.
+                    "saat": datetime.datetime.now().hour,
+                    "dakika": datetime.datetime.now().minute,
+                    "saniye": datetime.datetime.now().second,
+                    "milisaniye": int(datetime.datetime.now().microsecond//1000)
+                                      },
+                "iha_mode": self.mod,
             }
-            print(self.telemetri)
+            print(self.telemetri_verisi)
 
 try:
     MAVLink = MAVLink()
