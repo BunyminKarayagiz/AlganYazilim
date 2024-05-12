@@ -7,12 +7,13 @@ import cv2
 import yolov5_deploy
 import json
 import time,datetime
+import os
 
 
 class Yerİstasyonu():
 
     def __init__(self):
-        self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name="bestuçak.pt")
+        self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name=("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt"))
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
@@ -98,7 +99,7 @@ class Yerİstasyonu():
             if lockedOrNot == 0 and locked_prev== 1:
                 cv2.putText(img=frame,text="ENEMY LOST",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
                 locked_prev=0
-                is_locked=0 
+                is_locked=0
                 sent_once = 0
 
             if lockedOrNot == 1 and locked_prev== 1:

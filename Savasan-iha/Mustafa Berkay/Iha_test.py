@@ -1,6 +1,6 @@
 
 import argparse
-
+import ipConfig
 import json
 import numpy as np
 import path
@@ -96,10 +96,9 @@ class Iha():
         self.TCP_json.close()
         self.TCP_pwm.close()
 
-
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.95")
+    iha_obj = Iha(ipConfig.wlan_ip())
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762)
 
 
