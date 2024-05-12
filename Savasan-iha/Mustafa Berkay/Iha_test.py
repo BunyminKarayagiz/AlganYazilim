@@ -1,11 +1,10 @@
-import socket
+
 import argparse
-import cv2
+
 import json
 import numpy as np
 import path
-import imutils
-import base64
+
 import time
 import threading
 import Client_Tcp,Client_Udp
@@ -14,11 +13,6 @@ import Client_Tcp,Client_Udp
 class Iha():
     def __init__(self,host_ip) -> None:
 
-        # UDP Configurations
-        self.udp_host = host_ip
-        self.udp_port = 9999
-        self.Capture_obj=Client_Udp.Client(self.udp_host,self.udp_port)
-        
         # TCP JSON Configurations
         self.tcp_port = 9000
         self.TCP_json = Client_Tcp.Client(host_ip,self.tcp_port)
@@ -30,14 +24,11 @@ class Iha():
         self.TCP_pwm.connect_to_server()
         print('Connected to TCP_pwm server...')
 
-        
-
     def IHA_MissionPlanner_Connect(self, tcp_port):
         parser = argparse.ArgumentParser()
         parser.add_argument('--connect', default=f'tcp:127.0.0.1:{str(tcp_port)}')
         args = parser.parse_args()
         connection_string = args.connect
-
         return path.Plane(connection_string)
 
     def IHA_Raspberry_Connect(self):
@@ -71,7 +62,7 @@ class Iha():
                 "milisaniye": iha.gps_time.microsecond // 1000,  # int(datetime.datetime.now().microsecond//1000)
             }
         }
-        return self.telemetri_verisi
+        return self.telemetri_verisi 
 
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
@@ -82,11 +73,6 @@ class Iha():
             telemetri["iha_otonom"] = 1
         if iha.get_ap_mode() != str(mod_kodu):
             iha.set_ap_mode(str(mod_kodu))
-
-    def send_video(self):
-        while True:
-            self.Capture_obj.send_video()
-
 
     def get_n_send_json(self,seconds=1.0):
         start_time = time.time()
@@ -109,24 +95,17 @@ class Iha():
     def close_sockets(self):
         self.TCP_json.close()
         self.TCP_pwm.close()
-        self.Capture_obj.close()
 
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("192.168.1.236")
+    iha_obj = Iha("10.80.1.95")
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762)
 
 
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
-
-
-    # Start UDP video thread
-    video_thread = threading.Thread(target=iha_obj.send_video)
-    video_thread.start()
-
 
     # Start TCP thread
     json_thread = threading.Thread(target=iha_obj.get_n_send_json)
@@ -137,7 +116,6 @@ if __name__ == '__main__':
     pwm_thread.start()
 
     pwm_thread.join()
-    video_thread.join()
     json_thread.join()
     
     # Clean up
