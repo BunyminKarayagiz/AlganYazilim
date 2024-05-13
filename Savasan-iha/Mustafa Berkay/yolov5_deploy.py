@@ -102,6 +102,6 @@ class Detection:
 
         cv2.destroyAllWindows()
 
-"""                 TODO PATH DÜZELTİLECEK TODO
+"""         TODO PATH DÜZELTİLECEK TODO
 detector = Detection(capture_index=0, model_name="D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt")
 detector()"""

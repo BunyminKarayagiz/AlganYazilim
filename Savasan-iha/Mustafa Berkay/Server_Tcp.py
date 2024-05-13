@@ -10,7 +10,7 @@ class Server():
     def creat_server(self):
         self.tcp_socket.bind((self.server_ip, self.PORT))
         self.tcp_socket.listen()
-        print("Server is listening...")
+        print("TCP-Server is listening...")
         self.conn, self.addr = self.tcp_socket.accept()
         print(f"Connect with{self.addr}")
 
@@ -22,3 +22,6 @@ class Server():
 
     def send_data_to_client(self, message):
         self.conn.sendall(message)
+
+    def close_socket(self):
+        self.tcp_socket.close()

@@ -7,8 +7,7 @@ import cv2
 import yolov5_deploy
 import json
 import time,datetime
-import asyncio
-
+import os
 
 
 class Yerİstasyonu():
@@ -18,6 +17,7 @@ class Yerİstasyonu():
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
+        self.Server_tcp_json = Server_Tcp.Server(9000)
         self.Server_tcp_pwm = Server_Tcp.Server(9001)
         self.Server_udp = Server_Udp.Server()
 
@@ -32,31 +32,23 @@ class Yerİstasyonu():
             self.ana_sunucuya_giris_durumu = True
         return self.ana_sunucuya_giris_durumu
 
-    def Görüntü_sunucusu_oluştur(self):
-        connection=False
-        while not connection:
-            try:
-                self.Server_udp.create_server()
-                connection=True
-            except (ConnectionError , Exception) as e:
-                print("UDP SERVER oluşturma hatası: ", e)
-                print("3 saniye içinden yeniden bağlanılıyor...\n")
-                time.sleep(3) #Değiştirilebilir. TODO
-                self.Server_udp.create_server()
-                
-    def PWM_sunucusu_oluştur(self):
-        connection=False
-        while not connection:
-            try:
-                self.Server_tcp_pwm.creat_server()
-                connection=True
-            except (ConnectionError, Exception) as e:
-                print("PWM SERVER oluştururken hata : ", e , " \n")
-                print("3 saniye içinden yeniden bağlanılıyor...\n")
-                time.sleep(3) #Değiştirilebilir. TODO
-                self.Server_tcp_pwm.creat_server()
 
-    def Yolo_Görüntü_işleme(self,frame):
+    def TCP_connection_handler(self,function):
+    
+        try:
+            self.Server_tcp_json.creat_server()
+        except (ConnectionError, Exception) as e:
+            print("JSON SERVER oluşturma hatası: ", e)
+            connection=False
+            while not connection:
+                self.Server_tcp_json.creat_server()
+                connection=True
+   
+        while True:
+            data = self.Server_tcp_json.recv_tcp_message()
+            function(data)
+
+    def yolo_frame_func(self,frame):
         
         "Gelen frame yolo modeline sokuluyor"
         results,frame=yer_istasyonu.yolo_model.get_results(frame)
@@ -64,31 +56,47 @@ class Yerİstasyonu():
 
         "Modelden gelen değerler ile pwm değeri hesaplanıyor"
         pwm_verileri=yer_istasyonu.yolo_model.coordinates_to_pwm(xCord,yCord)
+
         return frame,lockedOrNot,pwm_verileri
 
-    def görüntü_çek(self):
-        frame= self.Server_udp.recv_frame_from_client()
-        return frame
+    def UDP_connection_handler(self):
+        
+        try:
+            self.Server_udp.create_server()
+        except (ConnectionError , Exception) as e:
+            print("UDP SERVER oluşturma hatası: ", e)
+            connection=False
+            while not connection:
+                self.Server_udp.create_server()
+                connection=True
 
-    def kilitlenme_ve_pwm_üretimi(self):
+        try:
+            self.Server_tcp_pwm.creat_server()
+        except (ConnectionError, Exception) as e:
+            print("PWM SERVER oluşturma hatası: ", e)
+            connection=False
+            while not connection:
+                self.Server_tcp_pwm.creat_server()
+                connection=True
+
 
         locked_prev=0
         is_locked=0
         sent_once=0
 
         while True:
-            frame=self.görüntü_çek()
-            frame,lockedOrNot,pwm_verileri = self.Yolo_Görüntü_işleme(frame)
+            frame= self.Server_udp.recv_frame_from_client()
+            frame,lockedOrNot,pwm_verileri = self.yolo_frame_func(frame)
 
             "Rakip kilitlenme"
             if lockedOrNot == 1 and locked_prev== 0:
                 start_time=time.time()
                 start_now =datetime.datetime.now()
-                cv2.putText(img=frame,text="HEDEF GÖRÜLDÜ",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                cv2.putText(img=frame,text="ENEMY ON SIGHT",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
                 locked_prev=1
 
             if lockedOrNot == 0 and locked_prev== 1:
-                cv2.putText(img=frame,text="HEDEF KAYBOLDU",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                cv2.putText(img=frame,text="ENEMY LOST",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
                 locked_prev=0
                 is_locked=0
                 sent_once = 0
@@ -98,10 +106,10 @@ class Yerİstasyonu():
                 cv2.putText(img=frame,text=str(round(elapsed_time,3)),org=(50,400),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
                 
                 if is_locked == 0:
-                    cv2.putText(img=frame,text="KİLİTLENİYOR",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                    cv2.putText(img=frame,text="LOCKING",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
 
                 if elapsed_time >= 4.0:
-                    cv2.putText(img=frame,text="KİLİTLENDİ",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
+                    cv2.putText(img=frame,text="LOCKED",org=(50,450),fontFace=1,fontScale=1,color=(0,255,0),thickness=1)
                     kilitlenme_bilgisi=True
                     is_locked=1
                 
@@ -153,11 +161,8 @@ if __name__ == '__main__':
             giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
             connection=True
 
-    yer_istasyonu.Görüntü_sunucusu_oluştur()
-    yer_istasyonu.PWM_sunucusu_oluştur()
+    Tcp_thread = threading.Thread(target= yer_istasyonu.TCP_connection_handler ,args=( yer_istasyonu.ana_sunucu.sunucuya_postala,))
+    Udp_thread = threading.Thread(target= yer_istasyonu.UDP_connection_handler )
 
-    PWM_thread = threading.Thread(target= yer_istasyonu.)
-    Udp_thread = threading.Thread(target= yer_istasyonu.kilitlenme_ve_pwm_üretimi )
-
+    Tcp_thread.start()
     Udp_thread.start()
-    #Udp_thread.start()
