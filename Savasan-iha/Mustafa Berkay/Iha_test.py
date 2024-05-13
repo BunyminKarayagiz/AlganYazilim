@@ -1,22 +1,37 @@
-
 import argparse
-import ipConfig
 import json
 import numpy as np
 import path
 
 import time
 import threading
-import Client_Tcp,Client_Udp
+import Client_Tcp
 
 
 class Iha():
     def __init__(self,host_ip) -> None:
 
         # TCP PWM Configurations
+        self.TCP_yonelim= Client_Tcp.Client(host_ip,9002)
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
-        self.TCP_pwm.connect_to_server()
-        print('Connected to TCP_pwm server...')
+        
+    def Yonelim_sunucusuna_baglan(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_yonelim.connect_to_server()
+                connection=True
+            except (ConnectionError , Exception) as e:
+                print("YONELIM SERVER: baglanırken hatası: ", e)
+
+    def PWM_sunucusuna_baglan(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_pwm.connect_to_server()
+                connection=True
+            except (ConnectionError , Exception) as e:
+                print("PWM SERVER: baglanırken hatası: ", e)
 
     def IHA_MissionPlanner_Connect(self, tcp_port):
         parser = argparse.ArgumentParser()
@@ -32,7 +47,6 @@ class Iha():
         connection_string = args.connect
         return path.Plane(connection_string)
 
-
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
         print(mod_kodu)
@@ -43,31 +57,39 @@ class Iha():
         if iha.get_ap_mode() != str(mod_kodu):
             iha.set_ap_mode(str(mod_kodu))
 
-    def recv_pwm(self):
+    def pwm_cek(self):
         while True:
-            pwm_verileri=self.TCP_pwm.client_recv_message()
+            try:
+                pwm_verileri=self.TCP_pwm.client_recv_message().decode()
+                print("PWM VERILERI: ",pwm_verileri)
+            except Exception as e:
+                print("PWM SERVER: Veri çekilirken hata :",e)
 
-    def close_sockets(self):
-
-        self.TCP_pwm.close()
+    def yonelim_verisi_cek(self):
+        while True:
+            try:
+                yonelim_verisi=self.TCP_yonelim.client_recv_message()
+                print("YONELIM VERISI: ",yonelim_verisi)
+            except Exception as e:
+                print("YONELIM SERVER: Veri çekilirken hata :",e)
 
 if __name__ == '__main__':
 
-    iha_obj = Iha(ipConfig.wlan_ip())
-    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762)
-
-
+    iha_obj = Iha("10.0.0.236")
+    iha_path = iha_obj.IHA_Raspberry_Connect()
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
 
     # Start PWM thread
-    pwm_thread = threading.Thread(target=iha_obj.recv_pwm)
-    pwm_thread.start()
-    
-    # Clean up
-    iha_obj.close_sockets()
+    iha_obj.Yonelim_sunucusuna_baglan()
+    iha_obj.PWM_sunucusuna_baglan()
 
+    pwm_thread = threading.Thread(target=iha_obj.pwm_cek)
+    yonelim_thread= threading.Thread(target=iha_obj.yonelim_verisi_cek)
+    
+    pwm_thread.start()
+    yonelim_thread.start()
     
     while True:
         try:

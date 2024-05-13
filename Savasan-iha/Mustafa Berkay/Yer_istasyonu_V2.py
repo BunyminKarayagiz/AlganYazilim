@@ -42,9 +42,8 @@ class Yerİstasyonu():
         self.new_frame_time=0
         self.prev_frame_time=0
 
-
-    "Ana Sunucuya Bağlanma Fonksiyonu"
-    def connect_to_anasunucu(self, kullanici_adi, sifre):
+    
+    def anasunucuya_baglan(self, kullanici_adi, sifre):
         "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
         ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(
             str(kullanici_adi),
@@ -71,6 +70,7 @@ class Yerİstasyonu():
         connection=False
         while not connection:
             try:
+                print("Yönelim sunucusu oluşturuluyor.")
                 self.Server_yönelim.creat_server()
                 connection=True
             except (ConnectionError, Exception) as e:
@@ -110,9 +110,10 @@ class Yerİstasyonu():
     def yönelim(self):
         while True:
             yönelim_verisi=0
+            "------------------------"
             "Yönelim için değerler gönderiliyor"
-            "Buralar doldurulacak" #TODO
-            "----------"
+            "Buralar doldurulacak" #TODO 
+            "------------------------"
             self.Server_yönelim.send_data_to_client(json.dumps(yönelim_verisi).encode())
             print("YÖNELİM YAPILIYOR....")
             time.sleep(1) # TODO GEÇİÇİ
@@ -219,22 +220,24 @@ if __name__ == '__main__':
 
     try:
         "Ana Sunucuya giriş yapıyor."
-        giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
+        giris_kodu = yer_istasyonu.anasunucuya_baglan("algan", "53SnwjQ2sQ")
     except (ConnectionError , Exception) as e:
         print("Anasunucu veya Server oluşturma hatası: ", e)
-
-        #Eğer Bağlantı hatası olursa While içinde tekrar bağlanmayı deneyecek
         connection=False
         while not connection:
-            giris_kodu = yer_istasyonu.connect_to_anasunucu("algan", "53SnwjQ2sQ")
+            giris_kodu = yer_istasyonu.anasunucuya_baglan("algan", "53SnwjQ2sQ")
             connection=True
 
     yer_istasyonu.Görüntü_sunucusu_oluştur()
-    yer_istasyonu.PWM_sunucusu_oluştur()
     yer_istasyonu.Yönelim_sunucusu_oluştur()
-
+    yer_istasyonu.PWM_sunucusu_oluştur()        #DEBUG TODO Burada PWM sunucusu bir şekilde kodu kilitliyor. Bu nedenle PWM SUNUCUSU gelmeden diğer sunuculardan veri alamıyorum.
+                                                #Sorunun kaynağı, PWM sunucusunun iha_test.py kodunun içinde olması olabilir.
+    
     Yönelim_threadi = threading.Thread(target= yer_istasyonu.yönelim)
     kilitlenme_ve_görüntü_threadi = threading.Thread(target= yer_istasyonu.kilitlenme_ve_pwm_üretimi )
 
     kilitlenme_ve_görüntü_threadi.start()
     Yönelim_threadi.start()
+
+    kilitlenme_ve_görüntü_threadi.join()
+    Yönelim_threadi.join()
