@@ -1,6 +1,7 @@
 import socket
 import Client_Tcp , Client_Udp
 import threading
+import ipConfig
 
 class iha_haberlesme():
     def __init__(self,host_ip) -> None:
@@ -21,7 +22,7 @@ class iha_haberlesme():
 
 if __name__ == "__main__":
 
-    iha_obj=iha_haberlesme("10.80.1.95")
+    iha_obj=iha_haberlesme(ipConfig.wlan_ip())
     
     video_thread = threading.Thread(target=iha_obj.send_video)
     video_thread.start()

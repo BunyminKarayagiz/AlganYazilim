@@ -18,7 +18,7 @@ class Server():
 
     def create_server(self):
         self.udp_socket.bind((self.host_ip, self.port))
-        print('Listening at:', (self.host_ip, self.port))
+        print('UDP-Server Listening at:', (self.host_ip, self.port))
 
     def recv_frame_from_client(self):
         message , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)
@@ -26,6 +26,10 @@ class Server():
         npdata = np.fromstring(data, dtype=np.uint8)
         frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
         return frame
+
+    def close_socket(self):
+        self.udp_socket.close()
+
 
     def show(self, frame):
         cv2.imshow("Yer_istasyonu Video", frame)
