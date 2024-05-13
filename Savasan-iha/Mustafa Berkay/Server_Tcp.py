@@ -5,6 +5,7 @@ class Server():
     def __init__(self,PORT):
         self.server_ip = socket.gethostbyname(socket.gethostname())
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.PORT = PORT
 
     def creat_server(self):
