@@ -77,20 +77,16 @@ try:
         # çember denklemi (x-a)^2 + (y-b)^2 = r^2
         x, y = sp.symbols('x y')
         cember_denklemi = Eq((x - a) ** 2 + (y - b) ** 2, r ** 2)
-        return cember_denklemi
+        return cember_denlemi
 
 
     def kesisim_kontrol(nokta1, nokta2, cember):
-        # Çemberin merkezi ve yarıçapı
         h, k, r = cember
-
-        # Doğru parçasının eğimi ve y-intercept'i
         dx = nokta2[0] - nokta1[0]
         dy = nokta2[1] - nokta1[1]
         if dx != 0:
             m = dy / dx
             b = nokta1[1] - m * nokta1[0]
-
             # Çemberin merkezi ile doğru parçası arasındaki en kısa mesafe
             d = abs(m * h - k + b) / np.sqrt(m ** 2 + 1)
         else:
@@ -102,18 +98,10 @@ try:
 
 
     def yeni_nokta_olusturma(nokta1, nokta2, cember):
-        h, k, r = cember  # Çemberin merkezi (h, k) ve yarıçapı r
-        dx, dy = nokta2[0] - nokta1[0], nokta2[1] - nokta1[1]  # İki nokta arasındaki fark
-        mesafe = np.sqrt(dx ** 2 + dy ** 2)  # İki nokta arasındaki mesafe
+        h, k, r = cember
+        dx, dy = nokta2[0] - nokta1[0], nokta2[1] - nokta1[1]
         egim = dy / dx  # İki nokta arasındaki eğim
         normal_egim = -1 / egim  # Dik doğrunun eğimi
-
-        # Çemberin merkezinden geçen ve iki noktayı birleştiren doğruya dik olan doğrunun denklemi
-        # y - k = normal_egim * (x - h)
-
-        # Bu doğru üzerinde, çemberin yarıçapından daha uzakta bir nokta belirleyelim
-        # Bu nokta, çemberin dışına çıkacak ve çemberi dolaşacak bir yol belirlememizi sağlar
-        # Örneğin, çemberin yarıçapının 1.5 katı uzaklıkta bir nokta seçelim
         uzaklik = r * 1.5
         yeni_x = h + uzaklik / np.sqrt(1 + normal_egim ** 2)
         yeni_y = k + normal_egim * (yeni_x - h)
