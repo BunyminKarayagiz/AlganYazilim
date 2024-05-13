@@ -5,7 +5,7 @@ class MAVLink:
 
     def __init__(self):
 
-
+        self.gonderilen_zaman = time.time()
         self.telemetri = None
         self.mod = None
         self.custom_mode = None
@@ -56,7 +56,7 @@ class MAVLink:
         }
     """burada öncelikle bağlanacağımız mision plannerdan ctrl-f yaparak açtığımız pencereden mavlink kısmına giriyoruz. oradan tcp host 14550 yi seçip altından da baudrate i seçiyoruz.
     uzaktaki bilgisayara bağlanmak istediğimiz için write access kutucuğunu işaretleyip bağlan kısmına tıklıyoruz."""
-    def connect(self, port='tcp:10.80.1.63:14550'):
+    def connect(self, port='tcp:10.80.1.72:14550'):
         self.master = mavutil.mavlink_connection(port)
 
 
@@ -115,7 +115,14 @@ class MAVLink:
                 },
                 "iha_mode": self.mod,
             }
-            print(self.telemetri)
+            while True:
+                if time.time() - self.gonderilen_zaman < 1:
+                    break
+                else:
+                    print(self.telemetri)
+                    self.gonderilen_zaman = time.time()
+                    break
+
 
 try:
     maVLink = MAVLink()
@@ -126,3 +133,7 @@ except KeyboardInterrupt:
     pass
 finally:
     print("görev tamamlandı")
+
+
+
+
