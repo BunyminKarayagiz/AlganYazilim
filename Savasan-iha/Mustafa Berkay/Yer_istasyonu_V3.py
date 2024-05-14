@@ -42,7 +42,9 @@ class Yerİstasyonu():
         self.new_frame_time=0
         self.prev_frame_time=0
 
-    
+        #GÖREV_MODU SEÇİMİ #TODO-Daha yapılmadı. İHA'DAN ALINMASI GEREKİYOR.
+        self.secilen_görev_modu="kilitlenme"
+
     def anasunucuya_baglan(self, kullanici_adi, sifre):
         "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
         ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(
@@ -67,8 +69,8 @@ class Yerİstasyonu():
             #   self.Server_udp.create_server()
 
     def Yönelim_sunucusu_oluştur(self):
-        connection=False
-        while not connection:
+        connection_status=False
+        while not connection_status:
             try:
                 print("Yönelim sunucusu oluşturuluyor.")
                 self.Server_yönelim.creat_server()
@@ -76,9 +78,8 @@ class Yerİstasyonu():
             except (ConnectionError, Exception) as e:
                 print("YÖNELİM SERVER: oluştururken hata : ", e , " \n")
                 print("YÖNELİM SERVER: yeniden bağlanılıyor...\n")
-                self.Server_yönelim.close_socket()
-                self.Server_yönelim = Server_Tcp.Server(9002)
-                self.Server_yönelim.creat_server()
+                connection_status=self.Server_yönelim.reconnect()
+        return connection
 
     def PWM_sunucusu_oluştur(self):
         connection=False
@@ -92,6 +93,7 @@ class Yerİstasyonu():
                 self.Server_pwm.close_socket()
                 self.Server_pwm = Server_Tcp.Server(9001)
                 self.Server_pwm.creat_server()
+        return connection
 
     def Yolo_frame_işleme(self,frame):
         
@@ -118,9 +120,18 @@ class Yerİstasyonu():
             yönelim_verisi= 0
             "------------------------"
             "Yönelim için değerler gönderiliyor"
-            "Buralar doldurulacak" #TODO 
+            "Buralar doldurulacak" #TODO
             "------------------------"
-            self.Server_yönelim.send_data_to_client(json.dumps(yönelim_verisi).encode())
+            try:
+                self.Server_yönelim.send_data_to_client(json.dumps(yönelim_verisi).encode())
+            except:
+                print("ERROR : YONELİM VERİSİ GÖNDERİLİRKEN HATA")
+                print("YONELİM YENİDEN BAĞLANIYOR--RETRY..2sec")
+                connection=False
+                while not connection:
+                    connection=self.Yönelim_sunucusu_oluştur()
+                    time.sleep(2) #TODO GEÇİÇİ
+                
             print("YÖNELİM YAPILIYOR....")
             time.sleep(1) # TODO GEÇİÇİ
             if self.yönelim_modu==False:
@@ -211,14 +222,25 @@ class Yerİstasyonu():
         task2= asyncio.create_task(self.pwm_gönder(pwm_verileri))
         await task2
 
-    def kilitlenme_ve_pwm_üretimi(self):
-        
+    def kilitlenme_görevi(self):
         while True:
-            frame=self.görüntü_çek()
-            frame = cv2.flip(frame,0)
-            frame,lockedOrNot,pwm_verileri = self.Yolo_frame_işleme(frame)
+           frame=self.görüntü_çek()
+           frame = cv2.flip(frame,0)
+           frame,lockedOrNot,pwm_verileri = self.Yolo_frame_işleme(frame)
+           asyncio.run(self.coroutine(frame,lockedOrNot,pwm_verileri))
+
+    def GOREV_KONTROL(self):
         
-            asyncio.run(self.coroutine(frame,lockedOrNot,pwm_verileri))
+        if self.secilen_görev_modu == "kilitlenme":
+                Yönelim_threadi = threading.Thread(target= yer_istasyonu.yönelim)
+                kilitlenme_görevi_thread = threading.Thread(target=self.kilitlenme_görevi)
+                kilitlenme_görevi_thread.start()
+                Yönelim_threadi.start()
+
+        if self.secilen_görev_modu == "Kamikaze":
+            pass
+        
+
 
 if __name__ == '__main__':
 
@@ -238,12 +260,9 @@ if __name__ == '__main__':
     yer_istasyonu.Yönelim_sunucusu_oluştur()
     yer_istasyonu.PWM_sunucusu_oluştur()        #DEBUG TODO Burada PWM sunucusu bir şekilde kodu kilitliyor. Bu nedenle PWM SUNUCUSU gelmeden diğer sunuculardan veri alamıyorum.
                                                 #Sorunun kaynağı, PWM sunucusunun iha_test.py kodunun içinde olması olabilir.
+ 
+    görev_kontrol = threading.Thread(target=yer_istasyonu.GOREV_KONTROL)
+
+    görev_kontrol.start()
+    görev_kontrol.join()
     
-    Yönelim_threadi = threading.Thread(target= yer_istasyonu.yönelim)
-    kilitlenme_ve_görüntü_threadi = threading.Thread(target= yer_istasyonu.kilitlenme_ve_pwm_üretimi)
-
-    kilitlenme_ve_görüntü_threadi.start()
-    Yönelim_threadi.start()
-
-    kilitlenme_ve_görüntü_threadi.join()
-    Yönelim_threadi.join()
