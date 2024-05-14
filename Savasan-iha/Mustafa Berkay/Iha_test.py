@@ -7,6 +7,8 @@ import time
 import threading
 import Client_Tcp
 
+import ipConfig #UÇAKTA BU BULUNMAYACAK #TODO
+
 
 class Iha():
     def __init__(self,host_ip) -> None:
@@ -68,15 +70,15 @@ class Iha():
     def yonelim_verisi_cek(self):
         while True:
             try:
-                yonelim_verisi=self.TCP_yonelim.client_recv_message()
+                yonelim_verisi=json.loads(self.TCP_yonelim.client_recv_message())                
                 print("YONELIM VERISI: ",yonelim_verisi)
             except Exception as e:
                 print("YONELIM SERVER: Veri çekilirken hata :",e)
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.0.0.236")
-    iha_path = iha_obj.IHA_Raspberry_Connect()
+    iha_obj = Iha(ipConfig.wlan_ip()) #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor

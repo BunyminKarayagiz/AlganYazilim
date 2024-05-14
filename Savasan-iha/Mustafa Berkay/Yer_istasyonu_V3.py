@@ -8,12 +8,13 @@ import yolov5_deploy
 import json
 import time,datetime
 import asyncio
+import mavproxy2
 
 
 
 class Yerİstasyonu():
 
-    def __init__(self):
+    def __init__(self,mavlink_obj):
         self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name=("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt"))
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
@@ -21,6 +22,9 @@ class Yerİstasyonu():
         self.Server_yönelim = Server_Tcp.Server(9002)
         self.Server_pwm = Server_Tcp.Server(9001)
         self.Server_udp = Server_Udp.Server()
+
+        #M.PLANNER bilgisayarından telemetri çekmek için kullanılacak obje
+        self.mavlink_obj = mavlink_obj
 
         #PWM sinyal üretiminin senkronizasyonu için kullanılan objeler
         #self.lock= asyncio.Lock()
@@ -74,12 +78,12 @@ class Yerİstasyonu():
             try:
                 print("Yönelim sunucusu oluşturuluyor.")
                 self.Server_yönelim.creat_server()
-                connection=True
+                connection_status=True
             except (ConnectionError, Exception) as e:
                 print("YÖNELİM SERVER: oluştururken hata : ", e , " \n")
                 print("YÖNELİM SERVER: yeniden bağlanılıyor...\n")
                 connection_status=self.Server_yönelim.reconnect()
-        return connection
+        return connection_status
 
     def PWM_sunucusu_oluştur(self):
         connection=False
@@ -109,10 +113,16 @@ class Yerİstasyonu():
         frame= self.Server_udp.recv_frame_from_client()
         return frame
 
-    def mavlink_telemetri():
-        pass
+    def mavlink_telemetri(self):
+        return self.mavlink_obj.veri_kaydetme()
+    
+    def mavlink_connect(self):
+        self.mavlink_obj.connect() #TODO Bağlantı kurulamaz ise burada kod kilitlenecek(opsiyonel :) ) ve yeniden deneyecek.
 
     def yönelim(self):
+        
+        self.mavlink_connect()
+
         while True:
             
             bizim_telemetri=self.mavlink_telemetri()
@@ -126,10 +136,10 @@ class Yerİstasyonu():
                 self.Server_yönelim.send_data_to_client(json.dumps(yönelim_verisi).encode())
             except:
                 print("ERROR : YONELİM VERİSİ GÖNDERİLİRKEN HATA")
-                print("YONELİM YENİDEN BAĞLANIYOR--RETRY..2sec")
+                print("YONELİM YENİDEN BAĞLANIYOR...")
                 connection=False
                 while not connection:
-                    connection=self.Yönelim_sunucusu_oluştur()
+                    connection=self.Server_yönelim.reconnect()
                     time.sleep(2) #TODO GEÇİÇİ
                 
             print("YÖNELİM YAPILIYOR....")
@@ -152,7 +162,7 @@ class Yerİstasyonu():
     async def kilitlenme_kontrol(self,frame,lockedOrNot):
         self.new_frame_time=time.time()
 
-        "Rakip kilitlenme"        
+        "Rakip kilitlenme"
         if lockedOrNot == 1 and self.locked_prev== 0:
             self.start_time=time.time()
             
@@ -181,7 +191,6 @@ class Yerİstasyonu():
                 cv2.putText(img=frame,text="KILITLENIYOR",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
             if self.elapsed_time >= 4.0:
                 cv2.putText(img=frame,text="KILITLENDI",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
-                print("KİLİTLENME BAŞARILI")
                 kilitlenme_bilgisi=True
                 self.is_locked=1
                 
@@ -212,6 +221,7 @@ class Yerİstasyonu():
                 },
                 "otonom_kilitlenme": 0
                 }
+                print("KİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\n")
                 self.ana_sunucu.sunucuya_postala(json.dumps(kilitlenme_bilgisi))
                 self.sent_once = 1
 
@@ -225,7 +235,7 @@ class Yerİstasyonu():
     def kilitlenme_görevi(self):
         while True:
            frame=self.görüntü_çek()
-           frame = cv2.flip(frame,0)
+           frame = cv2.flip(frame,0) 
            frame,lockedOrNot,pwm_verileri = self.Yolo_frame_işleme(frame)
            asyncio.run(self.coroutine(frame,lockedOrNot,pwm_verileri))
 
@@ -238,13 +248,20 @@ class Yerİstasyonu():
                 Yönelim_threadi.start()
 
         if self.secilen_görev_modu == "Kamikaze":
+
+            "Buraya kamikaze'ye ait fonksiyonlar eklenecek"
             pass
         
+        if self.secilen_görev_modu == None:
+            pass
 
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu()
+    import ipConfig #TODO GEÇİÇİ --- BİLGİSAYARDA SİMÜLASYON İÇİN
+    mavproxy2_obj = mavproxy2.MAVLink(ipConfig.wlan_ip()) # <----- Burada mission planner bilgisayarının ip'si verilecek.
+    #mavproxy2_obj = mavproxy2.MAVLink("169.254.228.236")
+    yer_istasyonu = Yerİstasyonu(mavproxy2_obj)
 
     try:
         "Ana Sunucuya giriş yapıyor."
