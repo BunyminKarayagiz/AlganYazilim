@@ -62,6 +62,7 @@ class Iha():
             iha.set_ap_mode(str(mod_kodu))
 
     def pwm_cek(self):
+        iha_obj.PWM_sunucusuna_baglan()
         while True:
             try:
                 pwm_verileri=self.TCP_pwm.client_recv_message().decode()
@@ -70,6 +71,7 @@ class Iha():
                 print("PWM SERVER: Veri çekilirken hata :",e)
 
     def yonelim_verisi_cek(self):
+        self.Yonelim_sunucusuna_baglan()
         while True:
             try:
                 print("YÖNELİM VERİSİ BEKLENİYOR..")
@@ -82,8 +84,6 @@ if __name__ == '__main__':
 
     iha_obj = Iha("10.80.1.71") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
-    iha_obj.Yonelim_sunucusuna_baglan()
-    iha_obj.PWM_sunucusuna_baglan()
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor

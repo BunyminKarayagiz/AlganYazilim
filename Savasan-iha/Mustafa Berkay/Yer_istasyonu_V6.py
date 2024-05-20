@@ -34,10 +34,12 @@ class Yerİstasyonu():
         #PWM sinyal üretiminin senkronizasyonu için kullanılan objeler
         #self.lock= asyncio.Lock()
         self.pwm_event=asyncio.Event()
+        self.pwm_release=False
 
         #Görüntüye rakibin yakalanması durumunda mod değişikliği yapacak obje
         self.yönelim_modundan_cikis_eventi=threading.Event()
         self.yönelim_modu=True
+
 
         #Kilitlenme yapılırken kullanılan parametreler
         self.locked_prev=0
@@ -152,9 +154,7 @@ class Yerİstasyonu():
                 print("UDP: GÖRÜNTÜ ALINIRKEN HATA..")
       
     def yönelim(self): #TODO YÖNELİM SUNUCUSUNDA BUG VAR. 
-
         self.Yönelim_sunucusu_oluştur()
-
         while True:
             try:
                 #bizim_telemetri=self.mavlink_obj.veri_kaydetme()
@@ -177,11 +177,13 @@ class Yerİstasyonu():
                 print("YONELİM YENİDEN BAĞLANIYOR...")
                 self.Server_yönelim.reconnect()
             
-            time.sleep(2) #TODO GEÇİÇİ
+            time.sleep(0.8) #TODO GEÇİÇİ
             if self.yönelim_modu==False:
                 print("YÖNELİM DEVRE DIŞI")
+                self.pwm_release=True
                 self.yönelim_modundan_cikis_eventi.wait()
                 self.yönelim_modundan_cikis_eventi.clear()
+                self.pwm_release=False
         
     def pwm_gönder(self,pwm_verileri):
         try:
@@ -236,7 +238,8 @@ class Yerİstasyonu():
         self.Server_udp.show(frame)
 
         try:
-            self.pwm_gönder(pwm_verileri)
+            if self.pwm_release==True:
+                self.pwm_gönder(pwm_verileri)
         except Exception as e:
             print("PWM SERVER : PWM GÖNDERİLİRKEN HATA...")
 

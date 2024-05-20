@@ -15,6 +15,7 @@ class iha_haberlesme():
     def send_video(self):
         while True:
             self.capture_obj.send_video()
+            print("FRAME SENT..")
 
     def hedef(self):
         pass
