@@ -11,7 +11,6 @@ class Server():
     def creat_server(self):
         self.tcp_socket.bind((self.server_ip, self.PORT))
         self.tcp_socket.listen()
-        print("TCP-Server is listening...")
         self.conn, self.addr = self.tcp_socket.accept()
         print(f"Connect with{self.addr}")
 
@@ -19,7 +18,6 @@ class Server():
         connection=False
         try:
             self.tcp_socket.listen()
-            print("TCP-Server is listening again...")
             self.conn, self.addr = self.tcp_socket.accept()
             print(f"Connect with{self.addr}")
             connection=True

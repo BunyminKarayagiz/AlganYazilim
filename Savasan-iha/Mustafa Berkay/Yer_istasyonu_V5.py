@@ -11,10 +11,9 @@ import asyncio
 import mavproxy2
 
 
-
 class Yerİstasyonu():
 
-    def __init__(self,mavlink_obj):
+    def __init__(self,mavlink_ip):
         self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name=("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt"))
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
@@ -23,8 +22,14 @@ class Yerİstasyonu():
         self.Server_pwm = Server_Tcp.Server(9001)
         self.Server_udp = Server_Udp.Server()
 
-        #M.PLANNER bilgisayarından telemetri çekmek için kullanılacak obje
-        self.mavlink_obj = mavlink_obj
+        #Sunucu durumları için kullanılacak değişkenler
+        self.görüntü_sunucusu=False
+        self.Yönelim_sunucusu=False
+        self.PWM_sunucusu=False
+        self.MAV_PROXY_sunucusu=False
+
+        #M.PLANNER bilgisayarından telemetri verisi çekmek için kullanılacak obje
+        self.mavlink_obj = mavproxy2.MAVLink(mavlink_ip)
 
         #PWM sinyal üretiminin senkronizasyonu için kullanılan objeler
         #self.lock= asyncio.Lock()
@@ -48,6 +53,8 @@ class Yerİstasyonu():
 
         #GÖREV_MODU SEÇİMİ #TODO-Daha yapılmadı. İHA'DAN ALINMASI GEREKİYOR.
         self.secilen_görev_modu="kilitlenme"
+        
+        self.frame=0
 
     def anasunucuya_baglan(self, kullanici_adi, sifre):
         "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
@@ -58,49 +65,73 @@ class Yerİstasyonu():
             print(f"\x1b[{31}m{'Ana Sunucuya Bağlanıldı: ' + durum_kodu}\x1b[0m")  # Ana sunucuya girerkenki durum kodu.
             self.ana_sunucuya_giris_durumu = True
         return self.ana_sunucuya_giris_durumu
-
+    
     def Görüntü_sunucusu_oluştur(self):
-        connection=False
-        while not connection:
+        connection_status=False
+        while not connection_status:
             try:
                 self.Server_udp.create_server()
-                connection=True
+                connection_status=True
+                print("UDP : SERVER OLUŞTURULDU")
             except (ConnectionError , Exception) as e:
-                print("UDP SERVER oluşturma hatası: ", e)
+                print("UDP SERVER: oluştururken hata : ", e)
             #    print("UDP SERVER'A 3 saniye içinden yeniden bağlanılıyor...\n")
             #   self.Server_udp.close_socket()
             #   self.Server_udp = Server_Udp.Server()
             #   self.Server_udp.create_server()
-
+        self.görüntü_sunucusu=connection_status
+        return connection_status
+    
     def Yönelim_sunucusu_oluştur(self):
         connection_status=False
         while not connection_status:
             try:
-                print("Yönelim sunucusu oluşturuluyor.")
                 self.Server_yönelim.creat_server()
                 connection_status=True
+                print("YONELİM : SERVER OLUŞTURULDU")
+                print("Connection status:",connection_status)
             except (ConnectionError, Exception) as e:
                 print("YÖNELİM SERVER: oluştururken hata : ", e , " \n")
                 print("YÖNELİM SERVER: yeniden bağlanılıyor...\n")
                 connection_status=self.Server_yönelim.reconnect()
+                if connection_status==True:
+                    print("YONELİM : SERVER OLUŞTURULDU-RETRY")
+        self.Yönelim_sunucusu=connection_status
         return connection_status
 
     def PWM_sunucusu_oluştur(self):
-        connection=False
-        while not connection:
+        connection_status=False
+        while not connection_status:
             try:
                 self.Server_pwm.creat_server()
-                connection=True
+                connection_status=True
+                print("PWM : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
                 print("PWM SERVER: oluştururken hata : ", e , " \n")
                 print("PWM SERVER: yeniden bağlanılıyor...\n")
-                self.Server_pwm.close_socket()
-                self.Server_pwm = Server_Tcp.Server(9001)
-                self.Server_pwm.creat_server()
-        return connection
+                self.Server_pwm.reconnect()
+                if connection_status==True:
+                    print("PWM : SERVER OLUŞTURULDU\n")
+        self.Yönelim_sunucusu=connection_status
+        return connection_status
+
+    def MAV_PROXY_sunucusu_oluştur(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.mavlink_obj.connect()
+                connection_status=True
+                print("MAVLINK : SERVER OLUŞTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                print("MAVLINK SERVER: oluştururken hata : ", e , " \n")
+                print("MAVLINK SERVER: yeniden bağlanılıyor...\n")
+                connection_status=self.mavlink_obj.connect()
+        self.MAV_PROXY_sunucusu=connection_status
+        return connection_status
+
 
     def Yolo_frame_işleme(self,frame):
-        
+
         "Gelen frame yolo modeline sokuluyor"
         results,frame=yer_istasyonu.yolo_model.get_results(frame)
         xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
@@ -110,71 +141,61 @@ class Yerİstasyonu():
         return frame,lockedOrNot,pwm_verileri
 
     def görüntü_çek(self):
-        frame= self.Server_udp.recv_frame_from_client()
-        return frame
-
-    def mavlink_telemetri(self):
-        return self.mavlink_obj.veri_kaydetme()
-    
-    def mavlink_connect(self):
-        self.mavlink_obj.connect() #TODO Bağlantı kurulamaz ise burada kod kilitlenecek(opsiyonel :) ) ve yeniden deneyecek.
-
+            
+            try:
+                frame= self.Server_udp.recv_frame_from_client()
+                return frame
+            except:
+                print("UDP: GÖRÜNTÜ ALINIRKEN HATA..")
+      
     def yönelim(self):
-        yer_istasyonu.Yönelim_sunucusu_oluştur()    
-        self.mavlink_connect()
-
-    
 
         while True:
-            
-            bizim_telemetri=self.mavlink_telemetri()
-            rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
-            yönelim_verisi= 0
-            "------------------------"
-            "Yönelim için değerler gönderiliyor"
-            "Buralar doldurulacak" #TODO
-            "------------------------"
             try:
+                #bizim_telemetri=self.mavlink_obj.veri_kaydetme()
+                #print(bizim_telemetri)
+                #rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
+                yönelim_verisi= 0
+                "------------------------"
+                "Yönelim için değerler gönderiliyor"
+                "Buralar doldurulacak" #TODO
+                "------------------------"
+            except Exception as e:
+                print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
+
+            try:
+                print("YÖNELİM YAPILIYOR....")
                 self.Server_yönelim.send_data_to_client(json.dumps(yönelim_verisi).encode())
-            except:
-                print("ERROR : YONELİM VERİSİ GÖNDERİLİRKEN HATA")
+            except Exception as e:
+                print("YONELİM : VERİSİ GÖNDERİLİRKEN HATA --> ",e)    
                 print("YONELİM YENİDEN BAĞLANIYOR...")
-                connection=False
-                while not connection:
-                    connection=self.Server_yönelim.reconnect()
-                    time.sleep(2) #TODO GEÇİÇİ
-                
-            print("YÖNELİM YAPILIYOR....")
-            time.sleep(1) # TODO GEÇİÇİ
+                self.Yönelim_sunucusu_oluştur()
+            
+            time.sleep(1) #TODO GEÇİÇİ
             if self.yönelim_modu==False:
                 print("YÖNELİM DEVRE DIŞI")
                 self.yönelim_modundan_cikis_eventi.wait()
                 self.yönelim_modundan_cikis_eventi.clear()
         
-    async def pwm_gönder(self,pwm_verileri):
-
-        yer_istasyonu.PWM_sunucusu_oluştur()  
-
+    def pwm_gönder(self,pwm_verileri):
         try:
-            await self.pwm_event.wait()
             self.Server_pwm.send_data_to_client(json.dumps(pwm_verileri).encode())
         except Exception as e:
             print("PWM SUNUCU HATASI : ",e)
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
             self.PWM_sunucusu_oluştur()
-            asyncio.sleep(1)
 
-    async def kilitlenme_kontrol(self,frame,lockedOrNot):
+    async def kilitlenme_kontrol(self,frame,lockedOrNot,pwm_verileri):
+
         self.new_frame_time=time.time()
 
         "Rakip kilitlenme"
         if lockedOrNot == 1 and self.locked_prev== 0:
             self.start_time=time.time()
-            
             self.start_now =datetime.datetime.now()
             cv2.putText(img=frame,text="HEDEF GORULDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
             self.locked_prev=1
-            
+
             #Hedef Görüldü. Yönelim modu devre dışı.
             self.yönelim_modu=False
 
@@ -191,14 +212,14 @@ class Yerİstasyonu():
         if lockedOrNot == 1 and self.locked_prev== 1:
             self.elapsed_time= time.time()- self.start_time
             cv2.putText(img=frame,text=str(round(self.elapsed_time,3)),org=(50,370),fontFace=1,fontScale=1.5,color=(0,255,0),thickness=2)
-            
+
             if self.is_locked == 0:
                 cv2.putText(img=frame,text="KILITLENIYOR",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
             if self.elapsed_time >= 4.0:
                 cv2.putText(img=frame,text="KILITLENDI",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
                 kilitlenme_bilgisi=True
                 self.is_locked=1
-                
+
                 #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
                 self.yönelim_modu=True
                 self.yönelim_modundan_cikis_eventi.set()
@@ -206,7 +227,14 @@ class Yerİstasyonu():
         self.pwm_event.set()
         fps = 1/(self.new_frame_time-self.prev_frame_time)
         cv2.putText(img=frame,text="FPS:"+str(int(fps)),org=(50,50),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
+
         self.Server_udp.show(frame)
+
+        try:
+            self.pwm_gönder(pwm_verileri)
+        except Exception as e:
+            print("PWM SERVER : PWM GÖNDERİLİRKEN HATA...")
+
         self.prev_frame_time=time.time()
 
         if self.is_locked == 1 and self.sent_once == 0:
@@ -230,43 +258,45 @@ class Yerİstasyonu():
                 self.ana_sunucu.sunucuya_postala(json.dumps(kilitlenme_bilgisi))
                 self.sent_once = 1
 
-    async def coroutine(self,frame,lockedOrNot,pwm_verileri):
-
-        task1= asyncio.create_task(self.kilitlenme_kontrol(frame,lockedOrNot))
-        await task1
-        task2= asyncio.create_task(self.pwm_gönder(pwm_verileri))
-        await task2
-
     def kilitlenme_görevi(self):
-        
         while True:
-           frame=self.görüntü_çek()
-           frame = cv2.flip(frame,0) 
-           frame,lockedOrNot,pwm_verileri = self.Yolo_frame_işleme(frame)
-           asyncio.run(self.coroutine(frame,lockedOrNot,pwm_verileri))
+            try:
+                frame=self.görüntü_çek()
+                frame = cv2.flip(frame,0)
+                frame,lockedOrNot,pwm_verileri = self.Yolo_frame_işleme(frame)
+                asyncio.run(self.kilitlenme_kontrol(frame,lockedOrNot,pwm_verileri))
+            except Exception as e:
+                print("KİLİTLENME GÖREVİ HATA : ",e) #TODO doldurulacak
+                pass
 
     def GOREV_KONTROL(self):
         
         if self.secilen_görev_modu == "kilitlenme":
-                Yönelim_threadi = threading.Thread(target= yer_istasyonu.yönelim)
+                Yönelim_threadi = threading.Thread(target=self.yönelim)
                 kilitlenme_görevi_thread = threading.Thread(target=self.kilitlenme_görevi)
                 kilitlenme_görevi_thread.start()
                 Yönelim_threadi.start()
 
         if self.secilen_görev_modu == "Kamikaze":
-
             "Buraya kamikaze'ye ait fonksiyonlar eklenecek"
             pass
         
         if self.secilen_görev_modu == None:
             pass
 
+    def sunuculari_oluştur(self):
+        t1=threading.Thread(target=self.Görüntü_sunucusu_oluştur)
+        t2=threading.Thread(target=self.PWM_sunucusu_oluştur)
+        t3=threading.Thread(target=self.Yönelim_sunucusu_oluştur)
+       # t4=threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
+        t1.start()
+        t2.start()
+        t3.start()
+       # t4.start()
 
 if __name__ == '__main__':
 
-    import ipConfig #TODO GEÇİÇİ --- BİLGİSAYARDA SİMÜLASYON İÇİN
-    mavproxy2_obj = mavproxy2.MAVLink(ipConfig.wlan_ip()) # <----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.236
-    yer_istasyonu = Yerİstasyonu(mavproxy2_obj)
+    yer_istasyonu = Yerİstasyonu("10.80.1.71") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.236
 
     try:
         "Ana Sunucuya giriş yapıyor."
@@ -278,11 +308,9 @@ if __name__ == '__main__':
             giris_kodu = yer_istasyonu.anasunucuya_baglan("algan", "53SnwjQ2sQ")
             connection=True
 
-    yer_istasyonu.Görüntü_sunucusu_oluştur()
+    yer_istasyonu.sunuculari_oluştur()
 
-                                              #DEBUG TODO Burada PWM sunucusu bir şekilde kodu kilitliyor. Bu nedenle PWM SUNUCUSU gelmeden diğer sunuculardan veri alamıyorum.
-                                                #Sorunun kaynağı, PWM sunucusunun iha_test.py kodunun içinde olması olabilir.
- 
+    time.sleep(3)
     görev_kontrol = threading.Thread(target=yer_istasyonu.GOREV_KONTROL)
 
     görev_kontrol.start()

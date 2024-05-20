@@ -53,21 +53,19 @@ class MAVLink:
         connection=False
         while not connection:
             try:
-                print("MAVLİNK BAĞLANTISI KURULUYOR...")
                 port=('tcp:' + (self.planner_ip)  + ':14550')
                 self.master = mavutil.mavlink_connection(port)
-                print("MAVLİNK BAĞLI")
                 connection=True
             except Exception as e:
-                print("MAVLİNK BAĞLANIRKEN HATA: ",e)
+                pass
         return connection
     
 
     def veri_kaydetme(self):
-        
-        try:
-            while True:
+            
+            try:
                 self.msg = self.master.recv_match(blocking=True)  # Burada mesajı tanımlıyoruz bu mesajlar bize farklı
+                
                 if self.msg.get_type() == 'GPS_RAW_INT':
                     self.enlem = self.msg.lat / 10000000
                     self.boylam = self.msg.lon / 10000000
@@ -85,36 +83,64 @@ class MAVLink:
                 elif self.msg.get_type() == 'HEARTBEAT':
                     self.custom_mode = self.msg.custom_mode
                     self.mod = self.mode_mapping.get(self.custom_mode, str(self.custom_mode))
+                elif self.msg.get_type() == 'SYSTEM_TIME':
+                    system_time_unix = self.msg.time_unix_usec / 1e6  # Mikrosaniyeden saniyeye çevirme
+                    system_time = time.gmtime(system_time_unix)
+                    gps_time = time.strftime('%Y-%m-%d %H:%M:%S',
+                                             system_time)  # Saat, dakika ve saniye cinsinden GPS zamanı alır #TODO PİXHAWK SAATİ ALINMALI!
+                    self.saat = (system_time.tm_hour)+3.0
+                    self.dakika = system_time.tm_min
+                    self.saniye = system_time.tm_sec
+                    self.milisaniye = int((system_time_unix % 1000000) / 1000)
+
                 self.telemetri = {
-                    "Emlen:": float(self.enlem),
-                    "Boylam": float(self.boylam),
-                    "Yükseklik": float(self.yukseklik),
-                    "Yer_Hızı": float(self.yer_hizi),
-                    "hava hızı": float(self.hava_hizi),
-                    "roll": float(self.roll),
-                    "pitch": float(self.pitch),
-                    "yaw": float(self.yaw),
-                    "mode": str(self.mod)
+                    "takim_numarasi": 1,
+                    "iha_enlem": float("{:.7f}".format(self.enlem)),
+                    "iha_boylam": float("{:.7f}".format(self.boylam)),
+                    "iha_irtifa": float("{:.2f}".format(self.yukseklik)),
+                    "iha_dikilme": float("{:.2f}".format(self.pitch)),
+                    "iha_yonelme": float("{:.2f}".format(self.yaw)),
+                    "iha_yatis": float("{:.2f}".format(self.roll)),
+                    "iha_hiz": float("{:.2f}".format(self.yer_hizi)),
+                    "iha_batarya": self.batarya,
+                    "iha_otonom": 0,
+                    "iha_kilitlenme": 0,
+                    "hedef_merkez_X": 0,
+                    "hedef_merkez_Y": 0,
+                    "hedef_genislik": 0,
+                    "hedef_yukseklik": 0,
+                    "gps_saati": {
+                        "saat": self.saat,
+                        "dakika": self.dakika,
+                        "saniye": self.saniye,
+                        "milisaniye": self.milisaniye
+                    },
+                    "iha_mode": self.mod,
                 }
-                print(self.telemetri)
-                return self.telemetri
+                while True:
+                    if time.time() - self.gonderilen_zaman < 1:
+                        break
+                    else:
+                        print(self.telemetri)
+                        self.gonderilen_zaman = time.time()
+                        break
             
-        except Exception as e:
-            print("MAVLİNK VERİ ALIRKEN HATA : ",e)
-            connection=False
-            while not connection:
-                connection=self.connect()
+            except Exception as e:
+                print("MAVLİNK VERİ ALIRKEN HATA : ",e)
+                connection=False
+                while not connection:
+                    connection=self.connect()
                 
 
-
-""" KOD TEST ----------
+"""
+#KOD TEST ----------
 try:
-    maVLink = MAVLink()
+    maVLink = MAVLink("localhost")
     maVLink.connect()
-    maVLink.veri_kaydetme()
+    while True:
+        maVLink.veri_kaydetme()
 except KeyboardInterrupt:
     pass
 finally:
     print("görev tamamlandı")
-
-    """
+"""
