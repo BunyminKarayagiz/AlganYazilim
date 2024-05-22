@@ -71,7 +71,6 @@ class Yerİstasyonu():
     
     def Görüntü_sunucusu_oluştur(self):
         connection_status=False
-        
         while not connection_status:
             try:
                 self.Server_udp.create_server()
@@ -82,7 +81,8 @@ class Yerİstasyonu():
             #    print("UDP SERVER'A 3 saniye içinden yeniden bağlanılıyor...\n")
             #   self.Server_udp.close_socket()
             #   self.Server_udp = Server_Udp.Server()
-            #   self.Server_udp.create_server()
+            #   self.Server_udp.create_server() #TODO DÜZENLEME GELEBİLİR
+                
         self.görüntü_sunucusu=connection_status
         return connection_status
     
@@ -94,12 +94,10 @@ class Yerİstasyonu():
                 connection_status=True
                 print("YONELİM : SERVER OLUŞTURULDU")
             except (ConnectionError, Exception) as e:
-                    
                     print("YÖNELİM SERVER: oluştururken hata : ", e , " \n")
                     print("YÖNELİM SERVER: yeniden bağlanılıyor...\n")
                     connection_status=self.Server_yönelim.reconnect()
                     print("YONELİM : SERVER OLUŞTURULDU.")
-
 
         self.Yönelim_sunucusu=connection_status
         
@@ -114,8 +112,8 @@ class Yerİstasyonu():
                 print("PWM SERVER: oluştururken hata : ", e , " \n")
                 print("PWM SERVER: yeniden bağlanılıyor...\n")
                 self.Server_pwm.reconnect()
-                if connection_status==True:
-                    print("PWM : SERVER OLUŞTURULDU\n")
+                print("PWM : SERVER OLUŞTURULDU\n")
+        
         self.Yönelim_sunucusu=connection_status
         return connection_status
 
@@ -132,8 +130,6 @@ class Yerİstasyonu():
                 connection_status=self.mavlink_obj.connect()
         self.MAV_PROXY_sunucusu=connection_status
         return connection_status
-
-
 
     def Yolo_frame_işleme(self,frame):
 
@@ -157,8 +153,8 @@ class Yerİstasyonu():
         self.Yönelim_sunucusu_oluştur()
         while True:
             try:
-                #bizim_telemetri=self.mavlink_obj.veri_kaydetme()
-                #print(bizim_telemetri)
+                bizim_telemetri=self.mavlink_obj.veri_kaydetme()
+                print(bizim_telemetri)
                 #rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
                 yönelim_verisi= 0
                 "------------------------"
@@ -299,15 +295,15 @@ class Yerİstasyonu():
         t1=threading.Thread(target=self.Görüntü_sunucusu_oluştur)
         t2=threading.Thread(target=self.PWM_sunucusu_oluştur)
         t3=threading.Thread(target=self.Yönelim_sunucusu_oluştur)
-        #t4=threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
+        t4=threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
         t1.start()
         t2.start()
         t3.start()
-        #t4.start()
+        t4.start()
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.71") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.236
+    yer_istasyonu = Yerİstasyonu("10.0.0.239") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.239
 
     try:
         "Ana Sunucuya giriş yapıyor."
