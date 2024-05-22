@@ -7,6 +7,8 @@ import time
 import threading
 import Client_Tcp
 
+import ipConfig #UÇAKTA BU BULUNMAYACAK #TODO
+
 
 class Iha():
     def __init__(self,host_ip) -> None:
@@ -21,8 +23,9 @@ class Iha():
             try:
                 self.TCP_yonelim.connect_to_server()
                 connection=True
+                print("YONELIM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
-                print("YONELIM SERVER: baglanırken hatası: ", e)
+                print("YONELIM SERVER: baglanırken hata: ", e)
 
     def PWM_sunucusuna_baglan(self):
         connection=False
@@ -30,8 +33,9 @@ class Iha():
             try:
                 self.TCP_pwm.connect_to_server()
                 connection=True
+                print("PWM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
-                print("PWM SERVER: baglanırken hatası: ", e)
+                print("PWM SERVER: baglanırken hata: ", e)
 
     def IHA_MissionPlanner_Connect(self, tcp_port):
         parser = argparse.ArgumentParser()
@@ -58,6 +62,7 @@ class Iha():
             iha.set_ap_mode(str(mod_kodu))
 
     def pwm_cek(self):
+        iha_obj.PWM_sunucusuna_baglan()
         while True:
             try:
                 pwm_verileri=self.TCP_pwm.client_recv_message().decode()
@@ -66,24 +71,22 @@ class Iha():
                 print("PWM SERVER: Veri çekilirken hata :",e)
 
     def yonelim_verisi_cek(self):
+        self.Yonelim_sunucusuna_baglan()
         while True:
             try:
-                yonelim_verisi=self.TCP_yonelim.client_recv_message()
+                print("YÖNELİM VERİSİ BEKLENİYOR..")
+                yonelim_verisi=json.loads(self.TCP_yonelim.client_recv_message())                
                 print("YONELIM VERISI: ",yonelim_verisi)
             except Exception as e:
                 print("YONELIM SERVER: Veri çekilirken hata :",e)
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.0.0.236")
-    iha_path = iha_obj.IHA_Raspberry_Connect()
+    iha_obj = Iha("10.80.1.71") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
-
-    # Start PWM thread
-    iha_obj.Yonelim_sunucusuna_baglan()
-    iha_obj.PWM_sunucusuna_baglan()
 
     pwm_thread = threading.Thread(target=iha_obj.pwm_cek)
     yonelim_thread= threading.Thread(target=iha_obj.yonelim_verisi_cek)

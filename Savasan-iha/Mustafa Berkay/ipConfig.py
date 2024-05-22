@@ -17,4 +17,8 @@ def ethernet_ip_for_teknofest():
         if scan:
             if 'ipv4' in i:
                 return i.split(':')[1].strip()
-
+            
+"""
+print(wlan_ip())
+print(type(wlan_ip()))
+"""
