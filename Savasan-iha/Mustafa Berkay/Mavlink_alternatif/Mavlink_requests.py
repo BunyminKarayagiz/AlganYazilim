@@ -10,7 +10,7 @@ import time
 from pymavlink import mavutil
 
 # Create the connection
-master = mavutil.mavlink_connection('tcpin:127.0.0.1:14550')
+master = mavutil.mavlink_connection('udpin:127.0.0.1:14550')
 # Wait a heartbeat before sending commands
 master.wait_heartbeat()
 

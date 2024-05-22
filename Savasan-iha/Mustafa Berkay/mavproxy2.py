@@ -8,7 +8,6 @@ class MAVLink:
         self.mod = None
         self.custom_mode = None
         self.batarya = 0.0
-        self.master = 0.0
         self.msg = None
         self.port = None
         self.enlem = 0.0
@@ -20,6 +19,11 @@ class MAVLink:
         self.pitch = 0.0
         self.yaw = 0.0
         self.mode = None
+        self.saat= 0.0
+        self.dakika= 0
+        self.saniye= 0 
+        self.milisaniye = 0
+        self.gonderilen_zaman = 0
 
         self.mode_mapping = {
             0: "MANUAL",
@@ -65,7 +69,7 @@ class MAVLink:
             
             try:
                 self.msg = self.master.recv_match(blocking=True)  # Burada mesajı tanımlıyoruz bu mesajlar bize farklı
-                
+            
                 if self.msg.get_type() == 'GPS_RAW_INT':
                     self.enlem = self.msg.lat / 10000000
                     self.boylam = self.msg.lon / 10000000
@@ -86,8 +90,8 @@ class MAVLink:
                 elif self.msg.get_type() == 'SYSTEM_TIME':
                     system_time_unix = self.msg.time_unix_usec / 1e6  # Mikrosaniyeden saniyeye çevirme
                     system_time = time.gmtime(system_time_unix)
-                    gps_time = time.strftime('%Y-%m-%d %H:%M:%S',
-                                             system_time)  # Saat, dakika ve saniye cinsinden GPS zamanı alır #TODO PİXHAWK SAATİ ALINMALI!
+                    #gps_time = time.strftime('%Y-%m-%d %H:%M:%S',
+                    #                         system_time)  # Saat, dakika ve saniye cinsinden GPS zamanı alır #TODO PİXHAWK SAATİ ALINMALI!
                     self.saat = (system_time.tm_hour)+3.0
                     self.dakika = system_time.tm_min
                     self.saniye = system_time.tm_sec
@@ -130,12 +134,13 @@ class MAVLink:
                 connection=False
                 while not connection:
                     connection=self.connect()
-                
+            
+            
 
 """
 #KOD TEST ----------
 try:
-    maVLink = MAVLink("localhost")
+    maVLink = MAVLink("10.0.0.240") #Mission planner bilgisayarı ip'si (10.0.0.240)
     maVLink.connect()
     while True:
         maVLink.veri_kaydetme()
@@ -144,3 +149,4 @@ except KeyboardInterrupt:
 finally:
     print("görev tamamlandı")
 """
+
