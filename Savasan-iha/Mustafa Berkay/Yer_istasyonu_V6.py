@@ -154,7 +154,7 @@ class Yerİstasyonu():
         while True:
             try:
                 bizim_telemetri=self.mavlink_obj.veri_kaydetme()
-                print(bizim_telemetri)
+                print("Telemetri:",bizim_telemetri)
                 #rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
                 yönelim_verisi= 0
                 "------------------------"
@@ -165,7 +165,6 @@ class Yerİstasyonu():
                 print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
 
             try:
-                print("YÖNELİM YAPILIYOR....")
                 self.Server_yönelim.send_data_to_client(json.dumps(yönelim_verisi).encode())
 
             except Exception as e:
@@ -173,7 +172,7 @@ class Yerİstasyonu():
                 print("YONELİM YENİDEN BAĞLANIYOR...")
                 self.Server_yönelim.reconnect()
             
-            time.sleep(0.8) #TODO GEÇİÇİ
+            time.sleep(0.2) #TODO GEÇİÇİ
             if self.yönelim_modu==False:
                 print("YÖNELİM DEVRE DIŞI")
                 self.pwm_release=True
@@ -187,7 +186,7 @@ class Yerİstasyonu():
         except Exception as e:
             print("PWM SUNUCU HATASI : ",e)
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
-            self.PWM_sunucusu_oluştur()
+            self.Server_pwm.reconnect()
 
     async def kilitlenme_kontrol(self,frame,lockedOrNot,pwm_verileri):
 
@@ -205,8 +204,8 @@ class Yerİstasyonu():
 
         if lockedOrNot == 0 and self.locked_prev== 1:
             cv2.putText(img=frame,text="HEDEF KAYBOLDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
-            self.locked_prev=0
-            self.is_locked=0
+            self.locked_prev= 0
+            self.is_locked= 0
             self.sent_once = 0
 
             #Hedef kayboldu. Yönelim Moduna geri dön.
@@ -263,9 +262,7 @@ class Yerİstasyonu():
                 self.sent_once = 1
 
     def kilitlenme_görevi(self):
-
         self.Görüntü_sunucusu_oluştur()
-
         while True:
             try:
                 frame=self.görüntü_çek()
@@ -296,14 +293,14 @@ class Yerİstasyonu():
         t2=threading.Thread(target=self.PWM_sunucusu_oluştur)
         t3=threading.Thread(target=self.Yönelim_sunucusu_oluştur)
         t4=threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
-        t1.start()
+        #t1.start()
         t2.start()
-        t3.start()
-        t4.start()
+        #t3.start()
+        #t4.start()
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu("10.0.0.239") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.239
+    yer_istasyonu = Yerİstasyonu("10.0.0.240") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
     try:
         "Ana Sunucuya giriş yapıyor."
@@ -315,7 +312,7 @@ if __name__ == '__main__':
             giris_kodu = yer_istasyonu.anasunucuya_baglan("algan", "53SnwjQ2sQ")
             connection=True
 
-    #yer_istasyonu.sunuculari_oluştur()
+    yer_istasyonu.sunuculari_oluştur()
 
     time.sleep(2)
     görev_kontrol = threading.Thread(target=yer_istasyonu.GOREV_KONTROL)

@@ -8,7 +8,6 @@ class MAVLink:
         self.mod = None
         self.custom_mode = None
         self.batarya = 0.0
-        self.master = 0.0
         self.msg = None
         self.port = None
         self.enlem = 0.0
@@ -20,10 +19,10 @@ class MAVLink:
         self.pitch = 0.0
         self.yaw = 0.0
         self.mode = None
-        self.saat:float= 0.0
-        self.dakika:int= 0
-        self.saniye:int= 0 
-        self.milisaniye:int = 0
+        self.saat= 0.0
+        self.dakika= 0
+        self.saniye= 0 
+        self.milisaniye = 0
         self.gonderilen_zaman = 0
 
         self.mode_mapping = {
@@ -141,7 +140,7 @@ class MAVLink:
 """
 #KOD TEST ----------
 try:
-    maVLink = MAVLink("10.0.0.239") #Mission planner bilgisayarı ip'si (10.0.0.239)
+    maVLink = MAVLink("10.0.0.240") #Mission planner bilgisayarı ip'si (10.0.0.240)
     maVLink.connect()
     while True:
         maVLink.veri_kaydetme()

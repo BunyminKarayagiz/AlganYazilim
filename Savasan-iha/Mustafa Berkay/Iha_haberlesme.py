@@ -23,7 +23,7 @@ class iha_haberlesme():
 
 if __name__ == "__main__":
 
-    iha_obj=iha_haberlesme(ipConfig.wlan_ip())
+    iha_obj=iha_haberlesme("10.0.0.236")
     
     video_thread = threading.Thread(target=iha_obj.send_video)
     video_thread.start()
