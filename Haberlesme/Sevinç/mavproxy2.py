@@ -2,7 +2,10 @@ import time
 
 from pymavlink import mavutil  # gerekli olan kütüphane yüklenir
 class MAVLink:
+
     def __init__(self):
+
+        self.gonderilen_zaman = time.time()
         self.telemetri = None
         self.mod = None
         self.custom_mode = None
@@ -19,6 +22,11 @@ class MAVLink:
         self.pitch = 0.0
         self.yaw = 0.0
         self.mode = None
+        self.saat=0.0
+        self.dakika=0.0
+        self.saniye=0.0
+        self.milisaniye=0.0
+
 
         self.mode_mapping = {
             0: "MANUAL",
@@ -48,7 +56,7 @@ class MAVLink:
         }
     """burada öncelikle bağlanacağımız mision plannerdan ctrl-f yaparak açtığımız pencereden mavlink kısmına giriyoruz. oradan tcp host 14550 yi seçip altından da baudrate i seçiyoruz.
     uzaktaki bilgisayara bağlanmak istediğimiz için write access kutucuğunu işaretleyip bağlan kısmına tıklıyoruz."""
-    def connect(self, port='tcp:10.80.1.31:14550'):
+    def connect(self, port='tcp:10.80.1.72:14550'):
         self.master = mavutil.mavlink_connection(port)
 
 
@@ -73,24 +81,59 @@ class MAVLink:
             elif self.msg.get_type() == 'HEARTBEAT':
                 self.custom_mode = self.msg.custom_mode
                 self.mod = self.mode_mapping.get(self.custom_mode, str(self.custom_mode))
+            elif self.msg.get_type() == 'SYSTEM_TIME':
+                system_time_unix = self.msg.time_unix_usec / 1e6  # Mikrosaniyeden saniyeye çevirme
+                system_time = time.gmtime(system_time_unix)
+                gps_time = time.strftime('%Y-%m-%d %H:%M:%S',
+                                         system_time)  # Saat, dakika ve saniye cinsinden GPS zamanı alır
+                self.saat = (system_time.tm_hour)+3.0
+                self.dakika = system_time.tm_min
+                self.saniye = system_time.tm_sec
+                self.milisaniye = int((system_time_unix % 1000000) / 1000)
+
             self.telemetri = {
-                "Emlen:": float(self.enlem),
-                "Boylam": float(self.boylam),
-                "Yükseklik": float(self.yukseklik),
-                "Yer_Hızı": float(self.yer_hizi),
-                "hava hızı": float(self.hava_hizi),
-                "roll": float(self.roll),
-                "pitch": float(self.pitch),
-                "yaw": float(self.yaw),
-                "mode": str(self.mod)
+                "takim_numarasi": 1,
+                "iha_enlem": float("{:.7f}".format(self.enlem)),
+                "iha_boylam": float("{:.7f}".format(self.boylam)),
+                "iha_irtifa": float("{:.2f}".format(self.yukseklik)),
+                "iha_dikilme": float("{:.2f}".format(self.pitch)),
+                "iha_yonelme": float("{:.2f}".format(self.yaw)),
+                "iha_yatis": float("{:.2f}".format(self.roll)),
+                "iha_hiz": float("{:.2f}".format(self.yer_hizi)),
+                "iha_batarya": self.batarya,
+                "iha_otonom": 0,
+                "iha_kilitlenme": 0,
+                "hedef_merkez_X": 0,
+                "hedef_merkez_Y": 0,
+                "hedef_genislik": 0,
+                "hedef_yukseklik": 0,
+                "gps_saati": {
+                    "saat": self.saat,
+                    "dakika": self.dakika,
+                    "saniye": self.saniye,
+                    "milisaniye": self.milisaniye
+                },
+                "iha_mode": self.mod,
             }
-            print(self.telemetri)
+            while True:
+                if time.time() - self.gonderilen_zaman < 1:
+                    break
+                else:
+                    print(self.telemetri)
+                    self.gonderilen_zaman = time.time()
+                    break
+
 
 try:
     maVLink = MAVLink()
     maVLink.connect()
     maVLink.veri_kaydetme()
+
 except KeyboardInterrupt:
     pass
 finally:
     print("görev tamamlandı")
+
+
+
+
