@@ -1,6 +1,6 @@
 import time
 
-from pymavlink import mavutil  # gerekli olan kütüphane yüklenir
+from pymavlink import mavutil
 class MAVLink:
 
     def __init__(self):
@@ -56,8 +56,9 @@ class MAVLink:
         }
     """burada öncelikle bağlanacağımız mision plannerdan ctrl-f yaparak açtığımız pencereden mavlink kısmına giriyoruz. oradan tcp host 14550 yi seçip altından da baudrate i seçiyoruz.
     uzaktaki bilgisayara bağlanmak istediğimiz için write access kutucuğunu işaretleyip bağlan kısmına tıklıyoruz."""
-    def connect(self, port='tcp:10.80.1.72:14550'):
+    def connect(self, port='tcp:127.0.0.1:14550'):
         self.master = mavutil.mavlink_connection(port)
+        print("bağlantı başarılı")
 
 
     def veri_kaydetme(self):
@@ -133,7 +134,3 @@ except KeyboardInterrupt:
     pass
 finally:
     print("görev tamamlandı")
-
-
-
-
