@@ -8,6 +8,10 @@ class sunucuApi():
         self.url = url
         self.ses = requests.Session()
 
+    def get_hava_savunma_coord(self):
+        self.hss_koordinat = self.ses.get(self.url + '/api/hss_koordinatlari')
+        return self.hss_koordinat.status_code, self.hss_koordinat.text
+
     def sunucuya_giris(self, kadi, sifre):
         self.headers = {
             'Content-type': 'application/json',

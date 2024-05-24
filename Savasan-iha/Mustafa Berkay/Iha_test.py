@@ -67,15 +67,20 @@ class Iha():
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
 
-    def yonelim_verisi_cek(self):
+    def yönelim_yap(self):
         self.Yonelim_sunucusuna_baglan()
         while True:
             try:
                 print("YÖNELİM VERİSİ BEKLENİYOR..")
-                yonelim_verisi=json.loads(self.TCP_yonelim.client_recv_message())                
-                print("YONELIM VERISI: ",yonelim_verisi)
+                yönelim_yapılacak_rakip=json.loads(self.TCP_yonelim.client_recv_message())
+                print("YONELIM VERISI: ",yönelim_yapılacak_rakip)
             except Exception as e:
                 print("YONELIM SERVER: Veri çekilirken hata :",e)
+
+            #YÖNELİM VERİSİ İLE RAKİBE YÖNELİM YAPILACAK KISIM
+            """------------------------------------------------"
+            Burada yönelimi gerçekleştirecek pixhawk-dronekit kodu yazılacak.  #TODO
+            "-------------------------------------------------"""
 
 if __name__ == '__main__':
 
@@ -86,7 +91,7 @@ if __name__ == '__main__':
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
 
     pwm_thread = threading.Thread(target=iha_obj.pwm_cek)
-    yonelim_thread= threading.Thread(target=iha_obj.yonelim_verisi_cek)
+    yonelim_thread= threading.Thread(target=iha_obj.yönelim_yap)
     
     pwm_thread.start()
     yonelim_thread.start()
