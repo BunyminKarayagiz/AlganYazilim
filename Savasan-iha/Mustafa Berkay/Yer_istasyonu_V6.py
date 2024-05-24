@@ -4,7 +4,7 @@ from path import Plane
 import ana_sunucu_islemleri
 import threading
 import cv2
-import yolov5_deploy
+import YOLOv8_deploy
 import json
 import time,datetime
 import asyncio
@@ -15,7 +15,7 @@ import hesaplamalar
 class Yerİstasyonu():
 
     def __init__(self,mavlink_ip):     #TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
-        self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name=("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt"))
+        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
@@ -139,11 +139,9 @@ class Yerİstasyonu():
     def Yolo_frame_işleme(self,frame):
 
         "Gelen frame yolo modeline sokuluyor"
-        results,frame=yer_istasyonu.yolo_model.get_results(frame)
-        xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
-
-        "Modelden gelen değerler ile pwm değeri hesaplanıyor"
-        pwm_verileri=yer_istasyonu.yolo_model.coordinates_to_pwm(xCord,yCord)
+        pwm_verileri , frame =self.yolo_model.model_predict(frame)
+        #results,frame=yer_istasyonu.yolo_model.get_results(frame)
+        lockedOrNot = 0
         return frame,lockedOrNot,pwm_verileri
 
     def görüntü_çek(self):
@@ -284,7 +282,7 @@ class Yerİstasyonu():
                 frame=self.görüntü_çek()
                 frame = cv2.flip(frame,0)
                 frame,lockedOrNot,pwm_verileri = self.Yolo_frame_işleme(frame)
-                asyncio.run(self.routine(frame,lockedOrNot,pwm_verileri))
+                asyncio.run(self.kilitlenme_kontrol(frame,lockedOrNot,pwm_verileri))
             except Exception as e:
                 print("KİLİTLENME GÖREVİ HATA : ",e) #TODO doldurulacak
                 pass
