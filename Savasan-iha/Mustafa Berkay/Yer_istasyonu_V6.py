@@ -21,7 +21,7 @@ class Yerİstasyonu():
 
         self.Server_yönelim = Server_Tcp.Server(9002)
         self.Server_pwm = Server_Tcp.Server(9001)
-        self.Server_udp = Server_Udp.Server()   
+        self.Server_udp = Server_Udp.Server()  
 
         #Sunucu durumları için kullanılacak değişkenler
         self.görüntü_sunucusu=False
@@ -30,7 +30,7 @@ class Yerİstasyonu():
         self.MAV_PROXY_sunucusu=False
 
         #YÖNELİM yapılacak uçağın seçilmesi için kullanılacak obje
-        self.yönelim_obj=hesaplamalar()
+        self.yönelim_obj=hesaplamalar.Hesaplamalar()
 
         #M.PLANNER bilgisayarından telemetri verisi çekmek için kullanılacak obje
         self.mavlink_obj = mavproxy2.MAVLink(mavlink_ip)
@@ -62,6 +62,7 @@ class Yerİstasyonu():
         
         self.frame=0
         self.TCP_ONAYLAMA_KODU="ALGAN"
+        self.sunucu_saati:str = ""
 
     def anasunucuya_baglan(self, kullanici_adi, sifre):
         "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
@@ -152,17 +153,19 @@ class Yerİstasyonu():
                 return frame
             except:
                 print("UDP: GÖRÜNTÜ ALINIRKEN HATA..")
-      
+
+    #KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
+
     def yönelim(self): #TODO YÖNELİM SUNUCUSUNDA BUG VAR. 
         self.Yönelim_sunucusu_oluştur()
 
         while True:
             try:
-                bizim_telemetri=self.mavlink_obj.veri_kaydetme()
-                print("Telemetri:",bizim_telemetri)
-                rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
-                
-                yönelim_yapılacak_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri)
+                #bizim_telemetri=self.mavlink_obj.veri_kaydetme()
+                #print("Telemetri:",bizim_telemetri)
+                #rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
+                #yönelim_yapılacak_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri)
+                yönelim_yapılacak_rakip = 0
             except Exception as e:
                 print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
 
@@ -190,6 +193,11 @@ class Yerİstasyonu():
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
             self.Server_pwm.reconnect()
 
+    async def sunucu_saati(self):
+        sunucu_kod , sunucu_saat = self.ana_sunucu.sunucu_saati_al()    
+        if (sunucu_kod == 200):
+            self.sunucu_saati = sunucu_saat       
+    
     async def kilitlenme_kontrol(self,frame,lockedOrNot,pwm_verileri):
 
         self.new_frame_time=time.time()
@@ -263,19 +271,25 @@ class Yerİstasyonu():
                 self.ana_sunucu.sunucuya_postala(json.dumps(kilitlenme_bilgisi))
                 self.sent_once = 1
 
+    async def routine(self,frame,lockedOrNot,pwm_verileri):
+        task1 = asyncio.create_task(self.sunucu_saati)
+        await task1
+        task2 = asyncio.create_task(self.kilitlenme_kontrol(frame,lockedOrNot,pwm_verileri))
+        await task2
+
     def kilitlenme_görevi(self):
-
         self.Görüntü_sunucusu_oluştur()
-
         while True:
             try:
                 frame=self.görüntü_çek()
                 frame = cv2.flip(frame,0)
                 frame,lockedOrNot,pwm_verileri = self.Yolo_frame_işleme(frame)
-                asyncio.run(self.kilitlenme_kontrol(frame,lockedOrNot,pwm_verileri))
+                asyncio.run(self.routine(frame,lockedOrNot,pwm_verileri))
             except Exception as e:
                 print("KİLİTLENME GÖREVİ HATA : ",e) #TODO doldurulacak
                 pass
+
+    #KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
 
     def ANA_GOREV_KONTROL(self):
         
@@ -285,11 +299,12 @@ class Yerİstasyonu():
                 kilitlenme_görevi_thread.start()
                 Yönelim_threadi.start()
 
+
         if self.secilen_görev_modu == "Kamikaze":
             "Buraya kamikaze'ye ait fonksiyonlar eklenecek"
             pass
         
-        if self.secilen_görev_modu == None:
+        if self.secilen_görev_modu == "AUTO":
             pass
 
     def sunuculari_oluştur(self):
@@ -304,7 +319,7 @@ class Yerİstasyonu():
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu("10.0.0.240") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.114") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
     try:
         "Ana Sunucuya giriş yapıyor."
