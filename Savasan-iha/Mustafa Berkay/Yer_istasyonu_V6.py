@@ -9,24 +9,28 @@ import json
 import time,datetime
 import asyncio
 import mavproxy2
+import hesaplamalar
 
 
 class Yerİstasyonu():
 
-    def __init__(self,mavlink_ip):
+    def __init__(self,mavlink_ip):     #TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
         self.yolo_model = yolov5_deploy.Detection(capture_index=0,model_name=("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt"))
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
         self.Server_yönelim = Server_Tcp.Server(9002)
         self.Server_pwm = Server_Tcp.Server(9001)
-        self.Server_udp = Server_Udp.Server()
+        self.Server_udp = Server_Udp.Server()   
 
         #Sunucu durumları için kullanılacak değişkenler
         self.görüntü_sunucusu=False
         self.Yönelim_sunucusu=False
         self.PWM_sunucusu=False
         self.MAV_PROXY_sunucusu=False
+
+        #YÖNELİM yapılacak uçağın seçilmesi için kullanılacak obje
+        self.yönelim_obj=hesaplamalar()
 
         #M.PLANNER bilgisayarından telemetri verisi çekmek için kullanılacak obje
         self.mavlink_obj = mavproxy2.MAVLink(mavlink_ip)
@@ -53,7 +57,7 @@ class Yerİstasyonu():
         self.new_frame_time=0
         self.prev_frame_time=0
 
-        #GÖREV_MODU SEÇİMİ #TODO-Daha yapılmadı. İHA'DAN ALINMASI GEREKİYOR.
+        #GÖREV_MODU SEÇİMİ #TODO-Daha yapılmadı. İHA VEYA MİSSİON PLANNER BİLGİSAYARINDAN ALINMASI GEREKİYOR.
         self.secilen_görev_modu="kilitlenme"
         
         self.frame=0
@@ -151,21 +155,19 @@ class Yerİstasyonu():
       
     def yönelim(self): #TODO YÖNELİM SUNUCUSUNDA BUG VAR. 
         self.Yönelim_sunucusu_oluştur()
+
         while True:
             try:
                 bizim_telemetri=self.mavlink_obj.veri_kaydetme()
                 print("Telemetri:",bizim_telemetri)
-                #rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
-                yönelim_verisi= 0
-                "------------------------"
-                "Yönelim için değerler gönderiliyor"
-                "Buralar doldurulacak" #TODO
-                "------------------------"
+                rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
+                
+                yönelim_yapılacak_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri)
             except Exception as e:
                 print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
 
             try:
-                self.Server_yönelim.send_data_to_client(json.dumps(yönelim_verisi).encode())
+                self.Server_yönelim.send_data_to_client(json.dumps(yönelim_yapılacak_rakip).encode())
 
             except Exception as e:
                 print("YONELİM : VERİ GÖNDERİLİRKEN HATA --> ",e)    
@@ -262,7 +264,9 @@ class Yerİstasyonu():
                 self.sent_once = 1
 
     def kilitlenme_görevi(self):
+
         self.Görüntü_sunucusu_oluştur()
+
         while True:
             try:
                 frame=self.görüntü_çek()
@@ -273,7 +277,7 @@ class Yerİstasyonu():
                 print("KİLİTLENME GÖREVİ HATA : ",e) #TODO doldurulacak
                 pass
 
-    def GOREV_KONTROL(self):
+    def ANA_GOREV_KONTROL(self):
         
         if self.secilen_görev_modu == "kilitlenme":
                 Yönelim_threadi = threading.Thread(target=self.yönelim)
@@ -289,9 +293,9 @@ class Yerİstasyonu():
             pass
 
     def sunuculari_oluştur(self):
-        t1=threading.Thread(target=self.Görüntü_sunucusu_oluştur)
+        t1=threading.Thread(target=self.Görüntü_sunucusu_oluştur) #KİLİTLENME_GÖREVİ FONKSİYONUNDA KULLANILMIŞ
         t2=threading.Thread(target=self.PWM_sunucusu_oluştur)
-        t3=threading.Thread(target=self.Yönelim_sunucusu_oluştur)
+        t3=threading.Thread(target=self.Yönelim_sunucusu_oluştur) #YÖNELİM FONKSİYONUNDA KULLANILMIŞ
         t4=threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
         #t1.start()
         t2.start()
@@ -315,7 +319,7 @@ if __name__ == '__main__':
     yer_istasyonu.sunuculari_oluştur()
 
     time.sleep(2)
-    görev_kontrol = threading.Thread(target=yer_istasyonu.GOREV_KONTROL)
+    görev_kontrol = threading.Thread(target=yer_istasyonu.ANA_GOREV_KONTROL)
 
     görev_kontrol.start()
     görev_kontrol.join()
