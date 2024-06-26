@@ -181,7 +181,6 @@ class Yerİstasyonu():
                 self.yönelim_modundan_cikis_eventi.clear()
         
     async def pwm_gönder(self,pwm_verileri):
-
         try:
             await self.pwm_event.wait()
             self.Server_pwm.send_data_to_client(json.dumps(pwm_verileri).encode())
