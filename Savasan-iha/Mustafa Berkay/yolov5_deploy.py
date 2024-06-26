@@ -14,10 +14,9 @@ class Detection:
         print("Using Device: ", self.device)
 
     def load_model(self, model_name):
-        modelName = "bestuçak.pt"
-        if model_name:
-            model = torch.hub.load((os.getcwd()) + "\\ultralytics_yolov5_master", 'custom', source='local',
-                                   path=modelName, force_reload=True)
+        if model_name:                  # PATH değiştirilecek  TODO TODO TODO 
+            model = torch.hub.load("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\ultralytics_yolov5_master", 'custom', source='local',
+                                   path=model_name, force_reload=True)
         return model
 
     def score_frame(self, frame):
@@ -103,6 +102,6 @@ class Detection:
 
         cv2.destroyAllWindows()
 
-
-"""detector = Detection(capture_index=0, model_name="bestuçak.pt")
+"""         TODO PATH DÜZELTİLECEK TODO
+detector = Detection(capture_index=0, model_name="D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt")
 detector()"""

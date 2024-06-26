@@ -5,7 +5,7 @@ read time_var
 echo -e "ScriptRunner: $time_var seconds selected. \n"
 
 function run_python() {
-	python  helloworld.py
+	python  Iha_haberlesme.py
 }
 
 
