@@ -96,6 +96,7 @@ if __name__ == '__main__':
     pwm_thread.start()
     yonelim_thread.start()
     
+    """ #ESKI KONTROL KODU
     while True:
         try:
             if iha_path.servo6 > 1600 and iha_path.servo7 > 1600:
@@ -105,4 +106,54 @@ if __name__ == '__main__':
             elif iha_path.servo6 < 1400 and iha_path.servo7 > 1600:
                 iha_obj.change_mod("FBWA", iha_path)
         except Exception as e:
-            print(e)
+            print(e) """
+
+    if iha_path.servo6 > 1600 and iha_path.servo7 < 1400:  # ch6: High, ch8: LOW
+        mod = "kamikaze"
+        mesaj['iha_otonom'] = 1
+        try:
+            qr_enlem, qr_boylam = rakip[3]['qrEnlem'], rakip[3]['qrBoylam']
+            # qr_enlem, qr_boylam = 40.2308154, 29.0076506
+            qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
+            print("QR MESAFE", qr_mesafe)
+
+            if not qr_gidiyor and not kalkista and qr_mesafe > 0.15:  # and iha.pos_alt_rel > 100:
+                print('qr_gidiyor')
+
+                if iha_path.get_ap_mode() != "GUIDED":
+                    iha_path.set_ap_mode("GUIDED")
+                qr_git = LocationGlobalRelative(qr_enlem, qr_boylam, 100)
+                iha_path.set_rc_channel(3, 1500)
+                iha_path.goto(qr_git)
+                qr_gidiyor = True
+
+            if qr_mesafe < 0.08 and qr_gidiyor:  # 150 metre
+                if iha_path.get_ap_mode() != "FBWA":
+                    iha_path.set_ap_mode("FBWA")
+
+                iha_path.set_rc_channel(1, 1500)  # Channel 1 is for Roll Input,
+                iha_path.set_rc_channel(2, 1100)  # Channel 2 is for Pitch Input,
+                iha_path.set_rc_channel(3, 1100)  # Channel 3 is for Throttle Input,
+
+            if iha_path.pos_alt_rel < 60:
+                iha_path.set_rc_channel(1, 1500)
+                iha_path.set_rc_channel(2, 1900)
+                iha_path.set_rc_channel(3, 1600)
+                # 169.254.148.157
+                qr_gidiyor = False
+                kalkista = True
+
+            if kalkista and iha_path.pos_alt_rel < 80:
+                print("kalkiyor")
+                iha_path.set_rc_channel(1, 1500)
+                iha_path.set_rc_channel(2, 1900)
+                iha_path.set_rc_channel(3, 1600)
+
+            if kalkista and iha_path.pos_alt_rel > 30:
+                print("kalkis bitti AUTO")
+                if iha_path.get_ap_mode() != "AUTO":
+                    iha_path.set_ap_mode("AUTO")
+                kalkista = False
+
+        except Exception as e:
+            print("kamikazede problem var:" + str(e))
