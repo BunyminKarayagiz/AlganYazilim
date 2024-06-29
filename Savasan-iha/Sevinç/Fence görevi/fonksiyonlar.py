@@ -1,10 +1,14 @@
 import vincenty
 import matplotlib.pyplot as plt
+import numpy as np
+import sympy as sp
+from sympy import Eq
 import math
 
-home_konumu = (40.2306557, 29.0010148)
-x=5
 
+home_konumu = (40.2306557, 29.0010148)
+x=8 #bu uzaklık bizim yeni oluşturulan noktamının çemberden kaç merte uzakla oluşturulmasını belirleyecektir
+ucus_alanı=[(40.2330761, 29.0002155), (40.2331743, 29.0092814), (40.2302666, 29.0093029), (40.230709, 29.001857), (40.2321751, 29.0007842)]
 def wp_nokta_okuma(dosya_adi):
     with open(dosya_adi, 'r') as dosya:
         # Dosyadan her satırı oku
@@ -168,12 +172,6 @@ def kesisim_kontrol(nokta1, nokta2, cember):
         d = abs(nokta1[0] - h)
 
     return d <= r
-
-
-import numpy as np
-import sympy as sp
-from sympy import Eq
-
 
 def yeni_nokta_olusturma(nokta1, nokta2, cember):
     h, k, r = cember  # Çemberin merkezi (h, k) ve yarıçapı r
@@ -418,3 +416,83 @@ def nokta_gecerli_mi(nokta, fence_kartezyen, ucus_alanı_kartezyen):
         if nokta_alanın_içinde_mi(nokta, ucus_alanı_kartezyen) == False:
             return False
     return True
+
+
+import math
+
+
+def aci_hesaplama(a, b, c):
+    vektor_a = (a[0] - b[0], a[1] - b[1])
+    vektor_b = (c[0] - b[0], c[1] - b[1])
+
+    # İki vektörün iç çarpımını hesapla
+    ic_carpim = vektor_a[0] * vektor_b[0] + vektor_a[1] * vektor_b[1]
+
+    # Vektörlerin uzunluklarını hesapla
+    uzunluk_a = math.sqrt(vektor_a[0] ** 2 + vektor_a[1] ** 2)
+    uzunluk_b = math.sqrt(vektor_b[0] ** 2 + vektor_b[1] ** 2)
+
+    # İki vektör arasındaki açıyı hesapla
+    if uzunluk_a * uzunluk_b == 0:
+        return "Vektör uzunlukları sıfır olamaz."
+
+    cos_theta = ic_carpim / (uzunluk_a * uzunluk_b)
+    theta = math.degrees(math.acos(cos_theta))
+
+    return theta
+
+
+def genislet_ve_yakinlastir(onceki_nokta, orta_nokta, sonraki_nokta, genisletme_miktari):
+    """
+    Önceki, orta ve sonraki noktalar arasındaki açıyı genişletir ve noktaları yakınlaştırır.
+
+    Args:
+        onceki_nokta (tuple): Önceki noktanın koordinatları (x1, y1).
+        orta_nokta (tuple): Orta noktanın koordinatları (x2, y2).
+        sonraki_nokta (tuple): Sonraki noktanın koordinatları (x3, y3).
+        genisletme_miktari (float): Açıyı genişletmek için kullanılacak faktör (örneğin 0.9).
+
+    Returns:
+        tuple: Yeni orta noktanın koordinatları.
+    """
+    # İki vektörü hesapla
+    vektor_A = (sonraki_nokta[0] - orta_nokta[0], sonraki_nokta[1] - orta_nokta[1])
+    vektor_B = (orta_nokta[0] - onceki_nokta[0], orta_nokta[1] - onceki_nokta[1])
+
+    # İki vektörün iç çarpımını hesapla
+    dot_product = vektor_A[0] * vektor_B[0] + vektor_A[1] * vektor_B[1]
+
+    # Vektörlerin uzunluklarını hesapla
+    uzunluk_A = math.sqrt(vektor_A[0] ** 2 + vektor_A[1] ** 2)
+    uzunluk_B = math.sqrt(vektor_B[0] ** 2 + vektor_B[1] ** 2)
+
+    # Ensure no division by zero
+    if uzunluk_A == 0 or uzunluk_B == 0:
+        raise ValueError("One of the vectors has zero length")
+
+    # Açıyı hesapla (radyan cinsinden)
+    cos_aci = dot_product / (uzunluk_A * uzunluk_B)
+
+    # Clamp the value to be within the range [-1, 1]
+    cos_aci = max(-1.0, min(1.0, cos_aci))
+
+    aci_radyan = math.acos(cos_aci)
+
+    # Açıyı genişlet
+    yeni_aci_radyan = aci_radyan * genisletme_miktari
+
+    # Yeni orta noktanın yönünü hesapla
+    genisletme_vektoru = (
+        orta_nokta[0] - onceki_nokta[0],
+        orta_nokta[1] - onceki_nokta[1]
+    )
+
+    uzunluk_genisletme = math.sqrt(genisletme_vektoru[0] ** 2 + genisletme_vektoru[1] ** 2)
+
+    if uzunluk_genisletme == 0:
+        raise ValueError("Expansion vector has zero length")
+
+    yeni_orta_x = onceki_nokta[0] + uzunluk_genisletme * math.cos(yeni_aci_radyan)
+    yeni_orta_y = onceki_nokta[1] + uzunluk_genisletme * math.sin(yeni_aci_radyan)
+
+    return (yeni_orta_x, yeni_orta_y)
