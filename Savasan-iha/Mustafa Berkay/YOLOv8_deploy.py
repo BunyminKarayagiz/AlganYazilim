@@ -13,8 +13,8 @@ class Detection:
         print("Using Device: ", self.device)
 
     def model_predict(self, frame):
-        results = self.model.predict(frame)
-        #results = self.model.track(source=frame, conf=0.3, iou=0.5, show=False, tracker="botsort.yaml")
+        results = self.model.predict(frame, verbose=False)
+        #results = self.model.track(source=frame, conf=0.3, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
         # ----------------------detect/track etmediği durum için düzenlenecek----------------------------
         pwm_verileri = {'pwmx': 1500,
                         'pwmy': 1500}
@@ -66,6 +66,5 @@ class Detection:
         cap.release()
         cv2.destroyAllWindows()
 
-detection = Detection("C:\\Users\\demir\\Projects\\AlganYazilim\\Savasan-iha\\Eda\\models\\Model2024_V1.pt")
-detection()
-"""
+detection = Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+detection()"""

@@ -11,6 +11,19 @@ import asyncio
 import mavproxy2
 import hesaplamalar
 
+#KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
+
+class StoppableThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        super(StoppableThread, self).__init__(*args, **kwargs)
+        self._stop_event = threading.Event()
+        threading.wait()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
 
 class Yerİstasyonu():
 
@@ -19,13 +32,15 @@ class Yerİstasyonu():
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
-        self.Server_yönelim = Server_Tcp.Server(9002)
-        self.Server_pwm = Server_Tcp.Server(9001)
-        self.Server_udp = Server_Udp.Server()  
+        self.Server_yönelim = Server_Tcp.Server(9002,name="YÖNELİM")
+        self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
+        self.Server_udp = Server_Udp.Server()
+        self.Server_mod = Server_Tcp.Server(9003,name="MOD")
 
         #Sunucu durumları için kullanılacak değişkenler
         self.görüntü_sunucusu=False
         self.Yönelim_sunucusu=False
+        self.Mod_sunucusu=False
         self.PWM_sunucusu=False
         self.MAV_PROXY_sunucusu=False
 
@@ -43,7 +58,6 @@ class Yerİstasyonu():
         #Görüntüye rakibin yakalanması durumunda mod değişikliği yapacak obje
         self.yönelim_modundan_cikis_eventi=threading.Event()
         self.yönelim_modu=True
-
 
         #Kilitlenme yapılırken kullanılan parametreler
         self.locked_prev=0
@@ -63,7 +77,23 @@ class Yerİstasyonu():
         self.frame=0
         self.TCP_ONAYLAMA_KODU="ALGAN"
         self.sunucu_saati:str = ""
-
+    
+    #SUNUCU FONKSİYONLARI
+    def senkron_local_saat(self):
+        status_code, sunuc_saati =  self.ana_sunucu.sunucu_saati_al()
+        local_saat = datetime.datetime.today()
+        sunuc_saati = json.loads(sunuc_saati)
+        sunucu_saat, sunucu_dakika, sunucu_saniye, sunucu_milisaniye = sunuc_saati["saat"], sunuc_saati["dakika"], sunuc_saati["saniye"], sunuc_saati["milisaniye"]
+        sunucu_saati = datetime.datetime( year=local_saat.year, 
+                                          month=local_saat.month, 
+                                          day=local_saat.day, 
+                                          hour=sunucu_saat,
+                                          minute=sunucu_dakika,
+                                          second=sunucu_saniye,
+                                          microsecond=sunucu_milisaniye)
+        fark = abs(local_saat - sunucu_saati)
+        return fark
+        
     def anasunucuya_baglan(self, kullanici_adi, sifre):
         "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
         ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(
@@ -105,7 +135,7 @@ class Yerİstasyonu():
                     print("YONELİM : SERVER OLUŞTURULDU.")
 
         self.Yönelim_sunucusu=connection_status
-        
+
     def PWM_sunucusu_oluştur(self):
         connection_status=False
         while not connection_status:
@@ -122,6 +152,22 @@ class Yerİstasyonu():
         self.Yönelim_sunucusu=connection_status
         return connection_status
 
+    def Mod_sunucusu_oluştur(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_mod.creat_server()
+                connection_status=True
+                print("MOD : SERVER OLUŞTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                print("MOD SERVER: oluştururken hata : ", e , " \n")
+                print("MOD SERVER: yeniden bağlanılıyor...\n")
+                self.Server_pwm.reconnect()
+                print("MOD : SERVER OLUŞTURULDU\n")
+        
+        self.Mod_sunucusu_sunucusu=connection_status
+        return connection_status
+
     def MAV_PROXY_sunucusu_oluştur(self):
         connection_status=False
         while not connection_status:
@@ -135,6 +181,9 @@ class Yerİstasyonu():
                 connection_status=self.mavlink_obj.connect()
         self.MAV_PROXY_sunucusu=connection_status
         return connection_status
+
+
+    #Frame işleyen fonksiyonlar
 
     def Yolo_frame_işleme(self,frame):
 
@@ -152,8 +201,9 @@ class Yerİstasyonu():
             except:
                 print("UDP: GÖRÜNTÜ ALINIRKEN HATA..")
 
-    #KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
 
+    #KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
+                
     def yönelim(self): #TODO YÖNELİM SUNUCUSUNDA BUG VAR. 
         self.Yönelim_sunucusu_oluştur()
 
@@ -171,7 +221,7 @@ class Yerİstasyonu():
                 self.Server_yönelim.send_data_to_client(json.dumps(yönelim_yapılacak_rakip).encode())
 
             except Exception as e:
-                print("YONELİM : VERİ GÖNDERİLİRKEN HATA --> ",e)    
+                print("YONELİM : VERİ GÖNDERİLİRKEN HATA --> ",e)
                 print("YONELİM YENİDEN BAĞLANIYOR...")
                 self.Server_yönelim.reconnect()
             
@@ -182,6 +232,7 @@ class Yerİstasyonu():
                 self.yönelim_modundan_cikis_eventi.wait()
                 self.yönelim_modundan_cikis_eventi.clear()
                 self.pwm_release=False
+
         
     def pwm_gönder(self,pwm_verileri):
         try:
@@ -271,8 +322,8 @@ class Yerİstasyonu():
 
     async def routine(self,frame,lockedOrNot,pwm_verileri):
         task1 = asyncio.create_task(self.sunucu_saati)
-        await task1
         task2 = asyncio.create_task(self.kilitlenme_kontrol(frame,lockedOrNot,pwm_verileri))
+        await task1
         await task2
 
     def kilitlenme_görevi(self):
@@ -287,37 +338,66 @@ class Yerİstasyonu():
                 print("KİLİTLENME GÖREVİ HATA : ",e) #TODO doldurulacak
                 pass
 
+
+
     #KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
+    "------------------------------------"
 
-    def ANA_GOREV_KONTROL(self):
-        
-        if self.secilen_görev_modu == "kilitlenme":
-                Yönelim_threadi = threading.Thread(target=self.yönelim)
-                kilitlenme_görevi_thread = threading.Thread(target=self.kilitlenme_görevi)
-                kilitlenme_görevi_thread.start()
-                Yönelim_threadi.start()
+    def kamikaze():
+        pass
 
 
-        if self.secilen_görev_modu == "Kamikaze":
-            "Buraya kamikaze'ye ait fonksiyonlar eklenecek"
-            pass
-        
-        if self.secilen_görev_modu == "AUTO":
-            pass
+
+
+
+
+
+
+
+
+
+
+
+    "------------------------------------"
 
     def sunuculari_oluştur(self):
         t1=threading.Thread(target=self.Görüntü_sunucusu_oluştur) #KİLİTLENME_GÖREVİ FONKSİYONUNDA KULLANILMIŞ
         t2=threading.Thread(target=self.PWM_sunucusu_oluştur)
         t3=threading.Thread(target=self.Yönelim_sunucusu_oluştur) #YÖNELİM FONKSİYONUNDA KULLANILMIŞ
         t4=threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
+        t5=threading.Thread(target=self.Mod_sunucusu_oluştur)
         #t1.start()
         t2.start()
         #t3.start()
         #t4.start()
+        t5.start()
+
+        return t2,t5
+
+    def ANA_GOREV_KONTROL(self): # ANA GÖREV KONTROL DEĞİŞECEK #TODO
+        threads = {}
+        yer_istasyonu.Mod_sunucusu_oluştur()
+        self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
+
+        if self.secilen_görev_modu == "kilitlenme":
+                pwm_thread ,mod_thread =self.sunuculari_oluştur()
+
+                Yönelim_threadi = threading.Thread(target=self.yönelim)
+                kilitlenme_görevi_thread = threading.Thread(target=self.kilitlenme_görevi)
+                kilitlenme_görevi_thread.start()
+                Yönelim_threadi.start()
+
+
+        if self.secilen_görev_modu == "kamikaze":
+            "Buraya kamikaze'ye ait fonksiyonlar eklenecek"
+            pass
+        
+        if self.secilen_görev_modu == "AUTO":
+            pass
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.114") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.55") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
     try:
         "Ana Sunucuya giriş yapıyor."
@@ -329,9 +409,8 @@ if __name__ == '__main__':
             giris_kodu = yer_istasyonu.anasunucuya_baglan("algan", "53SnwjQ2sQ")
             connection=True
 
-    yer_istasyonu.sunuculari_oluştur()
-
     time.sleep(2)
+    
     görev_kontrol = threading.Thread(target=yer_istasyonu.ANA_GOREV_KONTROL)
 
     görev_kontrol.start()

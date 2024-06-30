@@ -2,17 +2,18 @@ import socket
 
 class Server():
 
-    def __init__(self,PORT):
+    def __init__(self,PORT,name="UNNAMED"):
         self.server_ip = socket.gethostbyname(socket.gethostname())
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.PORT = PORT
+        self.name=name
 
     def creat_server(self):
         self.tcp_socket.bind((self.server_ip, self.PORT))
         self.tcp_socket.listen()
         self.conn, self.addr = self.tcp_socket.accept()
-        print(f"Connect with{self.addr}")
+        print(f"{self.name} : Connect with{self.addr}")
 
     def reconnect(self):
         connection=False
