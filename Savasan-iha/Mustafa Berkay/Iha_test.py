@@ -17,6 +17,7 @@ class Iha():
         self.TCP_yonelim=Client_Tcp.Client(host_ip,9002)
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
         self.TCP_mod=Client_Tcp.Client(host_ip,9003)
+        self.yönelim_yapılacak_rakip=""
 
     def Yonelim_sunucusuna_baglan(self):
         connection=False
@@ -86,8 +87,9 @@ class Iha():
         while True:
             try:
                 print("YÖNELİM VERİSİ BEKLENİYOR..")
-                yönelim_yapılacak_rakip=json.loads(self.TCP_yonelim.client_recv_message())
-                print("YONELIM VERISI: ",yönelim_yapılacak_rakip)
+                print(type(self.TCP_yonelim.client_recv_message()),self.TCP_yonelim.client_recv_message())
+                self.yönelim_yapılacak_rakip=json.loads(self.TCP_yonelim.client_recv_message())
+                print("YONELIM VERISI: ",self.yönelim_yapılacak_rakip)
             except Exception as e:
                 print("YONELIM SERVER: Veri çekilirken hata :",e)
 
@@ -95,11 +97,11 @@ class Iha():
             """------------------------------------------------"
             Burada yönelimi gerçekleştirecek pixhawk-dronekit kodu yazılacak.  #TODO
             "-------------------------------------------------"""
-
     def kamikaze_yönelim(self,iha_path):
         try:
-            qr_enlem, qr_boylam = rakip[3]['qrEnlem'], rakip[3]['qrBoylam']
-            # qr_enlem, qr_boylam = 40.2308154, 29.0076506
+            self.yönelim_yap()
+            #print("dlsaghşlksdahg",qr_enlem)
+            """# qr_enlem, qr_boylam = 40.2308154, 29.0076506
             qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
             print("QR MESAFE", qr_mesafe)
 
@@ -139,7 +141,7 @@ class Iha():
                 print("kalkis bitti AUTO")
                 if iha_path.get_ap_mode() != "AUTO":
                     iha_path.set_ap_mode("AUTO")
-                kalkista = False
+                kalkista = False"""
 
         except Exception as e:
             print("ERROR KAMIKAZE ->" + str(e))
@@ -147,7 +149,7 @@ class Iha():
 if __name__ == '__main__':
 
     DEBUG = input("Input 'DEBUG_kilitlenme' or 'DEBUG_kamikaze' for DEBUG_MODE...\n>")
-    iha_obj = Iha("10.80.1.55") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.59") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
