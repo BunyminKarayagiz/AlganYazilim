@@ -147,7 +147,7 @@ class Iha():
 if __name__ == '__main__':
 
     DEBUG = input("Input 'DEBUG_kilitlenme' or 'DEBUG_kamikaze' for DEBUG_MODE...\n>")
-    iha_obj = Iha("10.80.1.55") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.62") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")

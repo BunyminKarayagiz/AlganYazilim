@@ -28,7 +28,7 @@ class StoppableThread(threading.Thread):
 class Yerİstasyonu():
 
     def __init__(self,mavlink_ip):     #TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
-        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\demir\\Projects\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
@@ -188,9 +188,8 @@ class Yerİstasyonu():
     def Yolo_frame_işleme(self,frame):
 
         "Gelen frame yolo modeline sokuluyor"
-        pwm_verileri , frame =self.yolo_model.model_predict(frame)
+        pwm_verileri , frame ,lockedOrNot =self.yolo_model.model_predict(frame)
         #results,frame=yer_istasyonu.yolo_model.get_results(frame)
-        lockedOrNot = 0
         return frame,lockedOrNot,pwm_verileri
 
     def görüntü_çek(self):
@@ -397,7 +396,7 @@ class Yerİstasyonu():
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.55") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.62") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
     try:
         "Ana Sunucuya giriş yapıyor."
