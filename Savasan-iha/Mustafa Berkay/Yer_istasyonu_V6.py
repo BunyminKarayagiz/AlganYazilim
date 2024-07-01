@@ -183,9 +183,8 @@ class Yerİstasyonu():
     def Yolo_frame_işleme(self, frame):
 
         "Gelen frame yolo modeline sokuluyor"
-        pwm_verileri, frame = self.yolo_model.model_predict(frame)
+        pwm_verileri, frame ,lockedOrNot = self.yolo_model.model_predict(frame)
         # results,frame=yer_istasyonu.yolo_model.get_results(frame)
-        lockedOrNot = 0
         return frame, lockedOrNot, pwm_verileri
 
     def qr_oku(self, frame):
