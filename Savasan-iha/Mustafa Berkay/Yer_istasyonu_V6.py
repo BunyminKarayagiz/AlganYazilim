@@ -237,7 +237,6 @@ class Yerİstasyonu():
 
         fps = 1/(self.new_frame_time-self.prev_frame_time)
         cv2.putText(img=frame,text="FPS:"+str(int(fps)),org=(50,50),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
-
         self.Server_udp.show(frame)
 
         try:

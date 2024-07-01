@@ -74,15 +74,13 @@ bizim = {'takim_numarasi': 1, 'iha_enlem': 40.331272, 'iha_boylam': 29.0095263, 
 
 
 class Hesaplamalar():
-    def __init__(self, rakip, bizim):
-        self.rakip = rakip
-        self.bizim = bizim
+    def __init__(self):
         self.aradaki_mesafeler = []
         self.rakip_telemetri_verileri = []
 
-    def get_yonelim_acisi_farklari(self):  # Rakip İHA'lar ile bizim İHA'mız arasındaki açı farkını hesaplıyor. ve +- 50 derece olan İHA'ların telemetri verilerini döndürüyor
-        bizim_yonelim_acimiz = self.bizim["iha_yonelme"]
-        for i in self.rakip["konumBilgileri"]:
+    def get_yonelim_acisi_farklari(self,rakip,bizim):  # Rakip İHA'lar ile bizim İHA'mız arasındaki açı farkını hesaplıyor. ve +- 50 derece olan İHA'ların telemetri verilerini döndürüyor
+        bizim_yonelim_acimiz = bizim["iha_yonelme"]
+        for i in rakip["konumBilgileri"]:
             rakip_telemetri = {
                 "takim_id": '',
                 "enlem": '',
@@ -103,9 +101,9 @@ class Hesaplamalar():
                 self.rakip_telemetri_verileri.append(rakip_telemetri)
         return self.rakip_telemetri_verileri
 
-    def rakip_sec(self): # yönelim açısı +-50 olan en uzak rakibi seçiyor ve telemetri verilerini döndürüyor
-        enlem_boylam = (self.bizim["iha_enlem"], self.bizim["iha_boylam"])
-        rakip_telemetrileri = self.get_yonelim_acisi_farklari()
+    def rakip_sec(self,rakip,bizim): # yönelim açısı +-50 olan en uzak rakibi seçiyor ve telemetri verilerini döndürüyor
+        enlem_boylam = (bizim["iha_enlem"], bizim["iha_boylam"])
+        rakip_telemetrileri = self.get_yonelim_acisi_farklari(rakip,bizim)
         gecici_mesafe=0
         for i in rakip_telemetrileri:
             aradaki_mesafe = vincenty((enlem_boylam), (i["enlem"], i["boylam"]))
@@ -113,5 +111,5 @@ class Hesaplamalar():
                 gecici_mesafe=aradaki_mesafe
                 secilen_rakip=i
         return secilen_rakip
-hesap = Hesaplamalar(rakip, bizim)
-print(hesap.rakip_sec())
+hesap = Hesaplamalar()
+print(hesap.rakip_sec(rakip,bizim))

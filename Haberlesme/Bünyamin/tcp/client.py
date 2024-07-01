@@ -1,13 +1,37 @@
 import socket
+import sys
+import select
 
-HOST = "10.80.1.106"  # The server's hostname or IP address
-PORT = 9000  # The port used by the server
+class Connection():
+    def __init__(self):
+        self.s=socket.socket()
+        self.s.connect(("localhost",1234))
 
-tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def fileno(self):
+        return self.s.fileno()
 
-tcp.connect((HOST, PORT))
+    def on_read(self):
+        msg= self.s.recv(1000).decode("utf8")
+        print(msg)
+
+    def send(self,msg):
+        self.s.send(msg)
+
+class Input():
+
+    def __init__(self,sender):
+        self.sender=sender
+    def fileno(self):
+        return sys.stdin.fileno()
+    def on_read(self):
+        msg= sys.stdin.readline().encode("utf8")
+        self.sender.send(msg)
+
+connection = Connection()
+input_reader = Input(connection)
 
 while True:
-    tcp.sendall(b"Hello, world")
-    data = tcp.recv(1024)
-    print(f"Received {data!r}")
+    readers,_,_ = select.select([connection,input_reader],[],[])
+
+    for reader in readers:
+        reader.on_read()
