@@ -1,4 +1,4 @@
-# ALGAN Takımı tarafından oluşturulan basit test sunucu API dosyası
+    # ALGAN Takımı tarafından oluşturulan basit test sunucu API dosyası
 import datetime
 import random
 import flask
@@ -56,7 +56,7 @@ def giris():
 def getData():
     sunucusaati = {"saat": datetime.datetime.now().hour,
                    "dakika": datetime.datetime.now().minute,
-                   "saniye": datetime.datetime.now().second,
+                   "saniye": datetime.datetime.now().second + 3,
                    "milisaniye": datetime.datetime.now().microsecond // 1000
                    }
 
