@@ -39,7 +39,7 @@ class QR_Detection:
         os.remove(self.image_path)
         return qr_bilgisi
 
-if __name__ == "__main__":
+"""if __name__ == "__main__":
 
     qrd = QR_Detection()
     # Webcam'i başlatın
@@ -60,3 +60,4 @@ if __name__ == "__main__":
     # Çıkış yaparken kamera bağlantısını serbest bırakın ve pencereleri kapatın
     cap.release()
     cv2.destroyAllWindows()
+"""
