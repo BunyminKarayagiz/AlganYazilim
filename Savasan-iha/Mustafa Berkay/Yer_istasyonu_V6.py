@@ -95,7 +95,7 @@ class Yerİstasyonu():
                                          second=sunucu_saniye,
                                          microsecond=sunucu_milisaniye)
         self.fark = abs(local_saat - sunucu_saati)
-        print("Sunucu Saati: ", self.fark)
+        print("Sunucu Saat Farki: ", self.fark)
 
     def anasunucuya_baglan(self, kullanici_adi, sifre):
         "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
@@ -359,6 +359,7 @@ class Yerİstasyonu():
 
     def qr_kontrol(self):
         while True:
+            self.new_frame_time=time.time()
             try:
                 frame = self.görüntü_çek()
             except Exception as e:
@@ -367,8 +368,16 @@ class Yerİstasyonu():
             try:
                 frame = cv2.flip(frame, 0)
                 qr_text = self.qr_oku(frame)
-                frame = cv2.putText(frame, str(self.fark), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                
+                now = datetime.datetime.now() #TODO Düzeltilecek
+                t = now.strftime("%H:%M:%S")
+                cv2.putText(img=frame,text= "Sunucu saati: "+ t,org=(350,50),fontFace=1,fontScale=1.4,color=(0,255,0),thickness=2)
+                fps = 1/(self.new_frame_time-self.prev_frame_time)
+                cv2.putText(img=frame,text="FPS:"+str(int(fps)),org=(50,50),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
+
+
                 self.Server_udp.show(frame)
+                self.prev_frame_time=time.time()
                 print(qr_text)
             except Exception as e:
                 print("KAMIKAZE : QR ERROR -> ", e)
@@ -483,14 +492,3 @@ if __name__ == '__main__':
 
     görev_kontrol.start()
     görev_kontrol.join()
-
-
-
-    """
-    goruntu_status = yer_istasyonu.Görüntü_sunucusu_oluştur()
-    if goruntu_status == True:
-
-        while True:
-            frame=yer_istasyonu.görüntü_çek()
-            yer_istasyonu.Server_udp.show(frame)
-            """

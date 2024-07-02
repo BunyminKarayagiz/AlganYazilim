@@ -102,7 +102,6 @@ class Iha():
     def kamikaze_yönelim(self,iha_path):
         try:
             self.yönelim_yap()
-            #print("dlsaghşlksdahg",qr_enlem)
             """# qr_enlem, qr_boylam = 40.2308154, 29.0076506
             qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
             print("QR MESAFE", qr_mesafe)
@@ -161,7 +160,7 @@ if __name__ == '__main__':
     time.sleep(2)
 
     while True:
-        
+        time.sleep(1)
         if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(mod)
