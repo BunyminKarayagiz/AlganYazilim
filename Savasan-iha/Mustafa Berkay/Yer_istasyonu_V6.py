@@ -68,7 +68,7 @@ class Yerİstasyonu():
         # Kamikaze yapılırken kullanılan parametreler
         self.qr_coordinat = ""
         self.fark = 0
-        self.qr = QR_Detection
+        self.qr = QR_Detection()
 
         #Framerate Hesaplama parametreleri
         self.new_frame_time=0
