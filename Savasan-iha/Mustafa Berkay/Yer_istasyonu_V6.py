@@ -375,6 +375,14 @@ class Yerİstasyonu():
 
     def kamikaze_gorevi(self):
         _, self.qr_coordinat = self.ana_sunucu.qr_koordinat_al()
+        try:
+            print("2 SN BEKLENİYOR ---------------------------")
+            time.sleep(2)
+            print("2 SN BEKLENDİ ---------------------------")
+        except Exception as e:
+            print("YONELİM : VERİ GÖNDERİLİRKEN HATA --> ", e)
+            print("YONELİM YENİDEN BAĞLANIYOR...")
+            self.Server_yönelim.reconnect()
         self.Server_yönelim.send_data_to_client(json.dumps(self.qr_coordinat).encode())
         while True:
             try:
@@ -382,6 +390,7 @@ class Yerİstasyonu():
                 frame = cv2.flip(frame, 0)
                 qr_text, frame = self.qr_oku(frame)
                 frame = cv2.putText(frame, str(self.fark), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                cv2.imshow("saafsa",frame)
             except Exception as e:
                 print("Kamikaze Görev Hata", e)
 
