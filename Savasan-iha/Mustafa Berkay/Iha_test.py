@@ -87,7 +87,6 @@ class Iha():
         while True:
             try:
                 print("YÖNELİM VERİSİ BEKLENİYOR..")
-                print(type(self.TCP_yonelim.client_recv_message()),self.TCP_yonelim.client_recv_message())
                 self.yönelim_yapılacak_rakip=json.loads(self.TCP_yonelim.client_recv_message())
                 print("YONELIM VERISI: ",self.yönelim_yapılacak_rakip)
             except Exception as e:
@@ -148,8 +147,8 @@ class Iha():
 
 if __name__ == '__main__':
 
-    DEBUG = input("Input 'DEBUG_kilitlenme' or 'DEBUG_kamikaze' for DEBUG_MODE...\n>")
-    iha_obj = Iha("10.80.1.59") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    DEBUG = input("Input 'DEBUG_LOCK' or 'DEBUG_QR' for DEBUG_MODE...\n>")
+    iha_obj = Iha("10.80.1.72") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
@@ -158,13 +157,14 @@ if __name__ == '__main__':
     time.sleep(2)
 
     while True:
-        if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_kamikaze":  # ch6: High, ch8: LOW
+        if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(mod)
+            
             iha_obj.kamikaze_yönelim(iha_path)
 
 
-        if (iha_path.servo6 <= 1600 and iha_path.servo7 >= 1400) or DEBUG=="DEBUG_kilitlenme":  # ch6: High, ch8: LOW #TODO DÜZENLENECEK
+        if (iha_path.servo6 <= 1600 and iha_path.servo7 >= 1400) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: LOW #TODO DÜZENLENECEK
             mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(mod)
 
