@@ -19,8 +19,7 @@ import hesaplamalar
 class Yerİstasyonu():
 
     def __init__(self, mavlink_ip):  # TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
-        self.yolo_model = YOLOv8_deploy.Detection(
-            "C:\\Users\\bunya\\Desktop\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("D:\Visual Code File Workspace\ALGAN\AlganYazilim\Savasan-iha\Mustafa Berkay\Model2024_V1.pt")
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
@@ -188,17 +187,10 @@ class Yerİstasyonu():
         return frame, lockedOrNot, pwm_verileri
 
     def qr_oku(self, frame):
-        x1, x2, y1, y2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75) \
-            , int(frame.shape[0] * 0.10), int(
-            frame.shape[0] * 0.90)  # Gelen videoya dikdörtgen çizmek için koordinat almaktadır
-
-        roi = frame[y1:y2,
-              x1:x2]  # Roi değişkeni orijinal resim içine çizilen dörtgenin arasındaki görüntüyü alır.
-
+        x1, x2, y1, y2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75) , int(frame.shape[0] * 0.10), int(frame.shape[0] * 0.90)  # Gelen videoya dikdörtgen çizmek için koordinat almaktadır
+        roi = frame[y1:y2,x1:x2]  # Roi değişkeni orijinal resim içine çizilen dörtgenin arasındaki görüntüyü alır.
         # qr_code_list = pyzbar.decode(roi)
-
         qr_code_list = pyzbar.decode(frame)  # 640x480 için
-
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Gelen videoya dikdörtgen çizmektedir
 
         for qr_code in qr_code_list:
@@ -214,8 +206,7 @@ class Yerİstasyonu():
             # cv2.putText(roi, data, (pts2[0], pts2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 255), 2)
 
             if data != None:
-                x1, x2, y1, y2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75) \
-                    , int(frame.shape[0] * 0.10), int(frame.shape[0] * 0.90)
+                x1, x2, y1, y2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75) , int(frame.shape[0] * 0.10), int(frame.shape[0] * 0.90)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
             return qr_code.data, frame
@@ -402,8 +393,8 @@ class Yerİstasyonu():
             # t3.start()
             # t4.start()
             # t5.start()
-
             return t2
+        
         if mod == "kamikaze":
             t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)  # KİLİTLENME_GÖREVİ FONKSİYONUNDA KULLANILMIŞ
             t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
@@ -413,7 +404,7 @@ class Yerİstasyonu():
             t1.start()
             # t2.start()
             t3.start()
-            # t4.start()  Sonrada Açılacak
+            # t4.start()  Sonradan Açılacak
             # t5.start()
             return t1, t3
 
@@ -423,7 +414,7 @@ class Yerİstasyonu():
         self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
 
         if self.secilen_görev_modu == "kilitlenme":
-            pwm_thread, mod_thread = self.sunuculari_oluştur(self.secilen_görev_modu)
+            pwm_thread = self.sunuculari_oluştur(self.secilen_görev_modu)
 
             Yönelim_threadi = threading.Thread(target=self.yönelim)
             kilitlenme_görevi_thread = threading.Thread(target=self.kilitlenme_görevi)
@@ -441,8 +432,7 @@ class Yerİstasyonu():
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu(
-        "10.80.1.59")  # <----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.72")  # <----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
     try:
         "Ana Sunucuya giriş yapıyor."

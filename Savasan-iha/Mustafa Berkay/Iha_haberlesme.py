@@ -23,7 +23,7 @@ class iha_haberlesme():
 
 if __name__ == "__main__":
 
-    iha_obj=iha_haberlesme("10.80.1.62")
+    iha_obj=iha_haberlesme("10.80.1.72")
     
     video_thread = threading.Thread(target=iha_obj.send_video)
     video_thread.start()
