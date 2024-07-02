@@ -206,7 +206,6 @@ class Yerİstasyonu():
     # KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
 
     def yönelim(self): #TODO YÖNELİM SUNUCUSUNDA BUG VAR.
-        self.Yönelim_sunucusu_oluştur()
 
         while True:
             try:
@@ -332,7 +331,6 @@ class Yerİstasyonu():
         await task2
 
     def kilitlenme_görevi(self):
-        self.Görüntü_sunucusu_oluştur()
         while True:
             try:
                 frame=self.görüntü_çek()
@@ -429,12 +427,10 @@ class Yerİstasyonu():
                     print("ANA GOREV :KILITLENME BASLATILIYOR...")
                     threads["kilitlenme"] = kilitlenme_görevi_thread
                     kilitlenme_görevi_thread.start()
-                    yönelim_thread.start()
 
                 if not ("yönelim" in threads) : #and not threads["yönelim"].is_alive():
                     print("ANA GOREV :YONELIM BASLATILIYOR...")
                     threads["yönelim"] = yönelim_thread
-                    kilitlenme_görevi_thread.start()
                     yönelim_thread.start()
 
                 elif (self.secilen_görev_modu in threads) and threads[self.secilen_görev_modu].is_alive():
