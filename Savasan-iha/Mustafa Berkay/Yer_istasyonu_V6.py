@@ -13,7 +13,7 @@ import time, datetime
 import asyncio
 import mavproxy2
 import hesaplamalar
-
+from qr_detection import QR_Detection
 
 # KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
@@ -68,6 +68,7 @@ class Yerİstasyonu():
         # Kamikaze yapılırken kullanılan parametreler
         self.qr_coordinat = ""
         self.fark = 0
+        self.qr = QR_Detection
 
         #Framerate Hesaplama parametreleri
         self.new_frame_time=0
@@ -105,7 +106,7 @@ class Yerİstasyonu():
             print(f"\x1b[{31}m{'Ana Sunucuya Bağlanıldı: ' + durum_kodu}\x1b[0m")  # Ana sunucuya girerkenki durum kodu.
             self.ana_sunucuya_giris_durumu = True
         return self.ana_sunucuya_giris_durumu
-    
+
     def Görüntü_sunucusu_oluştur(self):
         connection_status=False
         while not connection_status:
@@ -121,7 +122,7 @@ class Yerİstasyonu():
             #   self.Server_udp.create_server() #TODO DÜZENLEME GELEBİLİR
         self.görüntü_sunucusu=connection_status
         return connection_status
-    
+
     def Yönelim_sunucusu_oluştur(self):
         connection_status=False
         while not connection_status:
@@ -187,37 +188,13 @@ class Yerİstasyonu():
     def Yolo_frame_işleme(self, frame):
 
         "Gelen frame yolo modeline sokuluyor"
-        pwm_verileri, frame ,lockedOrNot = self.yolo_model.model_predict(frame)
+        pwm_verileri, frame, lockedOrNot = self.yolo_model.model_predict(frame)
         # results,frame=yer_istasyonu.yolo_model.get_results(frame)
         return frame, lockedOrNot, pwm_verileri
 
     def qr_oku(self, frame):
-        x1, x2, y1, y2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75) , int(frame.shape[0] * 0.10), int(frame.shape[0] * 0.90)  # Gelen videoya dikdörtgen çizmek için koordinat almaktadır
-        roi = frame[y1:y2,x1:x2]  # Roi değişkeni orijinal resim içine çizilen dörtgenin arasındaki görüntüyü alır.
-        # qr_code_list = pyzbar.decode(roi)
-        qr_code_list = pyzbar.decode(frame)  # 640x480 için
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Gelen videoya dikdörtgen çizmektedir
-
-        for qr_code in qr_code_list:
-            data = qr_code.data.decode("utf-8")
-            print(data)
-            pts = np.array([qr_code.polygon], np.int32)
-            pts = pts.reshape((-1, 1, 2))
-            # cv2.polylines(roi, [pts], True, (255, 0, 255), 5)
-            cv2.polylines(frame, [pts], True, (255, 0, 255), 5)
-            pts2 = qr_code.rect
-
-            cv2.putText(frame, data, (pts2[0], pts2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 255), 2)
-            # cv2.putText(roi, data, (pts2[0], pts2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 255), 2)
-
-            if data != None:
-                x1, x2, y1, y2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75) , int(frame.shape[0] * 0.10), int(frame.shape[0] * 0.90)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-            return qr_code.data, frame
-
-        return None, frame
-    
+        qr_result = self.qr.file_operations(frame=frame)
+        return qr_result
     def görüntü_çek(self):
         try:
             frame = self.Server_udp.recv_frame_from_client()
@@ -261,7 +238,7 @@ class Yerİstasyonu():
                     self.kilitlenme_stop_event.wait()
                     self.kilitlenme_stop_event.clear()
                     break
-        
+
     def pwm_gönder(self,pwm_verileri):
         try:
             self.Server_pwm.send_data_to_client(json.dumps(pwm_verileri).encode())
@@ -404,7 +381,7 @@ class Yerİstasyonu():
             # t4.start()
             # t5.start()
             return t2
-        
+
         if mod == "kamikaze":
             t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)  # KİLİTLENME_GÖREVİ FONKSİYONUNDA KULLANILMIŞ
             t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
@@ -424,7 +401,7 @@ class Yerİstasyonu():
 
         while True:
             self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
-            
+
             if self.secilen_görev_modu == "kilitlenme":
                 pwm_thread = self.sunuculari_oluştur(self.secilen_görev_modu)
                 kilitlenme_görevi_thread = threading.Thread(target=self.kilitlenme_görevi)
@@ -454,7 +431,7 @@ class Yerİstasyonu():
 
                 elif (self.secilen_görev_modu in threads) and threads[self.secilen_görev_modu].is_alive():
                     print("zaten çalışır halde")
-                    
+
 
 
             if self.secilen_görev_modu == "kamikaze":
@@ -485,7 +462,7 @@ class Yerİstasyonu():
 
                 elif(self.secilen_görev_modu in threads) and threads[self.secilen_görev_modu].is_alive():
                     print("zaten çalışır halde")
-            
+
             if self.secilen_görev_modu == "AUTO":
                 pass
 
