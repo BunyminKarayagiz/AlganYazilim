@@ -8,7 +8,7 @@ import threading
 import Client_Tcp
 
 import vincenty
-from dronekit import LocationGlobalRelative 
+from dronekit import LocationGlobalRelative
 
 class Iha():
     def __init__(self,host_ip) -> None:
@@ -74,7 +74,6 @@ class Iha():
             iha.set_ap_mode(str(mod_kodu))
 
     def receive_pwm(self):
-        iha_obj.PWM_sunucusuna_baglan()
         while True:
             try:
                 pwm_verileri=self.TCP_pwm.client_recv_message().decode()
@@ -82,8 +81,11 @@ class Iha():
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
 
-    def yönelim_yap(self):
+    def sunuculara_baglan(self):
         self.Yonelim_sunucusuna_baglan()
+        self.PWM_sunucusuna_baglan()
+
+    def yönelim_yap(self):
         while True:
             try:
                 print("YÖNELİM VERİSİ BEKLENİYOR..")
@@ -96,6 +98,7 @@ class Iha():
             """------------------------------------------------"
             Burada yönelimi gerçekleştirecek pixhawk-dronekit kodu yazılacak.  #TODO
             "-------------------------------------------------"""
+
     def kamikaze_yönelim(self,iha_path):
         try:
             self.yönelim_yap()
@@ -147,21 +150,27 @@ class Iha():
 
 if __name__ == '__main__':
 
-    DEBUG = input("Input 'DEBUG_LOCK' or 'DEBUG_QR' for DEBUG_MODE...\n>")
-    iha_obj = Iha("10.80.1.35") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.72") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
     iha_obj.Mod_sunucusuna_baglan()
+    iha_obj.sunuculara_baglan()
+    DEBUG = input("Input 'DEBUG_LOCK' or 'DEBUG_QR' for DEBUG_MODE...\n>")
     time.sleep(2)
 
     while True:
+        
         if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(mod)
-            
             iha_obj.kamikaze_yönelim(iha_path)
+
+            if DEBUG == "DEBUG_QR":
+                while True:
+                    print("DEBUG MOD ON...\n\n")
+                    time.sleep(9999)
 
 
         if (iha_path.servo6 <= 1600 and iha_path.servo7 >= 1400) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: LOW #TODO DÜZENLENECEK

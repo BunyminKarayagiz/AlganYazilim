@@ -19,7 +19,7 @@ from qr_detection import QR_Detection
 class Yerİstasyonu():
 
     def __init__(self, mavlink_ip): #TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\demir\\Projects\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
@@ -68,7 +68,7 @@ class Yerİstasyonu():
         # Kamikaze yapılırken kullanılan parametreler
         self.qr_coordinat = ""
         self.fark = 0
-        self.qr = QR_Detection
+        self.qr = QR_Detection()
 
         #Framerate Hesaplama parametreleri
         self.new_frame_time=0
@@ -195,13 +195,13 @@ class Yerİstasyonu():
     def qr_oku(self, frame):
         qr_result = self.qr.file_operations(frame=frame)
         return qr_result
+    
     def görüntü_çek(self):
         try:
             frame = self.Server_udp.recv_frame_from_client()
             return frame
-        except:
-            print("UDP: GÖRÜNTÜ ALINIRKEN HATA..")
-
+        except Exception as e:
+            print("UDP: GÖRÜNTÜ ALINIRKEN HATA..",e)
 
     # KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
 
@@ -358,87 +358,78 @@ class Yerİstasyonu():
 
 
     def qr_kontrol(self):
-        self.Görüntü_sunucusu_oluştur()
         while True:
             try:
                 frame = self.görüntü_çek()
             except Exception as e:
                 print("KAMIKAZE : FRAME RECV ERROR -> ", e)
-
+            
             try:
                 frame = cv2.flip(frame, 0)
                 qr_text = self.qr_oku(frame)
                 frame = cv2.putText(frame, str(self.fark), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-                cv2.imshow("frame", frame)
+                self.Server_udp.show(frame)
                 print(qr_text)
             except Exception as e:
                 print("KAMIKAZE : QR ERROR -> ", e)
+            
 
+    def sunuculari_oluştur(self):
+        t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)  # KİLİTLENME_GÖREVİ FONKSİYONUNDA KULLANILMIŞ
+        t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
+        t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)  # YÖNELİM FONKSİYONUNDA KULLANILMIŞ
+        t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
+        t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
+        t1.start()
+        t2.start()
+        t3.start()
+        t4.start()
+        t5.start()
+        return t1,t2,t3,t4,t5
 
-    "------------------------------------"
-    def sunuculari_oluştur(self, mod):
-        if mod == "kilitlenme":
-            t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)  # KİLİTLENME_GÖREVİ FONKSİYONUNDA KULLANILMIŞ
-            t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
-            t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)  # YÖNELİM FONKSİYONUNDA KULLANILMIŞ
-            t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
-            t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
-            # t1.start()
-            t2.start()
-            # t3.start()
-            # t4.start()
-            # t5.start()
-            return t2
-
-        if mod == "kamikaze":
-            t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)
-            t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
-            t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)  # KAMİKAZE FONKSİYONUNDA KULLANILMIŞ
-            t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
-            t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
-            #t1.start()
-            # t2.start()
-            #t3.start()
-            # t4.start()  Sonradan Açılacak
-            # t5.start()
-            #return t1
 
     def ANA_GOREV_KONTROL(self): # ANA GÖREV KONTROL DEĞİŞECEK #TODO
-        threads = {}
         yer_istasyonu.Mod_sunucusu_oluştur()
+        goruntu_thread, pwm_thread, yonelim_thread,mavproxy_thread,mod_thread = yer_istasyonu.sunuculari_oluştur()
+        threads = {
+                "goruntu"  : goruntu_thread,
+                "pwm"      : pwm_thread,
+                "yonelim"  : yonelim_thread,
+                "mavproxy" : mavproxy_thread,
+                "mod"      : mod_thread
+        }
 
         while True:
             self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
 
             if self.secilen_görev_modu == "kilitlenme":
-                pwm_thread = self.sunuculari_oluştur(self.secilen_görev_modu)
                 kilitlenme_görevi_thread = threading.Thread(target=self.kilitlenme_görevi)
                 yönelim_thread = threading.Thread(target=self.yönelim)
 
                 if ("kamikaze" in threads) and threads["kamikaze"].is_alive():
-                    print("kamikaze kapatılıyor.")
+                    print("ANA GOREV :KAMIKAZE KAPATILIYOR...")
                     self.kamikaze_stop_event.set()
                     del threads["kamikaze"]
 
                 if ("qr" in threads) and threads["qr"].is_alive():
-                    print("qr kapatılıyor.")
+                    print("ANA GOREV :QR KAPATILIYOR...")
                     self.qr_stop_event.set()
                     del threads["qr"]
 
-                if not ("kilitlenme" in threads):
-                    print("kilitlenme başlatılıyor")
+                if not ("kilitlenme" in threads) : #and not threads["kilitlenme"].is_alive():
+                    print("ANA GOREV :KILITLENME BASLATILIYOR...")
                     threads["kilitlenme"] = kilitlenme_görevi_thread
                     kilitlenme_görevi_thread.start()
                     yönelim_thread.start()
 
-                if not ("yönelim" in threads):
-                    print("kilitlenme başlatılıyor")
+                if not ("yönelim" in threads) : #and not threads["yönelim"].is_alive():
+                    print("ANA GOREV :YONELIM BASLATILIYOR...")
                     threads["yönelim"] = yönelim_thread
                     kilitlenme_görevi_thread.start()
                     yönelim_thread.start()
 
                 elif (self.secilen_görev_modu in threads) and threads[self.secilen_görev_modu].is_alive():
-                    print("zaten çalışır halde")
+                    print("ANA GOREV :SECILEN MOD ZATEN AKTIF")
 
 
 
@@ -447,34 +438,34 @@ class Yerİstasyonu():
                 qr_görev_thread = threading.Thread(target=self.qr_kontrol)
 
                 if("kilitlenme" in threads) and threads["kilitlenme"].is_alive():
-                    print("kilitlenme kapatılıyor.")
+                    print("ANA GOREV :KILITLENME KAPATILIYOR....")
                     self.kilitlenme_stop_event.set()
                     del threads["kilitlenme"]
 
-                if("yönelim" in threads) and threads["yönelim"].is_alive():
-                    print("yönelim kapatılıyor.")
+                if ("yönelim" in threads) and threads["yönelim"].is_alive():
+                    print("ANA GOREV :YONELIM KAPATILIYOR....")
                     self.yönelim_stop_event.set()
                     del threads["yönelim"]
 
                 if not ("kamikaze" in threads):
-                    print("kamikaze başlatılıyor")
+                    print("ANA GOREV :KAMIKAZE BASLATILIYOR..")
                     threads["kamikaze"] = kamikaze_görevi_thread
                     kamikaze_görevi_thread.start()
 
                 if not ("qr" in threads):
-                    print("qr başlatılıyor")
+                    print("ANA GOREV :QR BASLATILIYOR..")
                     threads["qr"] = qr_görev_thread
                     qr_görev_thread.start()
 
                 elif(self.secilen_görev_modu in threads) and threads[self.secilen_görev_modu].is_alive():
-                    print("zaten çalışır halde")
+                    print("ANA GOREV :SECILEN MOD ZATEN AKTIF")
 
             if self.secilen_görev_modu == "AUTO":
                 pass
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.35") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.72") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
     try:
         "Ana Sunucuya giriş yapıyor."
@@ -492,3 +483,14 @@ if __name__ == '__main__':
 
     görev_kontrol.start()
     görev_kontrol.join()
+
+
+
+    """
+    goruntu_status = yer_istasyonu.Görüntü_sunucusu_oluştur()
+    if goruntu_status == True:
+
+        while True:
+            frame=yer_istasyonu.görüntü_çek()
+            yer_istasyonu.Server_udp.show(frame)
+            """
