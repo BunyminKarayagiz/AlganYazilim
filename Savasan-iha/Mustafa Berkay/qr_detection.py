@@ -49,8 +49,7 @@ if __name__ == "__main__":
         # Frame alır
         ret, frame = cap.read()
 
-        qrr= qrd.file_operations(frame=frame)
-        print(qrr)
+        qrd.file_operations(frame=frame)
         # Alınan frame'i gösterin
         cv2.imshow("Webcam", frame)
 
