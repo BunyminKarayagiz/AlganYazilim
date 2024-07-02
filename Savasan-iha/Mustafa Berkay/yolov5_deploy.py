@@ -14,9 +14,11 @@ class Detection:
         print("Using Device: ", self.device)
 
     def load_model(self, model_name):
-        if model_name:                  # PATH değiştirilecek  TODO TODO TODO 
-            model = torch.hub.load("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\ultralytics_yolov5_master", 'custom', source='local',
-                                   path=model_name, force_reload=True)
+        if model_name:  # PATH değiştirilecek  TODO TODO TODO
+            model = torch.hub.load(
+                "D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\ultralytics_yolov5_master",
+                'custom', source='local',
+                path=model_name, force_reload=True)
         return model
 
     def score_frame(self, frame):
@@ -26,15 +28,16 @@ class Detection:
         labels, cord = results.xyxyn[0][:, -1], results.xyxyn[0][:, :-1]
         return labels, cord
 
-    def get_results(self,frame):
+    def get_results(self, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.score_frame(frame=frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        return results,frame
+        return results, frame
+
     def class_to_label(self, x):
         return self.classes[int(x)]
 
-    def plot_boxes(self,results,frame):
+    def plot_boxes(self, results, frame):
         labels, cord = results
         disx1, disx2, disy1, disy2 = int(frame.shape[1] * 0.25), int(frame.shape[1] * 0.75), int(
             frame.shape[0] * 0.10), int(frame.shape[0] * 0.90)
@@ -65,9 +68,9 @@ class Detection:
                         lockedOrNot = 1
                     return xCord, yCord, frame, lockedOrNot
 
-        return  xCord, yCord, frame, lockedOrNot
+        return xCord, yCord, frame, lockedOrNot
 
-    def coordinates_to_pwm(self,xCord,yCord):
+    def coordinates_to_pwm(self, xCord, yCord):
         screen_width = 640
         screen_height = 480
         min_pwm = 1100
@@ -79,8 +82,8 @@ class Detection:
             pwm_x = 1500
             pwm_y = 1500
 
-        #print("PWM Signal for X-Axis:", pwm_x)
-        #print("PWM Signal for Y-Axis:", pwm_y)
+        # print("PWM Signal for X-Axis:", pwm_x)
+        # print("PWM Signal for Y-Axis:", pwm_y)
         pwm_verileri = {'pwmx': pwm_x,
                         'pwmy': pwm_y}
         return pwm_verileri
@@ -101,6 +104,7 @@ class Detection:
                     break
 
         cv2.destroyAllWindows()
+
 
 """         TODO PATH DÜZELTİLECEK TODO
 detector = Detection(capture_index=0, model_name="D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\bestuçak.pt")

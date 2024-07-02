@@ -7,13 +7,18 @@ import time
 import threading
 import Client_Tcp
 
+import vincenty
+from dronekit import LocationGlobalRelative 
+
 class Iha():
     def __init__(self,host_ip) -> None:
 
-        # TCP PWM Configurations
-        self.TCP_yonelim= Client_Tcp.Client(host_ip,9002)
+        # TCP Configurations
+        self.TCP_yonelim=Client_Tcp.Client(host_ip,9002)
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
-        
+        self.TCP_mod=Client_Tcp.Client(host_ip,9003)
+        self.yönelim_yapılacak_rakip=""
+
     def Yonelim_sunucusuna_baglan(self):
         connection=False
         while not connection:
@@ -33,6 +38,16 @@ class Iha():
                 print("PWM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("PWM SERVER: baglanırken hata: ", e)
+
+    def Mod_sunucusuna_baglan(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_mod.connect_to_server()
+                connection=True
+                print("MOD SERVER: BAĞLANDI.")
+            except (ConnectionError , Exception) as e:
+                print("MOD SERVER: baglanırken hata: ", e)
 
     def IHA_MissionPlanner_Connect(self, tcp_port):
         parser = argparse.ArgumentParser()
@@ -58,7 +73,7 @@ class Iha():
         if iha.get_ap_mode() != str(mod_kodu):
             iha.set_ap_mode(str(mod_kodu))
 
-    def pwm_cek(self):
+    def receive_pwm(self):
         iha_obj.PWM_sunucusuna_baglan()
         while True:
             try:
@@ -72,8 +87,8 @@ class Iha():
         while True:
             try:
                 print("YÖNELİM VERİSİ BEKLENİYOR..")
-                yönelim_yapılacak_rakip=json.loads(self.TCP_yonelim.client_recv_message())
-                print("YONELIM VERISI: ",yönelim_yapılacak_rakip)
+                self.yönelim_yapılacak_rakip=json.loads(self.TCP_yonelim.client_recv_message())
+                print("YONELIM VERISI: ",self.yönelim_yapılacak_rakip)
             except Exception as e:
                 print("YONELIM SERVER: Veri çekilirken hata :",e)
 
@@ -81,39 +96,11 @@ class Iha():
             """------------------------------------------------"
             Burada yönelimi gerçekleştirecek pixhawk-dronekit kodu yazılacak.  #TODO
             "-------------------------------------------------"""
-
-if __name__ == '__main__':
-
-    iha_obj = Iha("10.80.1.114") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
-    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
-
-    print("2 Sn bekleniyor...")
-    time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
-
-    pwm_thread = threading.Thread(target=iha_obj.pwm_cek)
-    yonelim_thread= threading.Thread(target=iha_obj.yönelim_yap)
-    
-    pwm_thread.start()
-    yonelim_thread.start()
-    
-    """ #ESKI KONTROL KODU
-    while True:
+    def kamikaze_yönelim(self,iha_path):
         try:
-            if iha_path.servo6 > 1600 and iha_path.servo7 > 1600:
-                iha_obj.change_mod("AUTO", iha_path)
-            elif 1400 < iha_path.servo6 < 1600 and iha_path.servo7 > 1600:
-                iha_obj.change_mod("RTL", iha_path)
-            elif iha_path.servo6 < 1400 and iha_path.servo7 > 1600:
-                iha_obj.change_mod("FBWA", iha_path)
-        except Exception as e:
-            print(e) """
-
-    if iha_path.servo6 > 1600 and iha_path.servo7 < 1400:  # ch6: High, ch8: LOW
-        mod = "kamikaze"
-        mesaj['iha_otonom'] = 1
-        try:
-            qr_enlem, qr_boylam = rakip[3]['qrEnlem'], rakip[3]['qrBoylam']
-            # qr_enlem, qr_boylam = 40.2308154, 29.0076506
+            self.yönelim_yap()
+            #print("dlsaghşlksdahg",qr_enlem)
+            """# qr_enlem, qr_boylam = 40.2308154, 29.0076506
             qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
             print("QR MESAFE", qr_mesafe)
 
@@ -153,7 +140,41 @@ if __name__ == '__main__':
                 print("kalkis bitti AUTO")
                 if iha_path.get_ap_mode() != "AUTO":
                     iha_path.set_ap_mode("AUTO")
-                kalkista = False
+                kalkista = False"""
 
         except Exception as e:
-            print("kamikazede problem var:" + str(e))
+            print("ERROR KAMIKAZE ->" + str(e))
+
+if __name__ == '__main__':
+
+    DEBUG = input("Input 'DEBUG_LOCK' or 'DEBUG_QR' for DEBUG_MODE...\n>")
+    iha_obj = Iha("10.80.1.72") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
+
+    print("2 Sn bekleniyor...")
+    time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
+    iha_obj.Mod_sunucusuna_baglan()
+    time.sleep(2)
+
+    while True:
+        if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
+            mod = "kamikaze"
+            iha_obj.TCP_mod.send_message_to_server(mod)
+            
+            iha_obj.kamikaze_yönelim(iha_path)
+
+
+        if (iha_path.servo6 <= 1600 and iha_path.servo7 >= 1400) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: LOW #TODO DÜZENLENECEK
+            mod = "kilitlenme"
+            iha_obj.TCP_mod.send_message_to_server(mod)
+
+            pwm_thread = threading.Thread(target=iha_obj.receive_pwm)
+            yonelim_thread= threading.Thread(target=iha_obj.yönelim_yap)
+        
+            pwm_thread.start()
+            yonelim_thread.start()
+
+            if DEBUG == "DEBUG_kilitlenme":
+                while True:
+                    print("DEBUG MOD ON...\n\n")
+                    time.sleep(9999)
