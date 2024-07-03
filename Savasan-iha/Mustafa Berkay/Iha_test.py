@@ -20,8 +20,8 @@ class Iha():
         self.yönelim_yapılacak_rakip=""
         self.mod =""
 
-        self.yönelim_stop_event = threading.Event()
-        self.kamikaze_stop_event = threading.Event()
+        self.yönelim_release_event = threading.Event()
+        self.kamikaze_release_event = threading.Event()
 
     def Yonelim_sunucusuna_baglan(self):
         connection=False
@@ -77,6 +77,13 @@ class Iha():
         if iha.get_ap_mode() != str(mod_kodu):
             iha.set_ap_mode(str(mod_kodu))
 
+    def sunuculara_baglan(self):
+        self.Yonelim_sunucusuna_baglan()
+        self.PWM_sunucusuna_baglan()
+
+
+    #KİLİTLENME FONKSİYONLARI
+
     def receive_pwm(self):
         while True:
             try:
@@ -85,50 +92,55 @@ class Iha():
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
 
-    def sunuculara_baglan(self):
-        self.Yonelim_sunucusuna_baglan()
-        self.PWM_sunucusuna_baglan()
+    def yönelim_yap(self): #TODO FONKSİYON İKİ FARKLI MODDA BİRDEN KULLANILDIĞINDAN DÜZENLENECEK...
 
-    def yönelim_yap(self):
-        if self.mod == "kilitlenme":
             while True:
+                if self.mod != "kilitlenme":
+                    self.yönelim_release_event.wait()
+                    self.yönelim_release_event.clear()
+                    pass
                 try:
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
                     self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
                 except Exception as e:
                     print("YONELIM SERVER: Veri çekilirken hata :", e)
-                if self.mod == "kamikaze":
-                    self.yönelim_stop_event.wait()
-                    self.yönelim_stop_event.clear()
-                    break
 
-                # YÖNELİM VERİSİ İLE RAKİBE YÖNELİM YAPILACAK KISIM
-                """------------------------------------------------"
-                Burada yönelimi gerçekleştirecek pixhawk-dronekit kodu yazılacak.  #TODO
-                "-------------------------------------------------"""
-
-        if self.mod == "kamikaze":
-            try:
-                print("YÖNELİM VERİSİ BEKLENİYOR..")
-                self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
-                print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
-            except Exception as e:
-                print("YONELIM SERVER: Veri çekilirken hata :", e)
-            # YÖNELİM VERİSİ İLE RAKİBE YÖNELİM YAPILACAK KISIM
-            """------------------------------------------------"
-            Burada yönelimi gerçekleştirecek pixhawk-dronekit kodu yazılacak.  #TODO
-            "-------------------------------------------------"""
-            return self.yönelim_yapılacak_rakip
-
+    # KAMIKAZE FONKSİYONLARI
+                    
+    def qr_konum_al(self):
+            is_qr_available = False
+            while not is_qr_available:
+                try:
+                    print("QR-KONUM BEKLENİYOR..")
+                    self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
+                    print("QR-KONUM : ", self.yönelim_yapılacak_rakip)
+                    is_qr_available = True
+                    return is_qr_available
+                
+                except Exception as e:
+                    print("QR-KONUM: Veri çekilirken hata :", e)
+            
     def kamikaze_yönelim(self,iha_path):
+        
+        if self.mod != "kamikaze" :
+                    print("KAMIKAZE -> BEKLEME MODU")
+                    self.kamikaze_release_event.wait()
+                    print("KAMIKAZE -> AKTIF")
+                    self.kamikaze_release_event.clear()
+        
+        is_qr_available=self.qr_konum_al()
         try:
-            self.yönelim_yap()
             qr_gidiyor=False
             kalkista = False
-            print("------------******************************************************",type(self.yönelim_yapılacak_rakip))
-            print(type(json.loads(self.yönelim_yapılacak_rakip)))
             while True:
+                if self.mod != "kamikaze" :
+                    print("KAMIKAZE -> BEKLEME MODU")
+                    self.kamikaze_release_event.wait()
+                    print("KAMIKAZE -> AKTIF")
+                    self.kamikaze_release_event.clear()
+
+                    
                 qr_enlem, qr_boylam = json.loads(self.yönelim_yapılacak_rakip)["qrEnlem"], json.loads(self.yönelim_yapılacak_rakip)["qrBoylam"]
                 qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
                 print("QR MESAFE", qr_mesafe)
@@ -163,10 +175,7 @@ class Iha():
                     if iha_path.get_ap_mode() != "AUTO":
                         iha_path.set_ap_mode("AUTO")
                     kalkista = False
-                if self.mod == "kilitlenme":
-                    self.kamikaze_stop_event.wait()
-                    self.kamikaze_stop_event.clear()
-                    break
+
         except Exception as e:
             print("ERROR KAMIKAZE ->" + str(e))
 
@@ -174,8 +183,8 @@ class Iha():
 if __name__ == '__main__':
     threads= {}
 
-    iha_obj = Iha("127.0.0.1") #TODO UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
-    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #TODO UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
+    iha_obj = Iha("10.80.1.85") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
@@ -187,48 +196,31 @@ if __name__ == '__main__':
     pwm_thread = threading.Thread(target=iha_obj.receive_pwm)
     yonelim_thread = threading.Thread(target=iha_obj.yönelim_yap)
 
+    kamikaze_thread.start()
+    pwm_thread.start()
+    yonelim_thread.start()
+
     time.sleep(2)
 
     while True:
         time.sleep(1)
+
         if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
-
-
-            if ("yönelim" in threads) and threads["yönelim"].is_alive():
-                print("IHA GOREV : YONELIM KAPATILIYOR...")
-                iha_obj.yönelim_stop_event.set()
-                del threads["yönelim"]
-
-
-            if not ("kamikaze" in threads): #not kamikaze_thread.is_alive():
-                print("IHA GOREV : KAMIKAZE BASLATILIYOR...")
-                kamikaze_thread.start()
-                threads["kamikaze"] = kamikaze_thread
+            iha_obj.kamikaze_release_event.set()
 
             if DEBUG == "DEBUG_QR":
                 while True:
                     print("DEBUG MOD ON...\n\n")
                     time.sleep(9999)
 
-        if (iha_path.servo6 >= 1600 and iha_path.servo7 >= 1600) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: High #TODO DÜZENLENECEK
+
+        if (iha_path.servo6 >= 1600 and iha_path.servo7 >= 1600) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: High
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
-
-            if ("kamikaze" in threads) and threads["kamikaze"].is_alive():
-                print("ANA GOREV :kamikaze KAPATILIYOR...")
-                iha_obj.kamikaze_stop_event.set()
-                del threads["kamikaze"]
-
-            if not pwm_thread.is_alive():
-                print(threads)
-                pwm_thread.start()
-                threads["pwm"] = pwm_thread
-            if not yonelim_thread.is_alive():
-                yonelim_thread.start()
-                threads["yönelim"] = yonelim_thread
-
+            iha_obj.yönelim_release_event.set()
+            
             if DEBUG == "DEBUG_kilitlenme":
                 while True:
                     print("DEBUG MOD ON...\n\n")
