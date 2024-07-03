@@ -19,7 +19,7 @@ from qr_detection import QR_Detection
 class Yerİstasyonu():
 
     def __init__(self, mavlink_ip): #TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
-        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\demir\\Desktop\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
         self.ana_sunucuya_giris_durumu = False
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
@@ -290,8 +290,8 @@ class Yerİstasyonu():
                 self.yönelim_modu=True
                 self.yönelim_modundan_cikis_eventi.set()
 
-        fps = 1/(self.new_frame_time-self.prev_frame_time)
-        cv2.putText(img=frame,text="FPS:"+str(int(fps)),org=(50,50),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
+        #fps = 1/(self.new_frame_time-self.prev_frame_time)
+        #cv2.putText(img=frame,text="FPS:"+str(int(fps)),org=(50,50),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
 
         self.Server_udp.show(frame)
 
@@ -351,7 +351,7 @@ class Yerİstasyonu():
 
     def kamikaze_gorevi(self):
         _, self.qr_coordinat = self.ana_sunucu.qr_koordinat_al()
-        self.Yönelim_sunucusu_oluştur()
+        #self.Yönelim_sunucusu_oluştur()
         self.Server_yönelim.send_data_to_client(json.dumps(self.qr_coordinat).encode())
 
 
@@ -370,15 +370,19 @@ class Yerİstasyonu():
                 now = datetime.datetime.now() #TODO Düzeltilecek
                 t = now.strftime("%H:%M:%S")
                 cv2.putText(img=frame,text= "Sunucu saati: "+ t,org=(350,50),fontFace=1,fontScale=1.4,color=(0,255,0),thickness=2)
-                fps = 1/(self.new_frame_time-self.prev_frame_time)
-                cv2.putText(img=frame,text="FPS:"+str(int(fps)),org=(50,50),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
-
+                #fps = 1/(self.new_frame_time-self.prev_frame_time)
+                #cv2.putText(img=frame,text="FPS:"+str(int(fps)),org=(50,50),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
 
                 self.Server_udp.show(frame)
                 self.prev_frame_time=time.time()
                 print(qr_text)
             except Exception as e:
                 print("KAMIKAZE : QR ERROR -> ", e)
+
+            if self.secilen_görev_modu == "kilitlenme":
+                    self.qr_stop_event.wait()
+                    self.qr_stop_event.clear()
+                    break
             
 
     def sunuculari_oluştur(self):
@@ -454,8 +458,9 @@ class Yerİstasyonu():
 
                 if not ("kamikaze" in threads):
                     print("ANA GOREV :KAMIKAZE BASLATILIYOR..")
-                    threads["kamikaze"] = kamikaze_görevi_thread
                     kamikaze_görevi_thread.start()
+                    threads["kamikaze"] = kamikaze_görevi_thread
+
 
                 if not ("qr" in threads):
                     print("ANA GOREV :QR BASLATILIYOR..")
@@ -470,7 +475,7 @@ class Yerİstasyonu():
 
 if __name__ == '__main__':
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.72") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("127.0.0.1") #<----- Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
     try:
         "Ana Sunucuya giriş yapıyor."
