@@ -4,11 +4,12 @@ import numpy as np
 import sympy as sp
 from sympy import Eq
 import math
-
+import json
+import ana_sunucu_islemleri
 
 home_konumu = (40.2306557, 29.0010148)
-x=8 #bu uzaklık bizim yeni oluşturulan noktamının çemberden kaç merte uzakla oluşturulmasını belirleyecektir
-ucus_alanı=[(40.2330761, 29.0002155), (40.2331743, 29.0092814), (40.2302666, 29.0093029), (40.230709, 29.001857), (40.2321751, 29.0007842)]
+x=0 #bu uzaklık bizim yeni oluşturulan noktamının çemberden kaç merte uzakla oluşturulmasını belirleyecektir
+ucus_alanı=[(40.2333300, 29.0000975), (40.2335020, 29.0093350), (40.2302666, 29.0093029), (40.230709, 29.001857), (40.2321751, 29.0007842)]
 def wp_nokta_okuma(dosya_adi):
     with open(dosya_adi, 'r') as dosya:
         # Dosyadan her satırı oku
@@ -30,6 +31,23 @@ def wp_nokta_okuma(dosya_adi):
         # Noktalar listesine bir tuple olarak ekleyin
         noktalar.append((enlem, boylam))
     return noktalar
+
+
+def fence_dosya_kaydetme(fence_konumları,ucus_alanı, dosya_adi):
+
+    ucus_alanı_miktarı = len(ucus_alanı)
+    fence_konumları_miktarı = len(fence_konumları)
+
+    with open(dosya_adi, 'w') as dosya:
+        dosya.truncate(0)
+        dosya.write("QGC WPL 110\n")
+        dosya.write("0\t1\t0\t16\t0\t0\t0\t0\t40.2320505\t29.0042872\t100.220000\t1\n")
+        for i, konum in enumerate(ucus_alanı, start=1):
+            dosya.write(
+                f"{i}\t0\t0\t5001\t5.00000000\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
+        for j, konum in enumerate(fence_konumları, start=ucus_alanı_miktarı + 1):
+            dosya.write(
+                f"{j}\t0\t0\t5004\t{float(konum[2]):.8f}\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
 
 
 def fencenokta_okuma(dosya_adi):
@@ -58,7 +76,7 @@ def fencenokta_okuma(dosya_adi):
         elif degerler[3]=='5001':
             ucus_alanları.append((enlem, boylam))
 
-    return noktalar,ucus_alanları
+    return noktalar
 
 
 def wp_konum_hesapla(target_locations,ucusalani):
@@ -102,6 +120,7 @@ def wp_konum_hesapla(target_locations,ucusalani):
         ucus_alani.append(nokta)
 
     return wp_kartezyen,ucus_alani
+
 
 
 def fence_konum_hesapla(fence_konumları):
@@ -154,7 +173,7 @@ def cember_denklemi(a, b, radius):
     cember_denklemi = Eq((x - a) ** 2 + (y - b) ** 2, r ** 2)
     return cember_denklemi
 
-
+# nokta1 ve nokta2 arasındaki doğru parçası ile çemberin kesişip kesişmediğini kontrol eder
 def kesisim_kontrol(nokta1, nokta2, cember):
     h, k, r = cember
 
@@ -172,6 +191,8 @@ def kesisim_kontrol(nokta1, nokta2, cember):
         d = abs(nokta1[0] - h)
 
     return d <= r
+
+
 
 def yeni_nokta_olusturma(nokta1, nokta2, cember):
     h, k, r = cember  # Çemberin merkezi (h, k) ve yarıçapı r
@@ -198,13 +219,7 @@ def yeni_nokta_olusturma(nokta1, nokta2, cember):
         # Dik doğrunun eğimi
         normal_egim = -1 / egim
 
-        # Çemberin merkezinden geçen ve iki noktayı birleştiren doğruya dik olan doğrunun denklemi
-        # y - k = normal_egim * (x - h)
-
-        # Bu doğru üzerinde, çemberin yarıçapından daha uzakta bir nokta belirleyelim
-        # Bu nokta, çemberin dışına çıkacak ve çemberi dolaşacak bir yol belirlememizi sağlar
-        # Örneğin, çemberin yarıçapının 1.5 katı uzaklıkta bir nokta seçelim
-        uzaklik = r * 1.5
+        uzaklik = r+5
         yeni_x = h + uzaklik / np.sqrt(1 + normal_egim ** 2)
         yeni_y = k + normal_egim * (yeni_x - h)
 
@@ -235,19 +250,10 @@ def yeni_nokta_olusturma2(nokta1, nokta2, cember):
         egim = dy / dx
         # Dik doğrunun eğimi
         normal_egim = -1 / egim
-
-        # Çemberin merkezinden geçen ve iki noktayı birleştiren doğruya dik olan doğrunun denklemi
-        # y - k = normal_egim * (x - h)
-
-        # Bu doğru üzerinde, çemberin yarıçapından daha uzakta bir nokta belirleyelim
-        # Bu nokta, çemberin dışına çıkacak ve çemberi dolaşacak bir yol belirlememizi sağlar
-        # Örneğin, çemberin yarıçapının 1.5 katı uzaklıkta bir nokta seçelim
         uzaklik = r * 1.5
         yeni_x = h + uzaklik / np.sqrt(1 + normal_egim ** 2)
         yeni_y = k + normal_egim * (yeni_x - h)
 
-        # 180 derece kaydırılmış nokta için, mevcut noktanın tam tersi yönde olmalı
-        # Bu, mevcut noktadan çemberin merkezine olan vektörü alıp ters çevirerek yapılabilir
         kaydirilmis_x = h - (yeni_x - h)
         kaydirilmis_y = k - (yeni_y - k)
 
@@ -277,6 +283,9 @@ def WPnoktaları_dosyaya_yaz(noktalar, dosya_adi):
     dosya_ici = open(dosya_adi, 'r')
     return
 
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def ciz(cizim_listesi):
@@ -329,14 +338,14 @@ def ciz(cizim_listesi):
     # Göster
     plt.show()
 
-def nokta_silme(nokta,noktalar):
-    #noktalar içindeki noktayı sil
-    noktalar.remove(nokta)
-    return
-
 
 def nokta_cember_icinde_mi(nokta, cember):
-    h, k, r = cember  # Çemberin merkezi (h, k) ve yarıçapı r
+    try:
+        h, k, r = cember  # Çemberin merkezi (h, k) ve yarıçapı r
+    except ValueError as e:
+        print(f"Hata: {e}. cember değişkeninin değeri: {cember}")
+        return False
+
     x, y = nokta  # Kontrol edilecek nokta (x, y)
 
     # Noktanın çemberin merkezine olan uzaklığı
@@ -409,6 +418,18 @@ def aci_hesapla(önceki_nokta,wp,sonraki_nokta):
     # Açıyı derece cinsinden dönüştürün
     aci_derece = math.degrees(aci_radyan)
     return aci_derece
+
+
+
+
+def nokta_nokta(nokta1,nokta2): #iki nokta arasındaki mesafeyi hesaplar
+    x_uzaklık=abs(nokta1[0]-nokta2[0])
+    y_uzaklık=abs(nokta1[1]-nokta2[1])
+    mesafe=math.sqrt(x_uzaklık**2+y_uzaklık**2)
+    return mesafe
+
+
+
 def nokta_gecerli_mi(nokta, fence_kartezyen, ucus_alanı_kartezyen):
     for cember in fence_kartezyen:
         if nokta_cember_icinde_mi(nokta, cember):
@@ -416,11 +437,6 @@ def nokta_gecerli_mi(nokta, fence_kartezyen, ucus_alanı_kartezyen):
         if nokta_alanın_içinde_mi(nokta, ucus_alanı_kartezyen) == False:
             return False
     return True
-
-
-import math
-
-
 def aci_hesaplama(a, b, c):
     vektor_a = (a[0] - b[0], a[1] - b[1])
     vektor_b = (c[0] - b[0], c[1] - b[1])
