@@ -15,12 +15,11 @@ import mavproxy2
 import hesaplamalar
 from qr_detection import QR_Detection
 import multiprocessing as mp
-from datetime import datetime, timedelta
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
 
-    def __init__(self, mavlink_ip): #TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
+    def __init__(self, mavlink_ip,event_map): #TODO HER BİLGİSAYAR İÇİN PATH DÜZENLENMELİ
 
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
@@ -56,17 +55,19 @@ class Yerİstasyonu():
 
         self.fark = 0
 
-        #GÖREV_MODU SEÇİMİ 
+        #GÖREV_MODU SEÇİMİ
+        self.event_map = event_map
         self.secilen_görev_modu="kilitlenme"
+        self.önceki_mod = ""
         self.sunucu_saati:str = ""
 
     #! SUNUCU FONKSİYONLARI
     def senkron_local_saat(self):
         status_code, sunuc_saati = self.ana_sunucu.sunucu_saati_al()
-        local_saat = datetime.today()
+        local_saat = datetime.datetime.today()
         sunuc_saati = json.loads(sunuc_saati)
         sunucu_saat, sunucu_dakika, sunucu_saniye, sunucu_milisaniye = sunuc_saati["saat"], sunuc_saati["dakika"],sunuc_saati["saniye"], sunuc_saati["milisaniye"]
-        sunucu_saati = datetime(year=local_saat.year,
+        sunucu_saati = datetime.datetime(year=local_saat.year,
                                          month=local_saat.month,
                                          day=local_saat.day,
                                          hour=sunucu_saat,
@@ -151,6 +152,18 @@ class Yerİstasyonu():
         self.MAV_PROXY_sunucusu=connection_status
         return connection_status
 
+    #! KONTROL FONKSİYONU
+    def trigger_event(self, event_number, message): #*message -> "kilitlenme" veya "kamikaze"
+        try:
+            if event_number in self.event_map:
+                    queue, event = self.event_map[event_number]
+                    queue.put(message)
+                    event.set()
+            else:
+                raise ValueError(f"Event_map do not contain {event_number}")
+        except Exception as e:
+            print("TRIGGER ERROR -> ",e)
+
     #! KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
     def pwm_gonder(self,pwm_verileri):
         try:
@@ -193,7 +206,7 @@ class Yerİstasyonu():
             #     self.yönelim_modundan_cikis_eventi.wait()
             #     self.yönelim_modundan_cikis_eventi.clear()
             #     self.pwm_release=False
-            
+
     #! KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
     def qrKonum_gonder(self):
 
@@ -208,7 +221,7 @@ class Yerİstasyonu():
         except:
             print("KAMIKAZE : QR-KONUM IHA'YA GONDERILIRKEN HATA -> ",e)
             #TODO EKLEME YAPILACAK
-       
+
     #! ANA FONKSİYONLAR
     def sunuculari_oluştur(self):
         #t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)  # YKI_PROCESS Class içinde KULLANILMIŞ
@@ -227,39 +240,42 @@ class Yerİstasyonu():
     def ANA_GOREV_KONTROL(self):
         self.sunuculari_oluştur()
         time.sleep(10)
+        önceki_mod = ""
 
         while True:
             self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
 
-            if self.secilen_görev_modu == "kilitlenme":
+            if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):        
                 self.trigger_event(1,"kilitlenme")
                 self.trigger_event(2,"kilitlenme")
+                self.önceki_mod = "kilitlenme"
 
-            if self.secilen_görev_modu == "kamikaze":
+            if self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
                 self.trigger_event(1,"kamikaze")
                 self.trigger_event(2,"kamikaze")
+                self.önceki_mod = "kamikaze"
 
-            if self.secilen_görev_modu == "AUTO":
-                pass
+            if self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="auto"):
+                self.trigger_event(1,"auto")
+                self.trigger_event(2,"auto")
+                self.önceki_mod = "auto"
+
+            #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
+
 
 class YKI_PROCESS():
 
-    def __init__(self,fark,queue_size=1) -> None:
+    def __init__(self,fark,event_map,queue_size=1,):
         self.fark = fark
         self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
-        
+
         self.Server_udp = Server_Udp.Server()
         self.görüntü_sunucusu=False
 
         #MultiProcess-Mod Objeleri
         self.capture_queue = mp.Queue(maxsize=queue_size)
         self.display_queue = mp.Queue(maxsize=queue_size)
-        self.event_queue_1 = mp.Queue()
-        self.event_1 = mp.Event()
-        self.event_queue_2 = mp.Queue()
-        self.event_2 = mp.Event()
-        self.event_queue_3 = mp.Queue()
-        self.event_3 = mp.Event()
+        self.event_map = event_map
 
         self.qr_coordinat = ""
         self.qr = QR_Detection()
@@ -307,9 +323,10 @@ class YKI_PROCESS():
             except Exception as e:
                 print("FRAME : RECEIVE ERROR ->",e)
 
-    def process_frames(self, event_queue, event_trigger):
+    def process_frames(self, event_map,num):
         process_name = mp.current_process().name
         print(f"Starting Frame_Processing process: {process_name}")
+        event_queue,event_trigger = event_map[num]
 
         lockedOrNot = 0
         locked_prev = 0
@@ -409,44 +426,33 @@ class YKI_PROCESS():
         fps_start_time = time.perf_counter()
         frame_count:float= 0.0
         fps:float = 0.0
-        counter= 0
+        #counter= 0
         while True:
             if not self.display_queue.empty():
                 frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
 
                 current_time = time.strftime("%H:%M:%S")
-                cv2.putText(frame,"SUNUCU : "+current_time , (350, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 128, 0), 2)
+                cv2.putText(frame,"SUNUCU : "+current_time , (300, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 128, 0), 2)
                 cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 128, 0), 2)
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
                 frame_count += 1.0
-                counter = 0
+                #counter = 0
             else:
-                counter +=1
-                print("FRAME : DISPLAY_QUEUE IS EMPTY...",counter)
-                
+                #counter +=1
+                #print("FRAME : DISPLAY_QUEUE IS EMPTY...",counter)
+                pass
+
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
         cv2.destroyAllWindows()
 
-    #! KONTROL FONKSİYONU
-    def trigger_event(self, event_number, message): #*message -> "kilitlenme" veya "kamikaze"
-        if event_number == 1:
-            self.event_queue_1.put(message)
-            self.event_1.set()
-        elif event_number == 2:
-            self.event_queue_2.put(message)
-            self.event_2.set()
-        elif event_number == 3:
-            self.event_queue_3.put(message)
-            self.event_3.set()
-
     #! ANA FONKSİYONLAR
     def process_manager(self):
         p1 = mp.Process(target=self.capture_frames)
-        p2 = mp.Process(target=self.process_frames, args=(self.event_queue_1, self.event_1))
-        p3 = mp.Process(target=self.process_frames, args=(self.event_queue_2, self.event_2))
-        p4 = mp.Process(target=self.process_frames, args=(self.event_queue_3, self.event_3))
+        p2 = mp.Process(target=self.process_frames, args=(self.event_map, 1))
+        p3 = mp.Process(target=self.process_frames, args=(self.event_map, 2))
+        p4 = mp.Process(target=self.process_frames, args=(self.event_map, 3))
         p6 = mp.Process(target=self.display_frames)
 
         p1.start()
@@ -460,12 +466,6 @@ class YKI_PROCESS():
     def start(self):
         p1,p2,p3,p4,p6 = self.process_manager()
 
-        "---------------"
-        time.sleep(1)
-        self.trigger_event(1,"kilitlenme")
-        self.trigger_event(2,"kilitlenme")
-        self.trigger_event(3,"kilitlenme")
-        "---------------"
         time.sleep(5)
 
         p1.join()
@@ -474,21 +474,49 @@ class YKI_PROCESS():
         p4.join()
         p6.join()
 
-def create_IPC():
+def create_IPC(event_map):
     pass
+
+def create_event_map():        
+    
+    #Process frames
+    message_queue_1 = mp.Queue()
+    event_1 = mp.Event()
+    message_queue_2 = mp.Queue()
+    event_2 = mp.Event()
+    message_queue_3 = mp.Queue()
+    event_3 = mp.Event()
+
+    #Kilitlenme mod change
+    pwm_lock_queue = mp.Queue()
+    pwm_lock_event = mp.Event()
+    
+    #event_map -> (1,2,3):process_frames ; (4):pwm-yonelim switch
+    event_map = {
+    1: (message_queue_1, event_1),
+    2: (message_queue_2, event_2),
+    3: (message_queue_3, event_3),
+    4: (pwm_lock_queue,pwm_lock_event),
+    #TODO EKLENECEK
+    }
+    
+    return event_map
+
 
 if __name__ == '__main__':
 
-    #a,b,c,d,e=create_IPC()
+    event_map = create_event_map()
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.89") #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    control_objects = create_IPC(event_map=event_map)
+
+    yer_istasyonu = Yerİstasyonu("10.241.77.149",event_map=event_map) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 
-    yki_process = YKI_PROCESS(queue_size=2,fark=fark) #TODO queue_size test + "sunucu+fark"
+    yki_process = YKI_PROCESS(queue_size=2,fark=fark,event_map=event_map) #TODO queue_size test + "sunucu+fark"
 
     görev_kontrol = threading.Thread(target=yer_istasyonu.ANA_GOREV_KONTROL)
-    #görev_kontrol.start()
+    görev_kontrol.start()
 
     yki_process.start()
     görev_kontrol.join()
