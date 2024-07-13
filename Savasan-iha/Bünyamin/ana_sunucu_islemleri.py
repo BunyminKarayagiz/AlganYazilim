@@ -69,3 +69,15 @@ class sunucuApi():
     def sunucudan_cikis(self):
         self.durum = self.ses.get(self.url + '/api/cikis')
         return self.durum
+
+    def get_hava_savunma_coord(self):
+        self.hss_koordinat = self.ses.get(self.url + '/api/hss_koordinatlari')
+        return self.hss_koordinat.status_code, self.hss_koordinat.text
+
+
+"""if __name__ == '__main__':
+    api = sunucuApi("http://127.0.0.1:5000")
+    api.sunucuya_giris("algan", "53SnwjQ2sQ")
+    status, text = api.get_hava_savunma_coord()
+    print(text)
+"""
