@@ -25,6 +25,7 @@ class Detection:
         target_area_x1, target_area_x2 = (int(y * 0.25), int(y * 0.75))
 
         cv2.rectangle(frame, (target_area_x1, target_area_y1), (target_area_x2, target_area_y2), (0, 255, 0), 2)
+        cv2.putText(frame, f'Mod: {"Kilitlenme"}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
 
         locked_or_not = False
         if results:

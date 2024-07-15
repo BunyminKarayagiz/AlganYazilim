@@ -15,6 +15,7 @@ import mavproxy2
 import hesaplamalar
 from qr_detection import QR_Detection
 import multiprocessing as mp
+import ipConfig
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
@@ -255,10 +256,20 @@ class Yerİstasyonu():
                 self.trigger_event(2,"kamikaze")
                 self.önceki_mod = "kamikaze"
 
-            if self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="auto"):
-                self.trigger_event(1,"auto")
-                self.trigger_event(2,"auto")
-                self.önceki_mod = "auto"
+            if self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
+                self.trigger_event(1,"AUTO")
+                self.trigger_event(2,"AUTO")
+                self.önceki_mod = "AUTO"
+
+            if self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
+                self.trigger_event(1,"FBWA")
+                self.trigger_event(2,"FBWA")
+                self.önceki_mod = "FBWA"
+            
+            if self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
+                self.trigger_event(1,"RTL")
+                self.trigger_event(2,"RTL")
+                self.önceki_mod = "RTL"
 
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
@@ -267,7 +278,7 @@ class YKI_PROCESS():
 
     def __init__(self,fark,event_map,queue_size=1,):
         self.fark = fark
-        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\bunya\\Desktop\\git\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
 
         self.Server_udp = Server_Udp.Server()
         self.görüntü_sunucusu=False
@@ -339,7 +350,7 @@ class YKI_PROCESS():
                 event_message = event_queue.get()
                 print(f"{process_name} received event: {event_message}")
                 event_trigger.clear()
-
+            print("EVENT MESSAGE:", event_message)
             if not self.capture_queue.empty():
                 frame = self.capture_queue.get()
 
@@ -415,10 +426,15 @@ class YKI_PROCESS():
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
 
+                elif event_message == "AUTO" or event_message == "FBWA" or event_message == "RTL":
+                    if not self.display_queue.full():
+                        self.display_queue.put(frame)
 
                 else:
                     print("INVALID MODE...")
                     time.sleep(0.5)
+
+                cv2.putText(frame, f'Mod: {event_message}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
 
     def display_frames(self): #TODO SUNUCU SAATİ EKRANA BASILACAK...
         process_name = mp.current_process().name
@@ -430,10 +446,9 @@ class YKI_PROCESS():
         while True:
             if not self.display_queue.empty():
                 frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
-
                 current_time = time.strftime("%H:%M:%S")
-                cv2.putText(frame,"SUNUCU : "+current_time , (300, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 128, 0), 2)
-                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 128, 0), 2)
+                cv2.putText(frame,"SUNUCU : "+current_time , (300, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
                 frame_count += 1.0
@@ -458,7 +473,7 @@ class YKI_PROCESS():
         p1.start()
         p2.start()
         p3.start()
-        #p4.start()
+        p4.start()
         p6.start()
 
         return p1,p2,p3,p4,p6
@@ -508,8 +523,8 @@ if __name__ == '__main__':
     event_map = create_event_map()
 
     control_objects = create_IPC(event_map=event_map)
-
-    yer_istasyonu = Yerİstasyonu("10.241.77.149",event_map=event_map) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    ip=ipConfig.wlan_ip()
+    yer_istasyonu = Yerİstasyonu(ip,event_map=event_map) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 

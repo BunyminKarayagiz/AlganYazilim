@@ -2,7 +2,7 @@ import argparse
 import json
 import numpy as np
 import path
-
+import ipConfig
 import time
 import threading
 import Client_Tcp
@@ -182,8 +182,8 @@ class Iha():
 
 if __name__ == '__main__':
     threads= {}
-
-    iha_obj = Iha("10.241.77.149") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    ip=ipConfig.wlan_ip()
+    iha_obj = Iha(ip) #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
@@ -205,6 +205,16 @@ if __name__ == '__main__':
     while True:
         time.sleep(1)
 
+        if (iha_path.servo6 >= 1600 and (iha_path.servo7 >= 1400 and iha_path.servo7 <= 1600)) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: Mid
+            iha_obj.mod = "kilitlenme"
+            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+            iha_obj.yönelim_release_event.set()
+            
+            if DEBUG == "DEBUG_kilitlenme":
+                while True:
+                    print("DEBUG MOD ON...\n\n")
+                    time.sleep(9999)
+
         if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
@@ -215,13 +225,26 @@ if __name__ == '__main__':
                     print("DEBUG MOD ON...\n\n")
                     time.sleep(9999)
 
+        if (iha_path.servo6 >= 1600 and iha_path.servo7 >= 1600):  # ch6: High, ch8: High
 
-        if (iha_path.servo6 >= 1600 and iha_path.servo7 >= 1600) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: High
-            iha_obj.mod = "kilitlenme"
+            iha_obj.mod="AUTO"
+            if iha_path.get_ap_mode !="AUTO":
+                iha_path.set_ap_mode("AUTO")    
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
-            iha_obj.yönelim_release_event.set()
-            
-            if DEBUG == "DEBUG_kilitlenme":
-                while True:
-                    print("DEBUG MOD ON...\n\n")
-                    time.sleep(9999)
+    
+
+        if ((iha_path.servo6 >= 1400 and iha_path.servo6 <= 1600) and iha_path.servo7 >= 1600):  # ch6: Mid, ch8: High
+
+            iha_obj.mod="FBWA"
+            if iha_path.get_ap_mode !="FBWA":
+                iha_path.set_ap_mode("FBWA")    
+            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+
+        if (iha_path.servo6 <= 1400 and iha_path.servo7 >= 1600):  # ch6: Low, ch8: High
+
+            iha_obj.mod="RTL"
+            if iha_path.get_ap_mode !="RTL":
+                 iha_path.set_ap_mode("RTL")    
+            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+
+        
