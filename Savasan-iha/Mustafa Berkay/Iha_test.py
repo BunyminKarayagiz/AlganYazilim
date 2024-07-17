@@ -103,7 +103,6 @@ class Iha():
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
                     self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
                     print("RAKİP:", self.yönelim_yapılacak_rakip)
-                    print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
                 except Exception as e:
                     print("YONELIM SERVER: Veri çekilirken hata :", e)
 
@@ -117,8 +116,6 @@ class Iha():
                     self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
                     print("QR-KONUM : ", self.yönelim_yapılacak_rakip)
                     is_qr_available = True
-                    return is_qr_available
-                
                 except Exception as e:
                     print("QR-KONUM: Veri çekilirken hata :", e)
             
@@ -130,11 +127,13 @@ class Iha():
                     print("KAMIKAZE -> AKTIF")
                     self.kamikaze_release_event.clear()
         
-        is_qr_available=self.qr_konum_al()
+        self.qr_konum_al()
+        print("tYPE: ",type(self.yönelim_yapılacak_rakip))
         try:
             qr_gidiyor=False
             kalkista = False
             while True:
+                print("QR KONUMU : ",self.yönelim_yapılacak_rakip )
                 if self.mod != "kamikaze" :
                     print("KAMIKAZE -> BEKLEME MODU")
                     self.kamikaze_release_event.wait()
@@ -142,7 +141,9 @@ class Iha():
                     self.kamikaze_release_event.clear()
 
                     
-                qr_enlem, qr_boylam = json.loads(self.yönelim_yapılacak_rakip)["qrEnlem"], json.loads(self.yönelim_yapılacak_rakip)["qrBoylam"]
+                qr_enlem, qr_boylam = self.yönelim_yapılacak_rakip["qrEnlem"], self.yönelim_yapılacak_rakip["qrBoylam"]
+                print("QR ENLEM: ",qr_enlem)
+                print("QR ENLEM: ",qr_boylam)
                 qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
                 print("QR MESAFE", qr_mesafe)
                 if not qr_gidiyor and not kalkista and qr_mesafe > 0.15:  # and iha.pos_alt_rel > 100:

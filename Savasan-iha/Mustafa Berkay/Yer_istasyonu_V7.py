@@ -214,12 +214,14 @@ class Yerİstasyonu():
     def qrKonum_gonder(self):
 
         try:
+            print("QRRR")
             _, self.qr_coordinat = self.ana_sunucu.qr_koordinat_al()
+            print("QR KONUM: ",self.qr_coordinat)
         except Exception as e :
             print("KAMIKAZE : SUNUCUDAN QR-KONUM ALINIRKEN HATA -> ",e)
             #TODO EKLEME YAPILACAK
         try:
-            self.Server_yönelim.send_data_to_client(json.dumps(self.qr_coordinat).encode())
+            self.Server_yönelim.send_data_to_client(self.qr_coordinat.encode())
             
         except:
             print("KAMIKAZE : QR-KONUM IHA'YA GONDERILIRKEN HATA -> ",e)
@@ -257,6 +259,7 @@ class Yerİstasyonu():
             if self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
                 self.trigger_event(1,"kamikaze")
                 self.trigger_event(2,"kamikaze")
+                self.qrKonum_gonder()
                 self.önceki_mod = "kamikaze"
 
             if self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
