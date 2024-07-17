@@ -125,7 +125,7 @@ class MAVLink:
                     if time.time() - self.gonderilen_zaman < 1:
                         break
                     else:
-                        print(self.telemetri)
+                        #print(self.telemetri)
                         self.gonderilen_zaman = time.time()
                         break
             
@@ -134,6 +134,7 @@ class MAVLink:
                 connection=False
                 while not connection:
                     connection=self.connect()
+            return self.telemetri
             
             
 

@@ -102,6 +102,7 @@ class Iha():
                 try:
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
                     self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
+                    print("RAKİP:", self.yönelim_yapılacak_rakip)
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
                 except Exception as e:
                     print("YONELIM SERVER: Veri çekilirken hata :", e)

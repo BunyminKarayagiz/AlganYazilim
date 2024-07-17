@@ -125,7 +125,7 @@ def tele():
                 "iha_boylam": 149.1420221,
                 "iha_irtifa": 50,
                 "iha_dikilme": 5,
-                "iha_yonelme": 256,
+                "iha_yonelme": 40,
                 "iha_yatis": 0,
                 "zaman_farki": 93
             },

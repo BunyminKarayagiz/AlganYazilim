@@ -182,14 +182,14 @@ class Yerİstasyonu():
             #     print("YONELİM/TAKIP --> BEKLEME MODU")
             #     self.yönelim_release_event.wait()
             #     print("YONELİM/TAKIP --> AKTIF")
-            #     self.yönelim_release_event.clear()
+            #     self.yönelim_release_event.clear()S
 
             try:
-                #bizim_telemetri=self.mavlink_obj.veri_kaydetme()
-                #print("Telemetri:",bizim_telemetri)
-                #rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
-                #yönelim_yapılacak_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri)
-                yönelim_yapılacak_rakip = 0
+                bizim_telemetri=self.mavlink_obj.veri_kaydetme()
+                status_code , rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri)
+                rakip_telemetri=json.loads(rakip_telemetri)
+                yönelim_yapılacak_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri)
+                #yönelim_yapılacak_rakip = 0
             except Exception as e:
                 print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
 
@@ -207,6 +207,8 @@ class Yerİstasyonu():
             #     self.yönelim_modundan_cikis_eventi.wait()
             #     self.yönelim_modundan_cikis_eventi.clear()
             #     self.pwm_release=False
+            if self.önceki_mod =="kilitlenme":
+                break
 
     #! KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
     def qrKonum_gonder(self):
@@ -249,6 +251,7 @@ class Yerİstasyonu():
             if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):        
                 self.trigger_event(1,"kilitlenme")
                 self.trigger_event(2,"kilitlenme")
+                self.yonelim_gonder()
                 self.önceki_mod = "kilitlenme"
 
             if self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
@@ -350,7 +353,7 @@ class YKI_PROCESS():
                 event_message = event_queue.get()
                 print(f"{process_name} received event: {event_message}")
                 event_trigger.clear()
-            print("EVENT MESSAGE:", event_message)
+            #print("EVENT MESSAGE:", event_message)
             if not self.capture_queue.empty():
                 frame = self.capture_queue.get()
 
@@ -447,7 +450,7 @@ class YKI_PROCESS():
             if not self.display_queue.empty():
                 frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                 current_time = time.strftime("%H:%M:%S")
-                cv2.putText(frame,"SUNUCU : "+current_time , (300, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                cv2.putText(frame,"SUNUCU : "+current_time , (400, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
