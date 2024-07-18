@@ -14,20 +14,26 @@ import mavproxy2
 import hesaplamalar
 from qr_detection import QR_Detection
 import multiprocessing as mp
+
+from custom_decorators import perf_counter,debug,memoize
+from logging_setup import setup_logging, start_log_listener
+from termcolor import colored, cprint
+
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
 #!Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
-#!Ana_sunucuya veri(görev) gönderimi : Eksik
+#!Ana_sunucuya veri gönderimi :        Eksik
 #!Telemetri verilerinin alınması :     Kusurlu
 #!Yonelim modunda rakip seçimi:        Kusurlu
 #!Aşırı yönelim(pwm):                   Eksik
-#!Hava savunma sistemi:                 Eksik
-#!Pwm veri doğruluğu:                   Test edilecek
+#!Hava savunma sistemi:                Eksik
+#!Pwm veri doğruluğu:                  Test edilecek
+#!Telemetri gönderim sıklığı:           Kusurlu
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
 
-    def __init__(self, mavlink_ip,event_map): #TODO 
+    def __init__(self, mavlink_ip,event_map): #TODO
 
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
@@ -223,7 +229,7 @@ class Yerİstasyonu():
                 print("TELEMETRI : VERI HATASI -> ",e)
 
             if not event_message == "STOP":
-                if event_message == "yonelim": #TODO Iha içine tuple desteği eklenecek....
+                if event_message == "yonelim":
                     if not bizim_telemetri == None:
                         self.yonelim_gonder( (self.rakip_sec(bizim_telemetri,rakip_telemetri),"yonelim") ) #? Rakip-Kontrol ayrı yapılabilir.
                 elif event_message == "qr":
@@ -240,28 +246,31 @@ class Yerİstasyonu():
         time.sleep(10)
 
         while True:
-            self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
+            try:
+                self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
+            except Exception as e:
+                cprint(f"MOD : Veri alırken hata -> {e}","red",attrs=["bold"]) #TODO EKLENECEK...
 
             if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
                 self.trigger_event(1,"kilitlenme")
                 self.trigger_event(2,"kilitlenme")
                 self.önceki_mod = "kilitlenme"
-                print(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
             elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
                 self.trigger_event(1,"kamikaze")
                 self.trigger_event(2,"kamikaze")
                 self.önceki_mod = "kamikaze"
-                print(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
             elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="auto"):
                 self.trigger_event(1,"auto")
                 self.trigger_event(2,"auto")
                 self.önceki_mod = "auto"
-                print(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
             else:
-                print("GOREV MODU : ",self.önceki_mod)
-
+                #print("GOREV MODU : ",self.önceki_mod)
+                cprint(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
 class YKI_PROCESS():
@@ -269,7 +278,6 @@ class YKI_PROCESS():
     def __init__(self,fark,event_map,queue_size=1):
         self.fark = fark
         self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
-
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_udp = Server_Udp.Server()
 
@@ -344,7 +352,7 @@ class YKI_PROCESS():
     
     def capture_frames(self):
         process_name = mp.current_process().name
-        print(f"Starting Capture-process: {process_name}")
+        cprint(f"Starting Capture-process: {process_name}","green")
 
         self.Görüntü_sunucusu_oluştur()
 
@@ -365,7 +373,7 @@ class YKI_PROCESS():
 
     def process_frames(self, event_map,num):
         process_name = mp.current_process().name
-        print(f"Starting Frame_Processing process: {process_name}")
+        cprint(f"Starting Frame_Processing process: {process_name}","green")
         event_queue,event_trigger = event_map[num]
 
         # yonelim_queue,yonelim_trigger = event_map[4]
@@ -381,7 +389,7 @@ class YKI_PROCESS():
             if event_trigger.is_set():
                 time.sleep(0.01)
                 event_message = event_queue.get()
-                print(f"{process_name} received event: {event_message}")
+                cprint(f"{process_name} received event: {event_message}","red")
                 event_trigger.clear()
 
             if not self.capture_queue.empty():
@@ -468,7 +476,7 @@ class YKI_PROCESS():
 
     def display_frames(self): #TODO SUNUCU SAATİ EKRANA BASILACAK...
         process_name = mp.current_process().name
-        print(f"Starting Display process: {process_name}")
+        cprint(f"Starting Display process: {process_name}","green")
         fps_start_time = time.perf_counter()
         frame_count:float= 0.0
         fps:float = 0.0
@@ -568,7 +576,8 @@ def create_event_map():
 if __name__ == '__main__':
 
     event_map = create_event_map()
-
+    log_queue, listener_process = start_log_listener()
+    setup_logging(log_queue)
     control_objects = create_IPC(event_map=event_map)
 
     yer_istasyonu = Yerİstasyonu("192.168.1.236",event_map=event_map) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
@@ -582,3 +591,6 @@ if __name__ == '__main__':
 
     yki_process.start()
     görev_kontrol.join()
+
+    listener_process.terminate()
+    listener_process.join()

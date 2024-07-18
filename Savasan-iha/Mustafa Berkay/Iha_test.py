@@ -9,6 +9,11 @@ import Client_Tcp
 
 from vincenty import vincenty
 from dronekit import LocationGlobalRelative
+#!      Sorunlar
+#!Kamikaze dalış güvenliği         Test edilecek[KRITIK]
+#!PWM ile takip                     Eksik
+#!Yonelim ile takip                 Eksik
+#!Logging.decorator                 .....
 
 class Iha():
     def __init__(self,host_ip) -> None:
@@ -122,7 +127,7 @@ class Iha():
                 except Exception as e:
                     print("QR-KONUM: Veri çekilirken hata :", e)
             
-    def kamikaze_yönelim(self,iha_path):
+    def kamikaze_yönelim(self,iha_path): #! KRITIK, Dalış anında modu değişimi sorun olabilir..
         
         if self.mevcut_mod != "kamikaze" :
                     print("KAMIKAZE -> BEKLEME MODU")
@@ -130,7 +135,7 @@ class Iha():
                     print("KAMIKAZE -> AKTIF")
                     self.kamikaze_release_event.clear()
         
-        is_qr_available=self.qr_konum_al()
+        is_qr_available=self.qr_konum_al() #TODO Code-Blocking line..
 
         try:
             qr_gidiyor=False
@@ -183,7 +188,6 @@ class Iha():
 
 
 if __name__ == '__main__':
-    threads= {}
 
     iha_obj = Iha("192.168.1.236") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
