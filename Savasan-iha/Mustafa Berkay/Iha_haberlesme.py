@@ -20,11 +20,10 @@ class iha_haberlesme():
     def hedef(self):
         pass
 
-
 if __name__ == "__main__":
+
     ip=ipConfig.wlan_ip()
     iha_obj=iha_haberlesme(ip)
-    
     video_thread = threading.Thread(target=iha_obj.send_video)
     video_thread.start()
     video_thread.join()

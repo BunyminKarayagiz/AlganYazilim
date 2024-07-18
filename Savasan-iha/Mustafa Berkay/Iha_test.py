@@ -18,7 +18,8 @@ class Iha():
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
         self.TCP_mod=Client_Tcp.Client(host_ip,9003)
         self.yönelim_yapılacak_rakip=""
-        self.mod =""
+        self.mevcut_mod =""
+        self.onceki_mod =""
 
         self.yönelim_release_event = threading.Event()
         self.kamikaze_release_event = threading.Event()
@@ -95,7 +96,7 @@ class Iha():
     def yönelim_yap(self): #TODO FONKSİYON İKİ FARKLI MODDA BİRDEN KULLANILDIĞINDAN DÜZENLENECEK...
 
             while True:
-                if self.mod != "kilitlenme":
+                if self.mevcut_mod != "kilitlenme":
                     self.yönelim_release_event.wait()
                     self.yönelim_release_event.clear()
                     pass
@@ -107,7 +108,7 @@ class Iha():
                     print("YONELIM SERVER: Veri çekilirken hata :", e)
 
     # KAMIKAZE FONKSİYONLARI
-                    
+
     def qr_konum_al(self):
             is_qr_available = False
             while not is_qr_available:
@@ -121,12 +122,11 @@ class Iha():
             
     def kamikaze_yönelim(self,iha_path):
         
-        if self.mod != "kamikaze" :
+        if self.mevcut_mod != "kamikaze" :
                     print("KAMIKAZE -> BEKLEME MODU")
                     self.kamikaze_release_event.wait()
                     print("KAMIKAZE -> AKTIF")
                     self.kamikaze_release_event.clear()
-        
         self.qr_konum_al()
         try:
             qr_gidiyor=False
@@ -134,6 +134,7 @@ class Iha():
             while True:
                 print("QR KONUMU : ",self.yönelim_yapılacak_rakip )
                 if self.mod != "kamikaze" :
+
                     print("KAMIKAZE -> BEKLEME MODU")
                     self.kamikaze_release_event.wait()
                     print("KAMIKAZE -> AKTIF")
@@ -183,6 +184,7 @@ if __name__ == '__main__':
     threads= {}
     ip=ipConfig.wlan_ip()
     iha_obj = Iha(ip) #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
@@ -202,7 +204,6 @@ if __name__ == '__main__':
     time.sleep(2)
 
     while True:
-        time.sleep(1)
 
         if (iha_path.servo6 >= 1600 and (iha_path.servo7 >= 1400 and iha_path.servo7 <= 1600)) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: Mid
             iha_obj.mod = "kilitlenme"
@@ -222,6 +223,8 @@ if __name__ == '__main__':
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
+            iha_obj.onceki_mod = "kamikaze"
+            print("SELECTED MOD : KAMIKAZE")
 
             if DEBUG == "DEBUG_QR":
                 while True:
@@ -234,7 +237,6 @@ if __name__ == '__main__':
             if iha_path.get_ap_mode !="AUTO":
                 iha_path.set_ap_mode("AUTO")    
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
-    
 
         if ((iha_path.servo6 >= 1400 and iha_path.servo6 <= 1600) and iha_path.servo7 >= 1600):  # ch6: Mid, ch8: High
 
@@ -249,5 +251,3 @@ if __name__ == '__main__':
             if iha_path.get_ap_mode !="RTL":
                  iha_path.set_ap_mode("RTL")    
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
-
-        
