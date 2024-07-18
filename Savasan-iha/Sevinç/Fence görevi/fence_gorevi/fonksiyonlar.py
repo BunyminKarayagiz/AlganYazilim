@@ -8,7 +8,7 @@ import json
 import ana_sunucu_islemleri
 
 home_konumu = (40.2287349, 28.9975977)
-x=25 #bu uzaklık bizim yeni oluşturulan noktamının çemberden kaç merte uzakla oluşturulmasını belirleyecektir
+x=20#bu uzaklık bizim yeni oluşturulan noktamının çemberden kaç merte uzakla oluşturulmasını belirleyecektir
 ucus_alanı=[(40.2336863,29.0000814),(40.2338296,29.0095121),(40.2291281,29.0093994),(40.230709,29.001857),(40.2321751,29.0007842)]
 
 
@@ -217,8 +217,8 @@ def kesisim_kontrol(nokta1, nokta2, fence):
         xc, yc = merkez
 
         # Doğrunun eğimi
-        if x2 - x1 != 0:
-            m = (y2 - y1) / (x2 - x1)
+        if x2 - x1 != 0 and y2 - y1 != 0:
+                m = (y2 - y1) / (x2 - x1)
         else:
             # Doğru dikeyse eğim sonsuz olur
             m = sp.oo
@@ -227,7 +227,7 @@ def kesisim_kontrol(nokta1, nokta2, fence):
         b = y1 - m * x1
 
         # Dikmenin eğimi
-        if m != sp.oo:
+        if m != sp.oo or m != 0:
             perpendicular_slope = -1 / m
         else:
             # Doğru dikeyse, dikme yatay olur
@@ -282,6 +282,7 @@ def kesisim_kontrol(nokta1, nokta2, fence):
 
 
 def yeni_nokta_olusturma(nokta1, nokta2, cember):
+
 
     if nokta1[1]>nokta2[1]:
         boşluk=nokta1
@@ -450,7 +451,7 @@ def ciz(cizim_listesi):
     plt.xlabel('X ekseni')
     plt.ylabel('Y ekseni')
     #grafiğin altında açıklama yap renkleri ve neyi gösterdiğini açıkla
-    plt.text(0, 1.3, 'Kırmızı: Yasaklı alanlar \nYeşil: Uçuş Alanı\nMavi: WP Noktaları',
+    plt.text(0, 1.3, 'Kırmızı: Yasaklı alanlar \nYeşil: Uçuş Rotası\nMavi: Uçuş Alanı',
              horizontalalignment='left', verticalalignment='top',
              transform=plt.gca().transAxes, fontsize=10,
              bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
