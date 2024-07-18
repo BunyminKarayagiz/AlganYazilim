@@ -1,23 +1,26 @@
 import time
+import logging
 from functools import wraps
+
+logger = logging.getLogger(__name__)
 
 def perf_counter(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        end = time.perf_counter()
-        print(f"Execution time of {func.__name__}: {end - start} seconds")
-        return result
+        start = time.perf_counter()  # Start the timer
+        result = func(*args, **kwargs)  # Call the function
+        end = time.perf_counter()  # End the timer
+        logger.debug(f"Execution time of {func.__name__}: {end - start} seconds")
+        return result  # Return the result of the function
     return wrapper
 
 def debug(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        print(f"Calling {func.__name__} with args: {args} and kwargs: {kwargs}")
-        result = func(*args, **kwargs)
-        print(f"{func.__name__} returned: {result}")
-        return result
+        logger.debug(f"Calling {func.__name__} with args: {args} and kwargs: {kwargs}")  # Log the function call details
+        result = func(*args, **kwargs)  # Call the function
+        logger.debug(f"{func.__name__} returned: {result}")  # Log the return value
+        return result  # Return the result of the function
     return wrapper
 
 #? Aşırı yönelim için kullanılabilir.
