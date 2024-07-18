@@ -448,6 +448,8 @@ class YKI_PROCESS():
         fps_start_time = time.perf_counter()
         frame_count:float= 0.0
         fps:float = 0.0
+        fourcc = cv2.VideoWriter_fourcc(*'MP4V') # XVID algoritmasını tanımlama
+        kayit = cv2.VideoWriter('kayit.mp4',fourcc,20.0,(640,480))
         #counter= 0
         while True:
             if not self.display_queue.empty():
@@ -455,6 +457,7 @@ class YKI_PROCESS():
                 current_time = time.strftime("%H:%M:%S")
                 cv2.putText(frame,"SUNUCU : "+current_time , (400, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                kayit.write(frame) # video yazmayı başlatma
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
                 frame_count += 1.0
@@ -465,6 +468,8 @@ class YKI_PROCESS():
                 pass
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
+                    kayit.release() # kaydı durdur
+                    cv2.destroyAllWindows()
                     break
         cv2.destroyAllWindows()
 

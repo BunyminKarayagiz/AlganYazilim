@@ -128,7 +128,6 @@ class Iha():
                     self.kamikaze_release_event.clear()
         
         self.qr_konum_al()
-        print("tYPE: ",type(self.yönelim_yapılacak_rakip))
         try:
             qr_gidiyor=False
             kalkista = False
@@ -142,8 +141,6 @@ class Iha():
 
                     
                 qr_enlem, qr_boylam = self.yönelim_yapılacak_rakip["qrEnlem"], self.yönelim_yapılacak_rakip["qrBoylam"]
-                print("QR ENLEM: ",qr_enlem)
-                print("QR ENLEM: ",qr_boylam)
                 qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
                 print("QR MESAFE", qr_mesafe)
                 if not qr_gidiyor and not kalkista and qr_mesafe > 0.15:  # and iha.pos_alt_rel > 100:
@@ -211,6 +208,10 @@ if __name__ == '__main__':
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()
+            
+            if iha_path.get_ap_mode !="FBWA":
+                iha_path.set_ap_mode("FBWA")    
+            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             
             if DEBUG == "DEBUG_kilitlenme":
                 while True:

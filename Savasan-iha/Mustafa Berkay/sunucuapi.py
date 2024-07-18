@@ -72,8 +72,8 @@ sunucusaati = {"saat": datetime.datetime.now().hour,
                }  # Test verileri
 
 qr_koordinati = {
-    "qrEnlem": -35.3549662,
-    "qrBoylam": 149.1613770
+    "qrEnlem": -35.3545987,
+    "qrBoylam": 149.1547465
 }
 
 girisveri = {"kadi": "algan", "sifre": "53SnwjQ2sQ"}
