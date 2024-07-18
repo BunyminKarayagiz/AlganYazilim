@@ -18,7 +18,8 @@ class Iha():
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
         self.TCP_mod=Client_Tcp.Client(host_ip,9003)
         self.yönelim_yapılacak_rakip=""
-        self.mod =""
+        self.mevcut_mod =""
+        self.onceki_mod =""
 
         self.yönelim_release_event = threading.Event()
         self.kamikaze_release_event = threading.Event()
@@ -95,7 +96,7 @@ class Iha():
     def yönelim_yap(self): #TODO FONKSİYON İKİ FARKLI MODDA BİRDEN KULLANILDIĞINDAN DÜZENLENECEK...
 
             while True:
-                if self.mod != "kilitlenme":
+                if self.mevcut_mod != "kilitlenme":
                     self.yönelim_release_event.wait()
                     self.yönelim_release_event.clear()
                     pass
@@ -107,7 +108,7 @@ class Iha():
                     print("YONELIM SERVER: Veri çekilirken hata :", e)
 
     # KAMIKAZE FONKSİYONLARI
-                    
+
     def qr_konum_al(self):
             is_qr_available = False
             while not is_qr_available:
@@ -123,18 +124,19 @@ class Iha():
             
     def kamikaze_yönelim(self,iha_path):
         
-        if self.mod != "kamikaze" :
+        if self.mevcut_mod != "kamikaze" :
                     print("KAMIKAZE -> BEKLEME MODU")
                     self.kamikaze_release_event.wait()
                     print("KAMIKAZE -> AKTIF")
                     self.kamikaze_release_event.clear()
         
         is_qr_available=self.qr_konum_al()
+
         try:
             qr_gidiyor=False
             kalkista = False
             while True:
-                if self.mod != "kamikaze" :
+                if self.mevcut_mod != "kamikaze" :
                     print("KAMIKAZE -> BEKLEME MODU")
                     self.kamikaze_release_event.wait()
                     print("KAMIKAZE -> AKTIF")
@@ -183,7 +185,7 @@ class Iha():
 if __name__ == '__main__':
     threads= {}
 
-    iha_obj = Iha("10.241.77.149") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("192.168.1.236") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
@@ -203,12 +205,13 @@ if __name__ == '__main__':
     time.sleep(2)
 
     while True:
-        time.sleep(1)
-
+        time.sleep(0.5)
         if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
+            iha_obj.onceki_mod = "kamikaze"
+            print("SELECTED MOD : KAMIKAZE")
 
             if DEBUG == "DEBUG_QR":
                 while True:
@@ -220,6 +223,9 @@ if __name__ == '__main__':
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()
+            iha_obj.onceki_mod = "kilitlenme"
+            print("SELECTED MOD : KILITLENME")
+
             
             if DEBUG == "DEBUG_kilitlenme":
                 while True:

@@ -122,12 +122,13 @@ class MAVLink:
                     "iha_mode": self.mod,
                 }
                 while True:
-                    if time.time() - self.gonderilen_zaman < 1:
+                    if time.time() - self.gonderilen_zaman < 0.1:
                         break
                     else:
-                        print(self.telemetri)
+                        #print(self.telemetri)
                         self.gonderilen_zaman = time.time()
-                        break
+                        return self.telemetri
+                        
             
             except Exception as e:
                 print("MAVLİNK VERİ ALIRKEN HATA : ",e)
