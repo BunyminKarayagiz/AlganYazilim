@@ -1,4 +1,5 @@
 import base64
+import time
 
 import cv2
 import imutils
@@ -21,5 +22,17 @@ class Client(UDP):
                 encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
                 message = base64.b64encode(buffer)
                 self.Main_socket.sendto(message, (self.host, self.port))
-        except Exception as e:
-            print("Video Gönderimi Koptu: ", e)
+        except Exception as err:
+            print("Video Gönderimi Koptu: ", err)
+            self.Main_socket.close()
+            connected= False
+            udp_haberlesme_obj=Client(self.host)
+            while not connected:
+                try:
+                    udp_haberlesme_obj.Main_socket.settimeout(0.001)
+                    connected=True
+                except Exception as err:
+                    print("Video verisi koptu", err)
+                    time.sleep(1)
+                    pass
+

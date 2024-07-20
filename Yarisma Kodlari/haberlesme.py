@@ -1,15 +1,15 @@
 import socket
-import json, requests
+import json
+import requests
 import time
 import zlib
-
 import select
 import cv2
-import imutils, base64
+import imutils
+import base64
 import numpy as np
-
-import GUIRun
-import Yer_istasyonu
+#import GUIRun
+#import Yer_istasyonu
 
 
 class server_TCP():

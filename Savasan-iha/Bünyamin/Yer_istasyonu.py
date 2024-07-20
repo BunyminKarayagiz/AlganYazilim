@@ -1,4 +1,5 @@
 import json
+import time
 
 import Server_Udp
 import Server_Tcp
@@ -6,6 +7,7 @@ from path import Plane
 import ana_sunucu_islemleri
 import yolov5_deploy
 import cv2
+"""import hesaplamalar"""
 
 
 class Yerİstasyonu():
@@ -37,6 +39,7 @@ class Yerİstasyonu():
         return self.ana_sunucuya_giris_durumu
 
     "telemetri verisinde İHA'dan mod değişkeni geliyor. Bu mod değişkeni kullanılmak üzere ayrılıyor"
+
     def data_ayirici(self, data):
         mod = data["iha_mod"]
         data.popitem()
@@ -70,25 +73,45 @@ if __name__ == '__main__':
             connection = True
 
     while True:
-        "İhadan gelen görüntü ve telemetri verisini alıyor."
-        data = server_tcp.recv_tcp_message()
-        telemetri, mod = yer_istasyonu.data_ayirici(data)
-        frame = server_udp.recv_frame_from_client()
+        try :
+            "İhadan gelen görüntü ve telemetri verisini alıyor."
+            data = server_tcp.recv_tcp_message()
+            print(data)
+            telemetri, mod = yer_istasyonu.data_ayirici(data)
+            frame = server_udp.recv_frame_from_client()
 
-        if mod == "savasan_iha":
-            "Gelen frame yolo modeline sokuluyor"
-            results, frame = yer_istasyonu.yolo_model.get_results(frame)
-            xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
 
-            "Modelden gelen değerler ile pwm değeri hesaplanıyor"
-            pwm_verileri = yer_istasyonu.yolo_model.coordinates_to_pwm(xCord, yCord)
+            if mod == "savasan_iha":
+                "Gelen frame yolo modeline sokuluyor"
+                results, frame = yer_istasyonu.yolo_model.get_results(frame)
+                xCord, yCord, frame, lockedOrNot = yer_istasyonu.yolo_model.plot_boxes(results, frame)
 
-            "Pwm değerleri İha'ya gönderiliyor."
-            server_tcp.send_data_to_client(json.dumps(pwm_verileri))
+                "Modelden gelen değerler ile pwm değeri hesaplanıyor"
+                pwm_verileri = yer_istasyonu.yolo_model.coordinates_to_pwm(xCord, yCord)
 
-        elif mod == "kamikaze":
-            pass
+                "Pwm değerleri İha'ya gönderiliyor."
+                server_tcp.send_data_to_client(json.dumps(pwm_verileri))
 
-        "Ana sunucuya clientten aldığımız data verisini postalıyor"
-        yer_istasyonu.ana_sunucu.sunucuya_postala(telemetri)
-        server_udp.show(frame)
+            elif mod == "kamikaze":
+                pass
+
+            "Ana sunucuya clientten aldığımız data verisini postalıyor"
+            status_code, rakip_telemetri_verileri = yer_istasyonu.ana_sunucu.sunucuya_postala(telemetri)
+            """print("Rakip Telemetri : ", rakip_telemetri_verileri)"""
+            """hesaplamalar.mesafe_hesaplama(rakip_telemetri_verileri)"""
+            server_udp.show(frame)
+
+        except Exception as err:
+            yer_istasyonu.Server_udp.Main_socket.close()
+            connected= False
+            yer_udp_obj=Server_Udp.Server()
+            while not connected:
+                try:
+                    yer_istasyonu.Server_udp.create_server()
+                    yer_istasyonu.Server_udp.Main_socket.settimeout(0.001)
+                    connected = True
+                except Exception as err:
+                    print(err)
+                    time.sleep(1)
+                    print("Telemetri - Gorsel veri alinamadi.", err)
+                    pass
