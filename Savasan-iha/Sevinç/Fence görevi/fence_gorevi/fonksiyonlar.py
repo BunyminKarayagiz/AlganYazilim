@@ -509,7 +509,7 @@ def aci_hesapla(önceki_nokta,wp,sonraki_nokta):
 
     # Vektörleri hesaplayın
     vektor_AB = (x2 - x1, y2 - y1)
-    vektor_AC = (x3 - x1, y3 - y1)
+    vektor_AC = (x3 - x2, y3 - y2)
 
     # İç çarpımı ve vektör uzunluklarını hesaplayın
     ic_carpim = vektor_AB[0] * vektor_AC[0] + vektor_AB[1] * vektor_AC[1]
@@ -645,3 +645,36 @@ def elemandan_sonrasina_ekle(liste, hedef_eleman, yeni_eleman):
 
     # Yeni elemanı hedef elemandan sonra ekleme
     liste.insert(index + 1, yeni_eleman)
+def orta_nokta(nokta1,nokta2):
+    x1,y1=nokta1
+    x2,y2=nokta2
+    orta_nokta_x=(x1+x2)/2
+    orta_nokta_y=(y1+y2)/2
+    return (orta_nokta_x,orta_nokta_y)
+
+
+def calculate_turn_angle(nokta1,nokta2,nokta3):
+    # Vektörleri oluştur
+    x1,y1=nokta1
+    x2,y2=nokta2
+    x3,y3=nokta3
+    v1_x, v1_y = x1 - x2, y1 - y2
+    v2_x, v2_y = x3 - x2, y3 - y2
+
+    # Skaler çarpım
+    dot_product = v1_x * v2_x + v1_y * v2_y
+
+    # Vektörlerin büyüklükleri
+    magnitude_v1 = math.sqrt(v1_x ** 2 + v1_y ** 2)
+    magnitude_v2 = math.sqrt(v2_x ** 2 + v2_y ** 2)
+
+    # Kosinüs teoremi
+    cos_theta = dot_product / (magnitude_v1 * magnitude_v2)
+
+    # Açı (radyan cinsinden)
+    theta_radians = math.acos(cos_theta)
+
+    # Açı (derece cinsinden)
+    theta_degrees = math.degrees(theta_radians)
+
+    return theta_degrees
