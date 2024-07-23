@@ -21,8 +21,8 @@ class iha_haberlesme():
 
 if __name__ == "__main__":
 
-    iha_obj=iha_haberlesme("192.168.1.236")
+    iha_obj=iha_haberlesme("10.80.1.96")
     
     video_thread = threading.Thread(target=iha_obj.send_video)
-    video_thread.start()
+    video_thread.run()
     video_thread.join()

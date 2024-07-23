@@ -22,7 +22,7 @@ from termcolor import colored, cprint
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
 #!Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
-#!Ana_sunucuya veri gönderimi :        Eksik
+#!Ana_sunucuya veri gönderimi :        Kusurlu
 #!Telemetri verilerinin alınması :     Kusurlu
 #!Yonelim modunda rakip seçimi:        Kusurlu
 #!Aşırı yönelim(pwm):                   Eksik
@@ -30,6 +30,7 @@ from termcolor import colored, cprint
 #!Pwm veri doğruluğu:                  Test edilecek
 #!Telemetri gönderim sıklığı:           Kusurlu
 #!Logger                                Kusurlu
+#!Qr için timeout                       Eksik
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
@@ -69,6 +70,8 @@ class Yerİstasyonu():
         "----------------------------------------------"
 
         self.fark = 0
+        self.is_qrAvailable = False
+        self.is_qr_transmitted = "False"
 
         #GÖREV_MODU SEÇİMİ
         self.event_map = event_map
@@ -185,12 +188,15 @@ class Yerİstasyonu():
     #! KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
     def get_qrCoord(self,timeout=1): #TODO Timeout özelliği eklenecek...
 
-        try:
-            _, self.qr_coordinat = self.ana_sunucu.qr_koordinat_al()
-            return self.qr_coordinat
-        except Exception as e :
-            print("KAMIKAZE : SUNUCUDAN QR-KONUM ALINIRKEN HATA -> ",e)
-            #TODO EKLEME YAPILACAK
+        if self.is_qrAvailable == True:
+            try:
+                _, self.qr_coordinat = self.ana_sunucu.qr_koordinat_al()
+                print("QRKONUM :",self.qr_coordinat)
+                self.is_qrAvailable = True
+                return self.qr_coordinat
+            except Exception as e :
+                print("KAMIKAZE : SUNUCUDAN QR-KONUM ALINIRKEN HATA -> ",e)
+                #TODO EKLEME YAPILACAK
 
     #! ANA FONKSİYONLAR
     def sunuculari_oluştur(self):
@@ -230,20 +236,41 @@ class Yerİstasyonu():
             except Exception as e:
                 print("TELEMETRI : VERI HATASI -> ",e)
 
-            if not event_message == "STOP":
                 if event_message == "yonelim":
                     if not bizim_telemetri == None:
                         self.yonelim_gonder( (self.rakip_sec(bizim_telemetri,rakip_telemetri),"yonelim") ) #? Rakip-Kontrol ayrı yapılabilir.
+
                 elif event_message == "qr":
-                    self.yonelim_gonder( (self.get_qrCoord(),"qr") )
-                
+                    #if not self.is_qrAvailable and self.is_qr_transmitted == "False" :
+                        self.yonelim_gonder(self.get_qrCoord())
+                        self.is_qr_transmitted=self.Server_yönelim.recv_tcp_message()
+                        print("Is QR transmitted : ",self.is_qr_transmitted)
+                    #else:
+                        print("Qr already available",self.qr_coordinat)
+
             time.sleep(0.01) #? GEÇİCİ
+
+    def ana_sunucu_manager(self,num=6):
+        event_queue,event_trigger = self.event_map[num]
+        lock_once_event,qr_once_event = event_map[7]
+        gorev_bilgisi = None
+
+        while True:
+            if event_trigger.is_set():
+                time.sleep(0.01)
+                gorev_bilgisi = event_queue.get()
+                print("Ana_sunucu_manager received event : ",gorev_bilgisi)
+                self.ana_sunucu.sunucuya_postala(gorev_bilgisi)
+                event_trigger.clear()
 
     def ANA_GOREV_KONTROL(self):
         self.sunuculari_oluştur()
 
         th1= threading.Thread(target=self.yonelim)
         th1.start()
+
+        th2 = threading.Thread(target=self.ana_sunucu_manager)
+        th2.start()
 
         time.sleep(10)
 
@@ -256,18 +283,21 @@ class Yerİstasyonu():
             if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
                 self.trigger_event(1,"kilitlenme")
                 self.trigger_event(2,"kilitlenme")
+                self.trigger_event(4,"yonelim")
                 self.önceki_mod = "kilitlenme"
                 cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
             elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
                 self.trigger_event(1,"kamikaze")
                 self.trigger_event(2,"kamikaze")
+                self.trigger_event(4,"qr")
                 self.önceki_mod = "kamikaze"
                 cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
             elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="auto"):
                 self.trigger_event(1,"auto")
                 self.trigger_event(2,"auto")
+                self.trigger_event(4,"yonelim")
                 self.önceki_mod = "auto"
                 cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
             else:
@@ -385,6 +415,8 @@ class YKI_PROCESS():
 
         # yonelim_queue,yonelim_trigger = event_map[4]
         pwm_data_queue,pwm_trigger = event_map[5]
+        ana_sunucu_queue,sunucu_event = event_map[6]
+        lock_once_event,qr_once_event = event_map[7]
 
         lockedOrNot = 0
         locked_prev = 0
@@ -462,17 +494,28 @@ class YKI_PROCESS():
                                 },
                                 "otonom_kilitlenme": 0
                             }
-                            print("KİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\n")
                             print(kilitlenme_bilgisi)
+                            kilitlenme_bilgisi = json.dumps(kilitlenme_bilgisi)
+                            print("KİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\n")
+                            sent_once = 1 #Kaldırılacak
+                            lock_once_event.set()
+                            if lock_once_event.is_set():
+
+                                self.trigger_event(6,kilitlenme_bilgisi)
                             #self.ana_sunucu.sunucuya_postala(json.dumps(kilitlenme_bilgisi))  #! ACİL :
-                            self.sent_once = 1
 
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
 
                 elif event_message == "kamikaze":
                     qr_text,processed_frame = self.qr_oku(frame)
-                    print(qr_text)
+                    
+                    if qr_text != None:
+                        qr_once_event.set()
+                        
+                    if qr_once_event.is_set():
+                        self.trigger_event(6,qr_text)
+
 
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
@@ -578,22 +621,28 @@ def create_event_map():
     #Kilitlenme mod change
     yonelim_queue = mp.Queue()
     yonelim_event = mp.Event()
-    pwm_queue = mp.Queue()
     pwm_data_queue = mp.Queue()
     pwm_event = mp.Event()
 
+    ana_sunucu_queue = mp.Queue()
+    sunucu_event =  mp.Event()
 
-    #event_map -> (1,2,3):process_frames ; (4,5):pwm-yonelim switch
+    lock_once_event = mp.Event()
+    qr_once_event = mp.Event()
+
+
+    #event_map -> (1,2,3):process_frames <> (4,5):pwm-yonelim switch <> (6):Ana Sunucu
     event_map = {
     1: (message_queue_1, event_1),
     2: (message_queue_2, event_2),
     3: (message_queue_3, event_3),
     4: (yonelim_queue,yonelim_event),
     5: (pwm_data_queue,pwm_event),
+    6: (ana_sunucu_queue,sunucu_event),
+    7: (lock_once_event,qr_once_event),
     #TODO EKLENECEK
     }
     return event_map
-
 
 if __name__ == '__main__':
     SHUTDOWN_KEY = ""
@@ -602,7 +651,7 @@ if __name__ == '__main__':
     setup_logging(log_queue)
     control_objects = create_IPC(event_map=event_map)
 
-    yer_istasyonu = Yerİstasyonu("192.168.1.236",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.96",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 

@@ -120,22 +120,37 @@ class Iha():
                 try:
                     print("QR-KONUM BEKLENİYOR..")
                     self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
-                    print("QR-KONUM : ", self.yönelim_yapılacak_rakip)
-                    is_qr_available = True
+                    print("RAKİP:",self.yönelim_yapılacak_rakip)
+                    self.yönelim_yapılacak_rakip=json.loads(self.yönelim_yapılacak_rakip)
+                    if self.yönelim_yapılacak_rakip == None:
+                        print("QRKONUM = None >> Reset")
+                        self.TCP_yonelim.send_message_to_server(is_qr_available)
+                    else:
+                        print("QR-KONUM : ", self.yönelim_yapılacak_rakip)
+                        is_qr_available = True
+                        self.TCP_yonelim.send_message_to_server(is_qr_available)
+                    
                     return is_qr_available
                 
                 except Exception as e:
                     print("QR-KONUM: Veri çekilirken hata :", e)
             
     def kamikaze_yönelim(self,iha_path): #! KRITIK, Dalış anında modu değişimi sorun olabilir..
-        
+        time.sleep(0.3)
         if self.mevcut_mod != "kamikaze" :
                     print("KAMIKAZE -> BEKLEME MODU")
                     self.kamikaze_release_event.wait()
                     print("KAMIKAZE -> AKTIF")
                     self.kamikaze_release_event.clear()
         
-        is_qr_available=self.qr_konum_al() #TODO Code-Blocking line..
+        is_qr_available= False
+        try:
+            while not is_qr_available:
+                is_qr_available=self.qr_konum_al() #TODO Code-Blocking line..
+                print("QRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\n")
+        except Exception as e:
+            print("KAMIKAZE :QR-Konum gg ->",e)
+
 
         try:
             qr_gidiyor=False
@@ -186,10 +201,9 @@ class Iha():
         except Exception as e:
             print("ERROR KAMIKAZE ->" + str(e))
 
-
 if __name__ == '__main__':
 
-    iha_obj = Iha("192.168.1.236") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.96") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
@@ -221,7 +235,6 @@ if __name__ == '__main__':
                 while True:
                     print("DEBUG MOD ON...\n\n")
                     time.sleep(9999)
-
 
         if (iha_path.servo6 >= 1600 and iha_path.servo7 >= 1600) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: High
             iha_obj.mod = "kilitlenme"
