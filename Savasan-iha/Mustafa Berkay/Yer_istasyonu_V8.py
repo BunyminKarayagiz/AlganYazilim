@@ -253,14 +253,19 @@ class Yerİstasyonu():
     def ana_sunucu_manager(self,num=6):
         event_queue,event_trigger = self.event_map[num]
         lock_once_event,qr_once_event = event_map[7]
+        lock_outer_event,qr_outer_event = event_map[8]
         gorev_bilgisi = None
 
         while True:
             if event_trigger.is_set():
                 time.sleep(0.01)
-                gorev_bilgisi = event_queue.get()
+                gorev_bilgisi,Type = event_queue.get()
                 print("Ana_sunucu_manager received event : ",gorev_bilgisi)
                 self.ana_sunucu.sunucuya_postala(gorev_bilgisi)
+                if Type == "qr":
+                    qr_outer_event.set()
+                if Type == "kilitlenme":
+                    lock_outer_event.set()
                 event_trigger.clear()
 
     def ANA_GOREV_KONTROL(self):
@@ -417,6 +422,7 @@ class YKI_PROCESS():
         pwm_data_queue,pwm_trigger = event_map[5]
         ana_sunucu_queue,sunucu_event = event_map[6]
         lock_once_event,qr_once_event = event_map[7]
+        lock_outer_event,qr_outer_event = event_map[8]
 
         lockedOrNot = 0
         locked_prev = 0
@@ -499,9 +505,9 @@ class YKI_PROCESS():
                             print("KİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\n")
                             sent_once = 1 #Kaldırılacak
                             lock_once_event.set()
-                            if lock_once_event.is_set():
+                            if lock_once_event.is_set() and (not lock_outer_event.is_set()):
 
-                                self.trigger_event(6,kilitlenme_bilgisi)
+                                self.trigger_event(6,(kilitlenme_bilgisi,"kilitlenme"))
                             #self.ana_sunucu.sunucuya_postala(json.dumps(kilitlenme_bilgisi))  #! ACİL :
 
                     if not self.display_queue.full():
@@ -510,12 +516,11 @@ class YKI_PROCESS():
                 elif event_message == "kamikaze":
                     qr_text,processed_frame = self.qr_oku(frame)
                     
-                    if qr_text != None:
+                    if qr_text != None :
                         qr_once_event.set()
                         
-                    if qr_once_event.is_set():
-                        self.trigger_event(6,qr_text)
-
+                    if qr_once_event.is_set() and (not qr_outer_event.is_set()):
+                        self.trigger_event(6,(qr_text,"qr"))
 
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
@@ -629,6 +634,8 @@ def create_event_map():
 
     lock_once_event = mp.Event()
     qr_once_event = mp.Event()
+    lock_outer_event = mp.Event()
+    qr_outer_event = mp.Event()
 
 
     #event_map -> (1,2,3):process_frames <> (4,5):pwm-yonelim switch <> (6):Ana Sunucu
@@ -640,6 +647,7 @@ def create_event_map():
     5: (pwm_data_queue,pwm_event),
     6: (ana_sunucu_queue,sunucu_event),
     7: (lock_once_event,qr_once_event),
+    8: (lock_outer_event,qr_outer_event),
     #TODO EKLENECEK
     }
     return event_map
