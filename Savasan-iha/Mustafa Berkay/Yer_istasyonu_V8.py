@@ -1,6 +1,7 @@
 # import numpy as np
 # from pyzbar import pyzbar
 
+import av
 import Server_Udp
 import Server_Tcp
 # from path import Plane
@@ -14,6 +15,7 @@ import mavproxy2
 import hesaplamalar
 from qr_detection import QR_Detection
 import multiprocessing as mp
+import numpy as np
 
 from custom_decorators import perf_counter,debug,memoize
 from logging_setup import setup_logging, start_log_listener
@@ -397,12 +399,16 @@ class YKI_PROCESS():
         cprint(f"Starting Capture-process: {process_name}","green")
 
         self.Görüntü_sunucusu_oluştur()
-
+        codec_1 = av.CodecContext.create('h264', 'r')
         while True:
             try:
-                frames = self.Server_udp.recv_frame_from_client()
+                data = self.Server_udp.recv_frame_from_client()
+                packet = av.Packet(data)
+                frames = codec_1.decode(packet)
                 for frame in frames:
                     try:
+                        img = frame.to_image()
+                        frame = np.array(img)
                         if not self.capture_queue.full():
                             self.capture_queue.put(frame)
                             #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
@@ -660,7 +666,7 @@ if __name__ == '__main__':
     setup_logging(log_queue)
     control_objects = create_IPC(event_map=event_map)
 
-    yer_istasyonu = Yerİstasyonu("10.241.105.236",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.0.0.240",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 
