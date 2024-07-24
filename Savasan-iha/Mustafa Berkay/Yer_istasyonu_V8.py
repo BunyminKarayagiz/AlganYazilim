@@ -318,7 +318,7 @@ class YKI_PROCESS():
 
     def __init__(self,fark,event_map,SHUTDOWN_KEY,queue_size=1):
         self.fark = fark
-        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\Model2024_V1.pt")
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_udp = Server_Udp.Server()
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
@@ -400,16 +400,17 @@ class YKI_PROCESS():
 
         while True:
             try:
-                frame = self.Server_udp.recv_frame_from_client()
-                try:
-                    if not self.capture_queue.full():
-                        self.capture_queue.put(frame)
-                        #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
-                    else:
-                        #print("FRAME : CAPTURE_QUEUE FULL...")
-                        pass
-                except Exception as e:
-                    print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
+                frames = self.Server_udp.recv_frame_from_client()
+                for frame in frames:
+                    try:
+                        if not self.capture_queue.full():
+                            self.capture_queue.put(frame)
+                            #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
+                        else:
+                            #print("FRAME : CAPTURE_QUEUE FULL...")
+                            pass
+                    except Exception as e:
+                        print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
             except Exception as e:
                 print("FRAME : RECEIVE ERROR ->",e)
 
@@ -659,7 +660,7 @@ if __name__ == '__main__':
     setup_logging(log_queue)
     control_objects = create_IPC(event_map=event_map)
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.96",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.241.105.236",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 

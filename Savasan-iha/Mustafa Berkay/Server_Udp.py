@@ -1,6 +1,7 @@
 import base64
 import socket
-
+import av
+import av.packet
 import cv2
 import numpy as np
 
@@ -15,17 +16,20 @@ class Server():
 
         self.host_name = socket.gethostname()
         self.host_ip = socket.gethostbyname(self.host_name)
+        self.codec = av.CodecContext.create('h264', 'r')
 
     def create_server(self):
         self.udp_socket.bind((self.host_ip, self.port))
         print('UDP-Server Listening at:', (self.host_ip, self.port))
 
     def recv_frame_from_client(self):
-        message , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)
-        data = base64.b64decode(message, ' /')
-        npdata = np.fromstring(data, dtype=np.uint8)
-        frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
-        return frame
+        data , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)
+        packet = av.packet(data)
+        frames = self.codec.decode(packet)
+        # data = base64.b64decode(message, ' /')
+        # npdata = np.fromstring(data, dtype=np.uint8)
+        # frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
+        return frames
 
     def close_socket(self):
         self.udp_socket.close()
