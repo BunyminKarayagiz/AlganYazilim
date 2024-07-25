@@ -4,6 +4,7 @@ import random
 import flask
 from flask import jsonify, request
 import json
+from termcolor import colored, cprint
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -157,14 +158,14 @@ def tele():
 @app.route('/api/kilitlenme_bilgisi', methods=["POST"])
 def kilit():
     gelen = json.loads(request.data)
-    print(gelen)
+    cprint(gelen,"red","on_white",attrs=["bold"]) #TODO EKLENECEK...
     return jsonify(gelen)
 
 
 @app.route('/api/kamikaze_bilgisi', methods=["POST"])
 def kamikaze():
     gelen = json.loads(request.data)
-    print(gelen)
+    cprint(gelen,"red","on_white",attrs=["bold"]) #TODO EKLENECEK...
     return jsonify(gelen)
 
 

@@ -1,13 +1,15 @@
 from dbr import BarcodeReader
 from dbr import *
 import cv2
+import multiprocessing as mp
 
 
 class QR_Detection:
     def __init__(self):
         self.license_key = "DLC2TdMdmL9ZvN620g//F4iSiRzjtjjLkjT3d0OCuvqDeA3i4W4Ng5HA1sMKbB3Nwe3xlSDeD22uWy6Oj1C9wvdCV3aT9WS0VGcfu41ibk96+cYwsDp26UaZfjGzMa7yPmt5VweXkmHkLVR3v3bpS3sh5SFHJCUKKkjP+ffkX1QdTpuMov9hEMNXk21h/yOLtoEB4Goz4D/dGG6goUb7NfS7OSYhSReEnB/O1keBRjaothIADoIPwEU9QRVoCbubGJwTJ6nsQC8Hst5vIkuTjxExPSieX8ld0lLCyHUe4tCtpD2H6xSUPHl2XHWWp7GBn9/T3y6zr2h8dAuX6tGjw95rXNxe62Y7sAeZeMUVrDVp2PEVQzj4AB1Q1pUNjmAcd9p55KYn5fK1B8IEDTcEHR3IRbHBRNlGKUHld/jN5EtYTY6Y8cO5Y8lYWPBcuqSVnnLQ+LUewnupLecxkYHjoNzFYGGAfAUsZYS8F3DWsbMCy/+euUOa"
         BarcodeReader.init_license(self.license_key)
-        self.image_path = "temp_frame.jpg"
+        mp.current_process().name
+        self.image_path = f"temp_frame_{mp.current_process().name}.jpg"
 
     def decode_data_matrix(self):
         reader = BarcodeReader()

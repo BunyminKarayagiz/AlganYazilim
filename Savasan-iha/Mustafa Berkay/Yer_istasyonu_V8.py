@@ -258,17 +258,38 @@ class Yerİstasyonu():
         lock_outer_event,qr_outer_event = event_map[8]
         gorev_bilgisi = None
 
+        qr_sent_once = False
+        lock_sent_once = False
+        
+
+        qr_timer = time.perf_counter()
+        lock_timer = time.perf_counter()
+
         while True:
             if event_trigger.is_set():
                 time.sleep(0.01)
                 gorev_bilgisi,Type = event_queue.get()
-                print("Ana_sunucu_manager received event : ",gorev_bilgisi)
-                self.ana_sunucu.sunucuya_postala(gorev_bilgisi)
+                print(Type)
                 if Type == "qr":
-                    qr_outer_event.set()
+                    cprint(f"QR:{gorev_bilgisi}","blue")
+                    if not qr_sent_once:
+                        self.ana_sunucu.sunucuya_postala(gorev_bilgisi)
+                        qr_sent_once = True
                 if Type == "kilitlenme":
-                    lock_outer_event.set()
+                    cprint(f"LOCK:{gorev_bilgisi}","blue")
+                    if not lock_sent_once:
+                        self.ana_sunucu.sunucuya_postala(gorev_bilgisi)
+                        lock_sent_once = True
                 event_trigger.clear()
+                
+            print("LOCK STATE :",lock_sent_once)
+            if time.perf_counter()-qr_timer > 3:
+                qr_sent_once = False
+                qr_timer = time.perf_counter()
+
+            if time.perf_counter()-lock_timer > 3:
+                lock_sent_once = False
+                lock_timer = time.perf_counter()
 
     def ANA_GOREV_KONTROL(self):
         self.sunuculari_oluştur()
@@ -301,12 +322,27 @@ class Yerİstasyonu():
                 self.önceki_mod = "kamikaze"
                 cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
-            elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="auto"):
-                self.trigger_event(1,"auto")
-                self.trigger_event(2,"auto")
+            elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
+                self.trigger_event(1,"AUTO")
+                self.trigger_event(2,"AUTO")
                 self.trigger_event(4,"yonelim")
-                self.önceki_mod = "auto"
+                self.önceki_mod = "AUTO"
                 cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+            
+            elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
+                self.trigger_event(1,"FBWA")
+                self.trigger_event(2,"FBWA")
+                self.trigger_event(4,"yonelim")
+                self.önceki_mod = "FBWA"
+                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+            
+            elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
+                self.trigger_event(1,"RTL")
+                self.trigger_event(2,"RTL")
+                self.trigger_event(4,"yonelim")
+                self.önceki_mod = "RTL"
+                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+            
             else:
                 #print("GOREV MODU : ",self.önceki_mod)
                 cprint(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
@@ -409,6 +445,7 @@ class YKI_PROCESS():
                     try:
                         img = frame.to_image()
                         frame = np.array(img)
+                        #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         if not self.capture_queue.full():
                             self.capture_queue.put(frame)
                             #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
@@ -420,10 +457,10 @@ class YKI_PROCESS():
             except Exception as e:
                 print("FRAME : RECEIVE ERROR ->",e)
 
-    def process_frames(self, event_map,num):
+    def process_frames(self, event_map, num):
         process_name = mp.current_process().name
         cprint(f"Starting Frame_Processing process: {process_name}","green")
-        event_queue,event_trigger = event_map[num]
+        event_queue, event_trigger = event_map[num]
 
         # yonelim_queue,yonelim_trigger = event_map[4]
         pwm_data_queue,pwm_trigger = event_map[5]
@@ -510,12 +547,11 @@ class YKI_PROCESS():
                             print(kilitlenme_bilgisi)
                             kilitlenme_bilgisi = json.dumps(kilitlenme_bilgisi)
                             print("KİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\nKİLİTLENME BAŞARILI\n")
-                            sent_once = 1 #Kaldırılacak
                             lock_once_event.set()
-                            if lock_once_event.is_set() and (not lock_outer_event.is_set()):
-
+                            #if lock_once_event.is_set() and (not lock_outer_event.is_set()):
+                            if lock_once_event.is_set():
                                 self.trigger_event(6,(kilitlenme_bilgisi,"kilitlenme"))
-                            #self.ana_sunucu.sunucuya_postala(json.dumps(kilitlenme_bilgisi))  #! ACİL :
+                                lock_once_event.clear()
 
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
@@ -523,14 +559,23 @@ class YKI_PROCESS():
                 elif event_message == "kamikaze":
                     qr_text,processed_frame = self.qr_oku(frame)
                     
-                    if qr_text != None :
-                        qr_once_event.set()
+                    # if qr_text != None :
+                    #     qr_once_event.set()
+                    # elif qr_text == None:
+                    #     qr_once_event.clear()
                         
-                    if qr_once_event.is_set() and (not qr_outer_event.is_set()):
+                    #if qr_once_event.is_set() and (not qr_outer_event.is_set()):
+                    # if qr_once_event.is_set():
+                    #     self.trigger_event(6,(qr_text,"qr"))
+                    if qr_text != None :
                         self.trigger_event(6,(qr_text,"qr"))
+
 
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
+                elif event_message == "AUTO" or event_message == "FBWA" or event_message == "RTL":
+                    if not self.display_queue.full():
+                        self.display_queue.put(frame)
 
                 else:
                     print("INVALID MODE...")
@@ -546,10 +591,12 @@ class YKI_PROCESS():
         while True:
             if not self.display_queue.empty():
                 frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
-
-                current_time = time.strftime("%H:%M:%S")
-                cv2.putText(frame,"SUNUCU : "+current_time , (300, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 128, 0), 2)
-                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 128, 0), 2)
+                #current_time = datetime.utcnow().strftime('%H:%M:%S.%f')[:-3]
+                #current_time = time.strftime("%H:%M:%S")
+                now = datetime.datetime.now()
+                current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
+                cv2.putText(frame,"SUNUCU : "+current_time , (450, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
                 frame_count += 1.0
