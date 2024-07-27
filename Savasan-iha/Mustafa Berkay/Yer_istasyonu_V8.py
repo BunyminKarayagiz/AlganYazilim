@@ -46,11 +46,13 @@ class Yerİstasyonu():
         self.Server_yönelim = Server_Tcp.Server(9002,name="YÖNELİM")
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_mod = Server_Tcp.Server(9003,name="MOD")
+        self.Server_kamikaze = Server_Tcp.Server(9004,name="KAMIKAZE")
 
         #Sunucu durumları için kullanılacak değişkenler
         self.ana_sunucu_status = False
         self.Yönelim_sunucusu=False
         self.Mod_sunucusu=False
+        self.kamikaze_sunucusu=False
         self.MAV_PROXY_sunucusu=False
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
 
@@ -158,6 +160,22 @@ class Yerİstasyonu():
         self.MAV_PROXY_sunucusu=connection_status
         return connection_status
 
+    def kamikaze_sunucusu_oluştur(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_kamikaze.creat_server()
+                connection_status=True
+                print("KAMIKAZE : SERVER OLUŞTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                print("KAMIKAZE SERVER: oluştururken hata : ", e , " \n")
+                print("KAMIKAZE SERVER: yeniden bağlanılıyor...\n")
+                self.Server_kamikaze.reconnect()
+                print("KAMIKAZE : SERVER OLUŞTURULDU\n")
+        self.kamikaze_sunucusu = connection_status
+        return connection_status
+
+
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_number, message): #*message -> "kilitlenme" veya "kamikaze"
         try:
@@ -199,6 +217,16 @@ class Yerİstasyonu():
             except Exception as e :
                 print("KAMIKAZE : SUNUCUDAN QR-KONUM ALINIRKEN HATA -> ",e)
                 #TODO EKLEME YAPILACAK
+    
+    def kamikaze_time_recv(self):
+        print("Waiting for kamikaze_time_oacket")
+        while True:
+            try:
+                self.kamikaze_packet=self.Server_kamikaze.recv_tcp_message()
+                print(self.kamikaze_packet)
+                print("Kamikaze_start received...")
+            except Exception as e:
+                print("Kamikaze_start ERROR :",e)
 
     #! ANA FONKSİYONLAR
     def sunuculari_oluştur(self):
@@ -207,13 +235,15 @@ class Yerİstasyonu():
         t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)
         t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
         t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
+        t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
         #t1.start()
         #t2.start()
         t3.start()
         t4.start()
         t5.start()
+        t6.start()
         t5.join()
-        return t3,t4,t5
+        return t3,t4,t5,t6
 
     def yonelim(self,num=4):
         event_queue,event_trigger = self.event_map[num]
@@ -264,6 +294,9 @@ class Yerİstasyonu():
 
         qr_timer = time.perf_counter()
         lock_timer = time.perf_counter()
+        
+        th1= threading.Thread(target=self.kamikaze_time_recv)
+        th1.start()
 
         while True:
             if event_trigger.is_set():
@@ -282,7 +315,6 @@ class Yerİstasyonu():
                         lock_sent_once = True
                 event_trigger.clear()
                 
-            print("LOCK STATE :",lock_sent_once)
             if time.perf_counter()-qr_timer > 3:
                 qr_sent_once = False
                 qr_timer = time.perf_counter()
@@ -356,7 +388,7 @@ class YKI_PROCESS():
 
     def __init__(self,fark,event_map,SHUTDOWN_KEY,queue_size=1):
         self.fark = fark
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_udp = Server_Udp.Server()
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
