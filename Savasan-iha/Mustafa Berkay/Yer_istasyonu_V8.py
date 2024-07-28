@@ -388,7 +388,7 @@ class YKI_PROCESS():
 
     def __init__(self,fark,event_map,SHUTDOWN_KEY,queue_size=1):
         self.fark = fark
-        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_udp = Server_Udp.Server()
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
@@ -523,7 +523,7 @@ class YKI_PROCESS():
                     if lockedOrNot == 1 and locked_prev == 0:
                             lock_start_time=time.perf_counter()
                             start_now =datetime.datetime.now()
-                            cv2.putText(img=processed_frame,text="HEDEF GORULDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
+                            # cv2.putText(img=processed_frame,text="HEDEF GORULDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
                             locked_prev=1
 
                     #Hedef Görüldü. Yönelim modu devre dışı.
@@ -533,7 +533,7 @@ class YKI_PROCESS():
                             
 
                     if lockedOrNot == 0 and locked_prev== 1:
-                            cv2.putText(img=processed_frame,text="HEDEF KAYBOLDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
+                            # cv2.putText(img=processed_frame,text="HEDEF KAYBOLDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
                             locked_prev= 0
                             is_locked= 0
                             sent_once = 0
@@ -546,18 +546,21 @@ class YKI_PROCESS():
                             lock_elapsed_time= time.perf_counter() - lock_start_time
                             cv2.putText(img=processed_frame,text=str(round(lock_elapsed_time,3)),org=(50,370),fontFace=1,fontScale=1.5,color=(0,255,0),thickness=2)
 
-                            if is_locked == 0:
-                                cv2.putText(img=processed_frame,text="KILITLENIYOR",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
-                                self.trigger_event(5,pwm_verileri)  
+                            """if is_locked == 0:
+                                cv2.putText(img=processed_frame,text="KILITLENIYOR",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)"""
+                                  
 
                             if lock_elapsed_time >= 4.0:
-                                cv2.putText(img=processed_frame,text="KILITLENDI",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
+                                # cv2.putText(img=processed_frame,text="KILITLENDI",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
                                 kilitlenme_bilgisi=True
                                 is_locked=1
-
-                    # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
                                 self.trigger_event(4,"yonelim")
                                 pwm_trigger.clear()
+                                
+                    if pwm_verileri["pwmx"] != 1500 or pwm_verileri["pwmy"] != 1500:
+                        self.trigger_event(5,pwm_verileri)
+                    # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
+                                
 
                     if is_locked == 1 and sent_once == 0:
                             end_now = datetime.datetime.now()
@@ -626,9 +629,10 @@ class YKI_PROCESS():
                 #current_time = datetime.utcnow().strftime('%H:%M:%S.%f')[:-3]
                 #current_time = time.strftime("%H:%M:%S")
                 now = datetime.datetime.now()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                 cv2.putText(frame,"SUNUCU : "+current_time , (450, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
-                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                # cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
                 frame_count += 1.0

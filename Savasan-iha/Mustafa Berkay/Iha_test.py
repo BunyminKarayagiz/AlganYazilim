@@ -106,16 +106,19 @@ class Iha():
     def receive_pwm(self):
         while True:
             try:
-                pwm_verileri=self.TCP_pwm.client_recv_message().decode()
+                pwm_verileri=json.loads(self.TCP_pwm.client_recv_message().decode())
                 print("PWM VERILERI: ",pwm_verileri)
                 try:
 
                     if iha_path.get_ap_mode() != "FBWA" :
+                            print("AP MODE SET TO FBWA...")
                             iha_path.set_ap_mode("FBWA")
                     pwmX = pwm_verileri['pwmx']
                     pwmY = pwm_verileri['pwmy']
                     iha_path.set_rc_channel(1, pwmX)
                     iha_path.set_rc_channel(2, pwmY)
+                    iha_path.set_rc_channel(3, 1500)
+                    
 
                 except Exception as e :
                     print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
@@ -251,8 +254,8 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.114") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
-    iha_path = iha_obj.IHA_Raspberry_Connect() #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
+    iha_obj = Iha("10.80.1.22") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
@@ -272,7 +275,9 @@ if __name__ == '__main__':
 
     while True:
         time.sleep(0.5)
-        if (iha_path.ch6 > 1600 and iha_path.ch8 > 1600):  # High High
+        print("SERVO:8", iha_path.servo8)
+        print("SERVO:6", iha_path.servo6)
+        if (iha_path.servo6 > 1600 and iha_path.servo8 > 1600):  # High High
             iha_obj.mod = "AUTO" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "AUTO"
@@ -280,7 +285,7 @@ if __name__ == '__main__':
                 iha_path.set_ap_mode("AUTO")
             print("SELECTED MOD : AUTO")
                 
-        if ((iha_path.ch6 >= 1400 and iha_path.ch6 <= 1600) and iha_path.ch8 > 1600):  # Mid High
+        if ((iha_path.servo6 >= 1400 and iha_path.servo6 <= 1600) and iha_path.servo8 > 1600):  # Mid High
             iha_obj.mod = "FBWA" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "FBWA"
@@ -288,7 +293,7 @@ if __name__ == '__main__':
                 iha_path.set_ap_mode("FBWA")
             print("SELECTED MOD : FBWA")
         
-        if (iha_path.ch6 < 1400 and iha_path.ch8 > 1600):  # LOW High
+        if (iha_path.servo6 < 1400 and iha_path.servo8 > 1600):  # LOW High
             iha_obj.mod = "RTL" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "RTL"
@@ -297,7 +302,7 @@ if __name__ == '__main__':
             print("SELECTED MOD : RTL")
         
             
-        if (iha_path.ch6 > 1600 and iha_path.ch8 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
+        if (iha_path.servo6 > 1600 and iha_path.servo8 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
@@ -309,7 +314,7 @@ if __name__ == '__main__':
                     print("DEBUG MOD ON...\n\n")
                     time.sleep(9999)
 
-        if (iha_path.ch6 >= 1600 and (iha_path.ch8 > 1400 and iha_path.ch8 < 1600)) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: Mid
+        if (iha_path.servo6 >= 1600 and (iha_path.servo8 > 1400 and iha_path.servo8 < 1600)) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: Mid
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()

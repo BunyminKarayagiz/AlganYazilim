@@ -482,6 +482,7 @@ class Plane():
             rc_chan     - rc channel number
             value_us    - pwm value
         """
+        print(f"set_rc_channel{rc_chan} to ->",value_us)
         strInChan = '%1d' % rc_chan
         self.vehicle.channels.overrides[strInChan] = int(value_us)
 

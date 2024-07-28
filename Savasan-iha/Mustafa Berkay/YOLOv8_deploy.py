@@ -24,7 +24,7 @@ class Detection:
         target_area_y1, target_area_y2 = (int(x * 0.10), int(x * 0.90))
         target_area_x1, target_area_x2 = (int(y * 0.25), int(y * 0.75))
 
-        cv2.rectangle(frame, (target_area_x1, target_area_y1), (target_area_x2, target_area_y2), (0, 255, 0), 2)
+        cv2.rectangle(frame, (target_area_x1, target_area_y1), (target_area_x2, target_area_y2), (255, 0, 0), 2) #RGB
 
         locked_or_not = False
         if results:
@@ -43,7 +43,9 @@ class Detection:
                     locked_or_not = True
 
                 return pwm_verileri, annotated_frame, locked_or_not
-
+            
+            
+            
         return pwm_verileri, annotated_frame, locked_or_not
 
     def coordinates_to_pwm(self, x_center, y_center):
@@ -51,8 +53,16 @@ class Detection:
         screen_height = 480
         min_pwm = 1100
         max_pwm = 1900
+        
         pwm_x = int((x_center / screen_width) * (max_pwm - min_pwm) + min_pwm)
         pwm_y = int((y_center / screen_height) * (max_pwm - min_pwm) + min_pwm)
+
+        if pwm_y > 1500:
+            fark = pwm_y - 1500
+            pwm_y = 1500 - fark
+        else : 
+            fark = 1500 - pwm_y
+            pwm_y = 1500 + fark
 
         if x_center == 0 and y_center == 0:
             pwm_x = 1500
@@ -62,8 +72,8 @@ class Detection:
                         'pwmy': pwm_y}
         return pwm_verileri
 
-"""
-    def __call__(self):
+
+"""    def __call__(self):
 
         cap = cv2.VideoCapture(0)  # webcam
 
@@ -74,6 +84,7 @@ class Detection:
                 frame = cv2.resize(frame, (640, 480))
                 pwm_verileri, annotated_frame, locked_or_not = self.model_predict(frame)
                 cv2.imshow("YOLOv8 Tracking", annotated_frame)
+                print("PWM Verileri: ", pwm_verileri)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
@@ -81,5 +92,5 @@ class Detection:
         cv2.destroyAllWindows()
 
 
-detection = Detection("C:\\Users\\demir\\Projects\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
+detection = Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Model2024_V1.pt")
 detection()"""
