@@ -108,6 +108,22 @@ class Iha():
             try:
                 pwm_verileri=self.TCP_pwm.client_recv_message().decode()
                 print("PWM VERILERI: ",pwm_verileri)
+
+                try:
+                    """---------------------------------------------
+                
+                    
+                    
+                    PWM-TAKİP KONTROL KODU BURAYA YAZILACAK
+                    
+                    
+                    
+                    ---------------------------------------------""" 
+
+
+                except Exception as e :
+                    print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
+
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
 
@@ -115,13 +131,29 @@ class Iha():
 
             while True:
                 if self.mevcut_mod != "kilitlenme":
+                    print("KILITLENME -> BEKLEME MODU")
                     self.yönelim_release_event.wait()
+                    print("KILITLENME -> AKTIF")
                     self.yönelim_release_event.clear()
                     pass
                 try:
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
                     self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
+
+                    try:
+                        """------------------------------------------
+                        
+                        
+                            YÖNELİM KONTROL KODU BURAYA YAZILACAK
+                        
+                        
+                        ----------------------------------------------"""
+
+                    except Exception as e:
+                        print("KONTROL(Telem) : YÖNELİRKEN HATA ->",e)
+
+
                 except Exception as e:
                     print("YONELIM SERVER: Veri çekilirken hata :", e)
 

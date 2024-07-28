@@ -151,6 +151,7 @@ class Plane():
 
                 self.ch6 = message.chan6_raw
                 self.ch7 = message.chan7_raw
+                self.ch8 = message.chan8_raw
 
             @self.vehicle.on_message('SYSTEM_TIME')
             def listener(vehicle, name, message):
