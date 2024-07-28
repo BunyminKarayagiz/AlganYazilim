@@ -98,7 +98,7 @@ class Iha():
         self.Yonelim_sunucusuna_baglan()
         self.PWM_sunucusuna_baglan()
         self.kamikaze_sunucusuna_baglan()
-        
+
 
 
     #KİLİTLENME FONKSİYONLARI

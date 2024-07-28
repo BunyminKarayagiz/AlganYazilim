@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 
 # Define the IP and port to listen on
-UDP_IP = "10.80.1.25"  # Listen on all available network interfaces
+UDP_IP = "10.80.1.51"  # Listen on all available network interfaces
 UDP_PORT = 5555
 
 # Create a UDP socket
