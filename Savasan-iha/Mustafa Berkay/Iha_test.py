@@ -108,18 +108,14 @@ class Iha():
             try:
                 pwm_verileri=self.TCP_pwm.client_recv_message().decode()
                 print("PWM VERILERI: ",pwm_verileri)
-
                 try:
-                    """---------------------------------------------
-                
-                    
-                    
-                    PWM-TAKİP KONTROL KODU BURAYA YAZILACAK
-                    
-                    
-                    
-                    ---------------------------------------------""" 
 
+                    if iha_path.get_ap_mode() != "FBWA" :
+                            iha_path.set_ap_mode("FBWA")
+                    pwmX = pwm_verileri['pwmx']
+                    pwmY = pwm_verileri['pwmy']
+                    iha_path.set_rc_channel(1, pwmX)
+                    iha_path.set_rc_channel(2, pwmY)
 
                 except Exception as e :
                     print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
@@ -149,6 +145,7 @@ class Iha():
                         
                         
                         ----------------------------------------------"""
+
 
                     except Exception as e:
                         print("KONTROL(Telem) : YÖNELİRKEN HATA ->",e)
