@@ -34,6 +34,6 @@ class Server():
 
     def send_data_to_client(self, message):
         self.conn.sendall(message)
-
+    
     def close_socket(self):
         self.tcp_socket.close()

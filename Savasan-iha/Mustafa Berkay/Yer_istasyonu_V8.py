@@ -47,12 +47,14 @@ class Yerİstasyonu():
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_mod = Server_Tcp.Server(9003,name="MOD")
         self.Server_kamikaze = Server_Tcp.Server(9004,name="KAMIKAZE")
+        self.Server_UI_telem = Server_Tcp.Server(9005,name="UI_TELEM")
 
         #Sunucu durumları için kullanılacak değişkenler
         self.ana_sunucu_status = False
         self.Yönelim_sunucusu=False
         self.Mod_sunucusu=False
         self.kamikaze_sunucusu=False
+        self.UI_telem_sunucusu = False
         self.MAV_PROXY_sunucusu=False
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
 
@@ -175,6 +177,20 @@ class Yerİstasyonu():
         self.kamikaze_sunucusu = connection_status
         return connection_status
 
+    def UI_telem_sunucusu_oluştur(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_UI_telem.creat_server()
+                connection_status=True
+                print("UI_TELEM : SERVER OLUSTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                print("UI_TELEM : SERVER OLUSTURURKEN HATA : ", e , " \n")
+                print("UI_TELEM : SERVER YENIDEN BAGLANIYOR...\n")
+                self.Server_UI_telem.reconnect()
+                print("UI_TELEM : SERVER OLUSTURULDU\n")
+        self.UI_telem_sunucusu = connection_status
+        return connection_status  
 
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_number, message): #*message -> "kilitlenme" veya "kamikaze"
@@ -236,12 +252,14 @@ class Yerİstasyonu():
         t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
         t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
         t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
+        #t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur) # UI_TELEM içine taşındı.
         #t1.start()
         #t2.start()
         t3.start()
         t4.start()
         t5.start()
         t6.start()
+        #t7.start()
         t5.join()
         return t3,t4,t5,t6
 
@@ -263,8 +281,9 @@ class Yerİstasyonu():
                     if time.perf_counter() - timer_start > 0.8 :
                         rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         timer_start=time.perf_counter()
-                #bizim_telemetri = 0 #!Sonradan kaldırılacak.
-                #rakip_telemetri = 0 #!Sonradan kaldırılacak.
+
+                    
+
             except Exception as e:
                 print("TELEMETRI : VERI HATASI -> ",e)
 
@@ -281,6 +300,20 @@ class Yerİstasyonu():
                         print("Qr already available",self.qr_coordinat)
 
             time.sleep(0.01) #? GEÇİCİ
+
+    def UI_TELEM(self): #Denenmedi
+        _ , arayuz_telem_queue = self.event_map(9)
+        t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur)
+        t7.start()
+        while True:
+            if self.UI_telem_sunucusu:
+                if not arayuz_telem_queue.empty():
+                    telemetri=arayuz_telem_queue.get()
+                    #Verileri bölme işi arayüz kodunda yapılacak.
+                    if not telemetri == None:
+                        self.Server_UI_telem.send_data_to_client(telemetri)
+
+
 
     def ana_sunucu_manager(self,num=6):
         event_queue,event_trigger = self.event_map[num]
@@ -331,6 +364,9 @@ class Yerİstasyonu():
 
         th2 = threading.Thread(target=self.ana_sunucu_manager)
         th2.start()
+
+        th3 = threading.Thread(target=self.UI_TELEM)
+        th3.start()
 
         time.sleep(10)
 
@@ -390,10 +426,12 @@ class YKI_PROCESS():
         self.fark = fark
         self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
+        self.Server_UIframe = Server_Udp.Server(11000)
         self.Server_udp = Server_Udp.Server()
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
 
         self.görüntü_sunucusu=False
+        self.UIframe_sunucusu=False
         self.PWM_sunucusu=False
 
         #MultiProcess-Mod Objeleri
@@ -437,9 +475,29 @@ class YKI_PROCESS():
         self.PWM_sunucusu=connection_status
         return connection_status
 
+    def ArayuzFrame_sunucusu_oluştur(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_UIframe.create_server()
+                connection_status=True
+                print("UI SERVER : SERVER OLUŞTURULDU")
+            except (ConnectionError , Exception) as e:
+                print("UI SERVER: oluştururken hata : ", e)
+        self.UIframe_sunucusu = connection_status
+        return connection_status
+
     def pwm_gonder(self,pwm_verileri):
         try:
             self.Server_pwm.send_data_to_client(json.dumps(pwm_verileri).encode())
+        except Exception as e:
+            print("PWM SUNUCU HATASI : ",e)
+            print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
+            self.Server_pwm.reconnect()
+
+    def ArayuzFrame_gonder(self,frame): #!Denenmedi...
+        try:
+            self.Server_UIframe.send_frame_to_client(frame)
         except Exception as e:
             print("PWM SUNUCU HATASI : ",e)
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
@@ -489,16 +547,16 @@ class YKI_PROCESS():
             except Exception as e:
                 print("FRAME : RECEIVE ERROR ->",e)
 
-    def process_frames(self, event_map, num):
+    def process_frames(self, num):
         process_name = mp.current_process().name
         cprint(f"Starting Frame_Processing process: {process_name}","green")
         event_queue, event_trigger = event_map[num]
 
-        # yonelim_queue,yonelim_trigger = event_map[4]
-        pwm_data_queue,pwm_trigger = event_map[5]
-        ana_sunucu_queue,sunucu_event = event_map[6]
-        lock_once_event,qr_once_event = event_map[7]
-        lock_outer_event,qr_outer_event = event_map[8]
+        # yonelim_queue,yonelim_trigger = self.event_map[4]
+        pwm_data_queue,pwm_trigger = self.event_map[5]
+        ana_sunucu_queue,sunucu_event = self.event_map[6]
+        lock_once_event,qr_once_event = self.event_map[7]
+        lock_outer_event,qr_outer_event = self.event_map[8]
 
         lockedOrNot = 0
         locked_prev = 0
@@ -616,9 +674,12 @@ class YKI_PROCESS():
                     print("INVALID MODE...")
                     time.sleep(0.5)
 
-    def display_frames(self): #TODO SUNUCU SAATİ EKRANA BASILACAK...
+    def display_frames(self):
         process_name = mp.current_process().name
         cprint(f"Starting Display process: {process_name}","green")
+        
+        arayuz_frame_queue , arayuz_telem_queue=self.event_map(9)
+        
         fps_start_time = time.perf_counter()
         frame_count:float= 0.0
         fps:float = 0.0
@@ -630,9 +691,15 @@ class YKI_PROCESS():
                 #current_time = time.strftime("%H:%M:%S")
                 now = datetime.datetime.now()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
                 current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                 cv2.putText(frame,"SUNUCU : "+current_time , (450, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 # cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+
+                if not arayuz_frame_queue.full():
+                    arayuz_frame_queue.put(frame)
+
+
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
                 frame_count += 1.0
@@ -646,7 +713,7 @@ class YKI_PROCESS():
                     break
         cv2.destroyAllWindows()
 
-    def pwm(self): #TODO Trigger kaldırıldı. Sonradan eklenebilir.
+    def PWM(self):
         self.PWM_sunucusu_oluştur()
         pwm_data_queue,pwm_trigger = self.event_map[5]
 
@@ -656,9 +723,23 @@ class YKI_PROCESS():
                     pwm_verileri = pwm_data_queue.get()
                     self.pwm_gonder(pwm_verileri=pwm_verileri)
 
+    def UI_FRAME(self):
+        self.ArayuzFrame_sunucusu_oluştur()
+
+        (arayuz_frame_queue,arayuz_telem_queue) =self.event_map()
+        if not arayuz_frame_queue.empty():
+            try:
+                frame = self.arayuz_frame_queue.get()
+                resized_frame = cv2.resize(frame, (480,320), interpolation=cv2.INTER_LINEAR)
+                _, encoded_frame = cv2.imencode('.jpg', resized_frame) #TODO Bu komuta ihtiyaç olmayabilir.
+                self.ArayuzFrame_gonder(encoded_frame)
+            except Exception as e:
+                print("UI_FRAME :",e)
+            
     #! ANA FONKSİYONLAR
     def process_manager(self):
-        th1=threading.Thread(target=self.pwm)
+        th1=threading.Thread(target=self.PWM)
+        th2=threading.Thread(target=self.UI_FRAME)
         p1 = mp.Process(target=self.capture_frames)
         p2 = mp.Process(target=self.process_frames, args=(self.event_map, 1))
         p3 = mp.Process(target=self.process_frames, args=(self.event_map, 2))
@@ -667,16 +748,19 @@ class YKI_PROCESS():
 
         th1.daemon = True
         th1.start()
+        th2.daemon = True
+        th2.start()
+
         p1.start()
         p2.start()
         p3.start()
         #p4.start()
         p6.start()
 
-        return th1,p1,p2,p3,p4,p6
+        return th1,th2,p1,p2,p3,p4,p6
 
     def start_stop(self):
-        th1,p1,p2,p3,p4,p6 = self.process_manager()
+        th1,th2,p1,p2,p3,p4,p6 = self.process_manager()
         time.sleep(0.2)
         try:
             self.SHUTDOWN_KEY = ""
@@ -699,10 +783,6 @@ class YKI_PROCESS():
         except Exception as e:
             cprint(f"Error during shutdown: {e}","red","on_white", attrs=["bold"])
 
-def create_IPC(event_map):
-    pass
-
-@perf_counter
 def create_event_map():
 
     #Process frames
@@ -727,6 +807,9 @@ def create_event_map():
     lock_outer_event = mp.Event()
     qr_outer_event = mp.Event()
 
+    arayuz_frame_queue = mp.Queue()
+    arayuz_telem_queue = mp.Queue()
+
 
     #event_map -> (1,2,3):process_frames <> (4,5):pwm-yonelim switch <> (6):Ana Sunucu
     event_map = {
@@ -738,6 +821,7 @@ def create_event_map():
     6: (ana_sunucu_queue,sunucu_event),
     7: (lock_once_event,qr_once_event),
     8: (lock_outer_event,qr_outer_event),
+    9: (arayuz_frame_queue,arayuz_telem_queue)
     #TODO EKLENECEK
     }
     return event_map
@@ -747,7 +831,6 @@ if __name__ == '__main__':
     event_map = create_event_map()
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
-    control_objects = create_IPC(event_map=event_map)
 
     yer_istasyonu = Yerİstasyonu("10.0.0.240",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()

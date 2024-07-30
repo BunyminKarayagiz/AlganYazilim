@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 
 # Define the IP and port to listen on
-UDP_IP = "10.80.1.51"  # Listen on all available network interfaces
+UDP_IP = "10.80.1.85"  # Listen on all available network interfaces
 UDP_PORT = 5555
 
 # Create a UDP socket
@@ -27,8 +27,6 @@ while True:
     try:
         # Create an AVPacket from the received data
         packet = av.Packet(data)
-        print(counter)
-        counter += 1
 
         # Decode the packet
         frames = codec.decode(packet)
@@ -39,9 +37,10 @@ while True:
 
             # Convert the image to a numpy array (OpenCV format)
             frame = np.array(img)
+            frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
             # Display the frame
-            cv2.imshow('Received Frame', frame)
+            cv2.imshow('Received Frame', frame_bgr)
 
             # Break the loop on 'q' key press
             if cv2.waitKey(1) & 0xFF == ord('q'):
