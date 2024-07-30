@@ -16,7 +16,7 @@ import hesaplamalar
 from qr_detection import QR_Detection
 import multiprocessing as mp
 import numpy as np
-
+import os
 from custom_decorators import perf_counter,debug,memoize
 from logging_setup import setup_logging, start_log_listener
 from termcolor import colored, cprint
@@ -33,6 +33,7 @@ from termcolor import colored, cprint
 #!Telemetri gönderim sıklığı:           Kusurlu
 #!Logger                                Kusurlu
 #!Qr için timeout                       Eksik
+#!Kalman ile rota tahmin                Eksik
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
@@ -302,7 +303,7 @@ class Yerİstasyonu():
             time.sleep(0.01) #? GEÇİCİ
 
     def UI_TELEM(self): #Denenmedi
-        _ , arayuz_telem_queue = self.event_map(9)
+        _ , arayuz_telem_queue = self.event_map[9]
         t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur)
         t7.start()
         while True:
@@ -424,7 +425,8 @@ class YKI_PROCESS():
 
     def __init__(self,fark,event_map,SHUTDOWN_KEY,queue_size=1):
         self.fark = fark
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
+
+        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_UIframe = Server_Udp.Server(11000)
         self.Server_udp = Server_Udp.Server()
@@ -550,7 +552,7 @@ class YKI_PROCESS():
     def process_frames(self, num):
         process_name = mp.current_process().name
         cprint(f"Starting Frame_Processing process: {process_name}","green")
-        event_queue, event_trigger = event_map[num]
+        event_queue, event_trigger = self.event_map[num]
 
         # yonelim_queue,yonelim_trigger = self.event_map[4]
         pwm_data_queue,pwm_trigger = self.event_map[5]
@@ -581,7 +583,7 @@ class YKI_PROCESS():
                     if lockedOrNot == 1 and locked_prev == 0:
                             lock_start_time=time.perf_counter()
                             start_now =datetime.datetime.now()
-                            # cv2.putText(img=processed_frame,text="HEDEF GORULDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
+                            cv2.putText(img=processed_frame,text="HEDEF GORULDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
                             locked_prev=1
 
                     #Hedef Görüldü. Yönelim modu devre dışı.
@@ -591,7 +593,7 @@ class YKI_PROCESS():
                             
 
                     if lockedOrNot == 0 and locked_prev== 1:
-                            # cv2.putText(img=processed_frame,text="HEDEF KAYBOLDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
+                            cv2.putText(img=processed_frame,text="HEDEF KAYBOLDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
                             locked_prev= 0
                             is_locked= 0
                             sent_once = 0
@@ -609,7 +611,7 @@ class YKI_PROCESS():
                                   
 
                             if lock_elapsed_time >= 4.0:
-                                # cv2.putText(img=processed_frame,text="KILITLENDI",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
+                                cv2.putText(img=processed_frame,text="KILITLENDI",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
                                 kilitlenme_bilgisi=True
                                 is_locked=1
                                 self.trigger_event(4,"yonelim")
@@ -618,8 +620,7 @@ class YKI_PROCESS():
                     if pwm_verileri["pwmx"] != 1500 or pwm_verileri["pwmy"] != 1500:
                         self.trigger_event(5,pwm_verileri)
                     # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
-                                
-
+                        
                     if is_locked == 1 and sent_once == 0:
                             end_now = datetime.datetime.now()
                             kilitlenme_bilgisi = {
@@ -678,7 +679,7 @@ class YKI_PROCESS():
         process_name = mp.current_process().name
         cprint(f"Starting Display process: {process_name}","green")
         
-        arayuz_frame_queue , arayuz_telem_queue=self.event_map(9)
+        arayuz_frame_queue , arayuz_telem_queue=self.event_map[9]
         
         fps_start_time = time.perf_counter()
         frame_count:float= 0.0
@@ -694,11 +695,10 @@ class YKI_PROCESS():
 
                 current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                 cv2.putText(frame,"SUNUCU : "+current_time , (450, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
-                # cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
 
                 if not arayuz_frame_queue.full():
                     arayuz_frame_queue.put(frame)
-
 
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
@@ -721,12 +721,19 @@ class YKI_PROCESS():
             if pwm_trigger.is_set():
                 if not pwm_data_queue.empty():
                     pwm_verileri = pwm_data_queue.get()
+
+                    #!------------------------------
+
+                    #! KALMAN BURADA UYGULANABİLİR
+
+                    #!------------------------------                    
+
                     self.pwm_gonder(pwm_verileri=pwm_verileri)
 
     def UI_FRAME(self):
         self.ArayuzFrame_sunucusu_oluştur()
 
-        (arayuz_frame_queue,arayuz_telem_queue) =self.event_map()
+        (arayuz_frame_queue,arayuz_telem_queue) =self.event_map[9]
         if not arayuz_frame_queue.empty():
             try:
                 frame = self.arayuz_frame_queue.get()
@@ -741,9 +748,9 @@ class YKI_PROCESS():
         th1=threading.Thread(target=self.PWM)
         th2=threading.Thread(target=self.UI_FRAME)
         p1 = mp.Process(target=self.capture_frames)
-        p2 = mp.Process(target=self.process_frames, args=(self.event_map, 1))
-        p3 = mp.Process(target=self.process_frames, args=(self.event_map, 2))
-        p4 = mp.Process(target=self.process_frames, args=(self.event_map, 3))
+        p2 = mp.Process(target=self.process_frames, args=(1,))
+        p3 = mp.Process(target=self.process_frames, args=(2,))
+        p4 = mp.Process(target=self.process_frames, args=(3,))
         p6 = mp.Process(target=self.display_frames)
 
         th1.daemon = True
@@ -759,27 +766,44 @@ class YKI_PROCESS():
 
         return th1,th2,p1,p2,p3,p4,p6
 
-    def start_stop(self):
+    def start_stop(self,listener_process):
         th1,th2,p1,p2,p3,p4,p6 = self.process_manager()
         time.sleep(0.2)
         try:
             self.SHUTDOWN_KEY = ""
             while self.SHUTDOWN_KEY !="ALGAN":
-                self.SHUTDOWN_KEY=input("SHUTDOWN KEY -> ALGAN")
+                self.SHUTDOWN_KEY=input("SHUTDOWN KEY -> ALGAN\n")
 
             cprint("Shutting down...","red","on_white", attrs=["bold"])
-            
+
             p1.terminate()
+            cprint("Capture process terminated...","red","on_white", attrs=["bold"])
             p2.terminate()
+            cprint("Frame-1 process terminated..","red","on_white", attrs=["bold"])
             p3.terminate()
+            cprint("Frame-2 process terminated.","red","on_white", attrs=["bold"])
             #p4.terminate()
+            #cprint("Frame-3 process terminated.","red","on_white", attrs=["bold"])
             p6.terminate()
+            cprint("Display process terminated..\n","red","on_white", attrs=["bold"])
+
 
             p1.join()
+            cprint("Capture process joined..","red","on_white", attrs=["bold"])
             p2.join()
+            cprint("Frame-1 process joined..","red","on_white", attrs=["bold"])
             p3.join()
+            cprint("Frame-2 process joined..","red","on_white", attrs=["bold"])
             #p4.join()
+            #cprint("Frame-3 process joined..","red","on_white", attrs=["bold"])
             p6.join()
+            cprint("Display process joined..\n","red","on_white", attrs=["bold"])
+
+            listener_process.terminate()
+            cprint("Listener process terminated..","red","on_white", attrs=["bold"])
+            listener_process.join()
+            cprint("Listener process joined..\n","red","on_white", attrs=["bold"])
+
         except Exception as e:
             cprint(f"Error during shutdown: {e}","red","on_white", attrs=["bold"])
 
@@ -832,17 +856,14 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu = Yerİstasyonu("10.0.0.240",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.95",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 
     yki_process = YKI_PROCESS(queue_size=2,fark=fark,event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #TODO queue_size test + "sunucu+fark"
 
     görev_kontrol = threading.Thread(target=yer_istasyonu.ANA_GOREV_KONTROL)
+    görev_kontrol.daemon = True
     görev_kontrol.start()
 
-    yki_process.start_stop()
-    görev_kontrol.join()
-    
-    listener_process.terminate()
-    listener_process.join()
+    yki_process.start_stop(listener_process=listener_process)
