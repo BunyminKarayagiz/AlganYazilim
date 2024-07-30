@@ -1,6 +1,6 @@
 import time
 from pymavlink import mavutil
-
+import sys
 
 def connect():
     # Create the connection
@@ -25,6 +25,15 @@ def request_message_interval(master, message_id: int, frequency_hz: int):
 master = connect()
 # Get the messages and reset intervals periodically
 start_time = 0
+telemetry_data = {
+    'RC_CHANNELS': None,
+    'VFR_HUD': None,
+    'GPS_RAW_INT': None,
+    'SERVO_OUTPUT_RAW': None,
+    'SYS_STATUS': None,
+    'POWER_STATUS': None,
+    'VIBRATION': None
+}
 while True:
     try:
         # Reset message intervals every 15 seconds
@@ -37,36 +46,16 @@ while True:
             request_message_interval(master, mavutil.mavlink.MAVLINK_MSG_ID_POWER_STATUS, 40)
             request_message_interval(master, mavutil.mavlink.MAVLINK_MSG_ID_VIBRATION, 40)
             start_time = time.time()
-        msg = master.recv_match(blocking=True, timeout=1)
+        msg = master.recv_match(blocking=True)
         if msg is None:
             print("No message received")
             continue
+        msg_type = msg.get_type()
+        if msg_type in telemetry_data:
+            telemetry_data[msg_type] = msg.to_dict()
 
-        msg_dict = msg.to_dict()
-
-        if msg.get_type() == 'RC_CHANNELS':
-            print(f"RC_CHANNELS: {msg_dict}")
-
-        elif msg.get_type() == 'VFR_HUD':
-                print(f"VFR_HUD: {msg_dict}")
-                """for key, value in msg_dict.items():
-                    if key == 'airspeed':
-                        print(key, ':', value, '------------------------------')"""
-
-        elif msg.get_type() == 'GPS_RAW_INT':
-            print(f"GPS_RAW_INT: {msg_dict}")
-
-        elif msg.get_type() == 'SERVO_OUTPUT_RAW':
-            print(f"SERVO_OUTPUT_RAW: {msg_dict}")
-
-        elif msg.get_type() == 'SYS_STATUS':
-            print(f"SYS_STATUS: {msg_dict}")
-
-        elif msg.get_type() == 'POWER_STATUS':
-            print(f"POWER_STATUS: {msg_dict}")
-
-        elif msg.get_type() == 'VIBRATION':
-            print(f"VIBRATION: {msg_dict}")
+        print(telemetry_data)
+        print(sys.getsizeof(telemetry_data))
 
     except Exception as e:
 

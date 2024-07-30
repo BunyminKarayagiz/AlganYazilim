@@ -277,6 +277,7 @@ class Yerİstasyonu():
 
             try:
                 bizim_telemetri=self.mavlink_obj.veri_kaydetme()
+                #arayüze gidecek telemetri eklenecek.
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 0.8 :
                         rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
