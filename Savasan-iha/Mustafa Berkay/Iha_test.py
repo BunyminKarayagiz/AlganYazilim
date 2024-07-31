@@ -2,6 +2,7 @@ import argparse
 import json
 import numpy as np
 import path
+import pickle
     
 import time , datetime
 import threading
@@ -106,15 +107,15 @@ class Iha():
     def receive_pwm(self):
         while True:
             try:
-                pwm_verileri=json.loads(self.TCP_pwm.client_recv_message().decode())
-                print("PWM VERILERI: ",pwm_verileri)
+                pwm_array=pickle.loads(self.TCP_pwm.client_recv_message())
+                print("PWM VERILERI: ",pwm_array)
                 try:
 
                     if iha_path.get_ap_mode() != "FBWA" :
                             print("AP MODE SET TO FBWA...")
                             iha_path.set_ap_mode("FBWA")
-                    pwmX = pwm_verileri['pwmx']
-                    pwmY = pwm_verileri['pwmy']
+                    pwmX = pwm_array[0]
+                    pwmY = pwm_array[1]
                     iha_path.set_rc_channel(1, pwmX)
                     iha_path.set_rc_channel(2, pwmY)
                     iha_path.set_rc_channel(3, 1500)
@@ -254,8 +255,15 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.95") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
-    iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
+    iha_obj = Iha("10.80.1.92") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    
+    m_planner_connection_status = False
+    while not m_planner_connection_status:
+        try:    
+            iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
+            m_planner_connection_status = True
+        except Exception as e:
+            print("M_PLANNER CONNECTION ERROR : ",e)
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor

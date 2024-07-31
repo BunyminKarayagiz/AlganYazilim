@@ -12,13 +12,19 @@ class Detection:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print("Using Device: ", self.device)
 
-    def model_predict(self, frame):
+    def model_predict(self, frame,frame_id):
         #results = self.model.predict(frame, verbose=False)
         results = self.model.track(source=frame, conf=0.3, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
         # ----------------------detect/track etmediği durum için düzenlenecek----------------------------
 
-        pwm_verileri = {'pwmx': 1500, 'pwmy': 1500}
-
+        """pwm_verileri = {
+                        'pwmx': 1500,
+                        'pwmy': 1500,
+                        'frame_id':frame_id
+                        }"""
+        
+        pwm_verileri = np.array([1500,1500,frame_id])
+        
         x, y = frame.shape[0], frame.shape[1]
 
         target_area_y1, target_area_y2 = (int(x * 0.10), int(x * 0.90))
@@ -37,7 +43,7 @@ class Detection:
                 x_center = int((x1 + x2) / 2)
                 y_center = int((y1 + y2) / 2)
 
-                pwm_verileri = self.coordinates_to_pwm(x_center, y_center)
+                pwm_verileri = self.coordinates_to_pwm(x_center, y_center,frame_id)
 
                 if(target_area_x1<x1 and target_area_x2>x2 and target_area_y1<y1 and target_area_y2>y2):
                     locked_or_not = True
@@ -48,7 +54,7 @@ class Detection:
             
         return pwm_verileri, annotated_frame, locked_or_not
 
-    def coordinates_to_pwm(self, x_center, y_center):
+    def coordinates_to_pwm(self, x_center, y_center,frame_id):
         screen_width = 640
         screen_height = 480
         min_pwm = 1100
@@ -68,8 +74,12 @@ class Detection:
             pwm_x = 1500
             pwm_y = 1500
 
-        pwm_verileri = {'pwmx': pwm_x,
-                        'pwmy': pwm_y}
+        """pwm_verileri = {
+                        'pwmx': pwm_x,
+                        'pwmy': pwm_y,
+                        'frame_id': frame_id
+                        }"""
+        pwm_verileri = np.array([pwm_x,pwm_y,frame_id])
         return pwm_verileri
 
 

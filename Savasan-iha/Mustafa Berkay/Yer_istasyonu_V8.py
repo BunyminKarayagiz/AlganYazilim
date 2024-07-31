@@ -20,19 +20,20 @@ import os
 from custom_decorators import perf_counter,debug,memoize
 from logging_setup import setup_logging, start_log_listener
 from termcolor import colored, cprint
+import pickle
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
 #!Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
-#!Ana_sunucuya veri gönderimi :        Kusurlu
-#!Telemetri verilerinin alınması :     Kusurlu
-#!Yonelim modunda rakip seçimi:        Kusurlu
+#!Ana_sunucuya veri gönderimi :        Kusurlu(Kısmen çözüldü)
+#!Telemetri verilerinin alınması :     Kusurlu(Kısmen çözüldü)
+#!Yonelim modunda rakip seçimi:        Eksik
 #!Aşırı yönelim(pwm):                   Eksik
 #!Hava savunma sistemi:                Eksik
 #!Pwm veri doğruluğu:                  Test edilecek
-#!Telemetri gönderim sıklığı:           Kusurlu
-#!Logger                                Kusurlu
-#!Qr için timeout                       Eksik
+#!Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
+#!Logger                                Kusurlu/Eksik
+#!Qr için timeout                       Eksik(İptal edildi.)
 #!Kalman ile rota tahmin                Eksik
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
@@ -284,8 +285,6 @@ class Yerİstasyonu():
                         rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         timer_start=time.perf_counter()
 
-                    
-
             except Exception as e:
                 print("TELEMETRI : VERI HATASI -> ",e)
 
@@ -314,8 +313,6 @@ class Yerİstasyonu():
                     #Verileri bölme işi arayüz kodunda yapılacak.
                     if not telemetri == None:
                         self.Server_UI_telem.send_data_to_client(telemetri)
-
-
 
     def ana_sunucu_manager(self,num=6):
         event_queue,event_trigger = self.event_map[num]
@@ -490,9 +487,9 @@ class YKI_PROCESS():
         self.UIframe_sunucusu = connection_status
         return connection_status
 
-    def pwm_gonder(self,pwm_verileri):
+    def pwm_gonder(self,pwm_array):
         try:
-            self.Server_pwm.send_data_to_client(json.dumps(pwm_verileri).encode())
+            self.Server_pwm.send_data_to_client(pickle.dumps(pwm_array))
         except Exception as e:
             print("PWM SUNUCU HATASI : ",e)
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
@@ -529,6 +526,7 @@ class YKI_PROCESS():
 
         self.Görüntü_sunucusu_oluştur()
         codec_1 = av.CodecContext.create('h264', 'r')
+        frame_id = 0
         while True:
             try:
                 data = self.Server_udp.recv_frame_from_client()
@@ -540,7 +538,8 @@ class YKI_PROCESS():
                         frame = np.array(img)
                         #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         if not self.capture_queue.full():
-                            self.capture_queue.put(frame)
+                            self.capture_queue.put((frame,frame_id))
+                            frame_id += 1
                             #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
                         else:
                             #print("FRAME : CAPTURE_QUEUE FULL...")
@@ -575,10 +574,11 @@ class YKI_PROCESS():
                 event_trigger.clear()
 
             if not self.capture_queue.empty():
-                frame = self.capture_queue.get()
+                (frame,frame_id) = self.capture_queue.get()
+                #print(f"{process_name} -> ",frame_id)
 
                 if event_message == "kilitlenme":
-                    pwm_verileri, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame)
+                    pwm_array, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
 
                     #* 4 SANIYE-KILITLENME
                     if lockedOrNot == 1 and locked_prev == 0:
@@ -589,9 +589,9 @@ class YKI_PROCESS():
 
                     #Hedef Görüldü. Yönelim modu devre dışı.
                             self.trigger_event(4,"STOP")
-                            pwm_data_queue.put(pwm_verileri)
+                            pwm_data_queue.put(pwm_array)
                             pwm_trigger.set()
-                            
+
 
                     if lockedOrNot == 0 and locked_prev== 1:
                             cv2.putText(img=processed_frame,text="HEDEF KAYBOLDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
@@ -618,8 +618,8 @@ class YKI_PROCESS():
                                 self.trigger_event(4,"yonelim")
                                 pwm_trigger.clear()
                                 
-                    if pwm_verileri["pwmx"] != 1500 or pwm_verileri["pwmy"] != 1500:
-                        self.trigger_event(5,pwm_verileri)
+                    if pwm_array[0] != 1500 or pwm_array[1] != 1500: #pwm_array -> [0]=pwmx , [1]=pwmy
+                        self.trigger_event(5,pwm_array)
                     # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
                         
                     if is_locked == 1 and sent_once == 0:
@@ -673,7 +673,7 @@ class YKI_PROCESS():
                         self.display_queue.put(frame)
 
                 else:
-                    print("INVALID MODE...")
+                    print("Process_frame :INVALID MODE...")
                     time.sleep(0.5)
 
     def display_frames(self):
@@ -685,7 +685,6 @@ class YKI_PROCESS():
         fps_start_time = time.perf_counter()
         frame_count:float= 0.0
         fps:float = 0.0
-        #counter= 0
         while True:
             if not self.display_queue.empty():
                 frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
@@ -704,10 +703,7 @@ class YKI_PROCESS():
                 cv2.imshow('Camera', frame)
                 fps = frame_count / (time.perf_counter() - fps_start_time)
                 frame_count += 1.0
-                #counter = 0
             else:
-                #counter +=1
-                #print("FRAME : DISPLAY_QUEUE IS EMPTY...",counter)
                 pass
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -721,15 +717,20 @@ class YKI_PROCESS():
         while True:
             if pwm_trigger.is_set():
                 if not pwm_data_queue.empty():
-                    pwm_verileri = pwm_data_queue.get()
+                    pwm_array= pwm_data_queue.get()
+                    #!------------------------------
+
+                    #! KALMAN BURADA UYGULANABİLİR - 1
 
                     #!------------------------------
 
-                    #! KALMAN BURADA UYGULANABİLİR
+                    self.pwm_gonder(pwm_array=pwm_array)
 
-                    #!------------------------------                    
+                    #!------------------------------
 
-                    self.pwm_gonder(pwm_verileri=pwm_verileri)
+                    #! KALMAN BURADA UYGULANABİLİR - 2
+
+                    #!------------------------------
 
     def UI_FRAME(self):
         self.ArayuzFrame_sunucusu_oluştur()
@@ -857,7 +858,7 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.95",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.92",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 
