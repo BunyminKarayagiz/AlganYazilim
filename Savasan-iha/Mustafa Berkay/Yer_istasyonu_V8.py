@@ -21,6 +21,7 @@ from custom_decorators import perf_counter,debug,memoize
 from logging_setup import setup_logging, start_log_listener
 from termcolor import colored, cprint
 import pickle
+import SimplifiedTelemetry
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
@@ -64,7 +65,7 @@ class Yerİstasyonu():
         self.yönelim_obj=hesaplamalar.Hesaplamalar()
 
         #M.PLANNER bilgisayarından telemetri verisi çekmek için kullanılacak obje
-        self.mavlink_obj = mavproxy2.MAVLink(mavlink_ip)
+        self.mavlink_obj = SimplifiedTelemetry.Telemetry(mavlink_ip)
 
         "Multiprocessing ile sorunlu objeler"
         "----------------------------------------------"
@@ -278,7 +279,7 @@ class Yerİstasyonu():
                 event_trigger.clear()
 
             try:
-                bizim_telemetri=self.mavlink_obj.veri_kaydetme()
+                bizim_telemetri,ui_telemetri=self.mavlink_obj.telemetry_packet()
                 #arayüze gidecek telemetri eklenecek.
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 0.8 :
@@ -424,7 +425,7 @@ class YKI_PROCESS():
     def __init__(self,fark,event_map,SHUTDOWN_KEY,queue_size=1):
         self.fark = fark
 
-        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\V5_best.pt")
         self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
         self.Server_UIframe = Server_Udp.Server(11000)
         self.Server_udp = Server_Udp.Server()
@@ -858,7 +859,7 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.92",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.63",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 
