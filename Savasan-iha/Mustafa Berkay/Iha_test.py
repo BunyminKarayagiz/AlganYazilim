@@ -105,21 +105,21 @@ class Iha():
     #KİLİTLENME FONKSİYONLARI
 
     def receive_pwm(self):
+        pwm_array = np.zeros((1,3),dtype=np.uint32)
         while True:
             try:
                 pwm_array=pickle.loads(self.TCP_pwm.client_recv_message())
-                print("PWM VERILERI: ",pwm_array)
+                print(pwm_array)
                 try:
 
                     if iha_path.get_ap_mode() != "FBWA" :
                             print("AP MODE SET TO FBWA...")
                             iha_path.set_ap_mode("FBWA")
-                    pwmX = pwm_array[0]
-                    pwmY = pwm_array[1]
-                    iha_path.set_rc_channel(1, pwmX)
-                    iha_path.set_rc_channel(2, pwmY)
+                    # pwmX = pwm_array[0]
+                    # pwmY = pwm_array[1]
+                    iha_path.set_rc_channel(1, pwm_array[0])
+                    iha_path.set_rc_channel(2, pwm_array[1])
                     iha_path.set_rc_channel(3, 1500)
-                    
 
                 except Exception as e :
                     print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
@@ -255,7 +255,7 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.92") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.65") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     m_planner_connection_status = False
     while not m_planner_connection_status:

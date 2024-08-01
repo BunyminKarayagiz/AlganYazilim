@@ -35,6 +35,7 @@ import pickle
 #!Logger                                Kusurlu/Eksik
 #!Qr için timeout                       Eksik(İptal edildi.)
 #!Kalman ile rota tahmin                Eksik
+#!Kalman array için gecikmesi           Kusurlu
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
@@ -682,19 +683,21 @@ class YKI_PROCESS():
         
         arayuz_frame_queue , arayuz_telem_queue=self.event_map[9]
         
-        fps_start_time = time.perf_counter()
+        is_stream_available = False
         frame_count:float= 0.0
         fps:float = 0.0
         while True:
             if not self.display_queue.empty():
+                if not is_stream_available:
+                    fps_start_time = time.perf_counter()
+                    is_stream_available = True
+                
                 frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
-                #current_time = datetime.utcnow().strftime('%H:%M:%S.%f')[:-3]
-                #current_time = time.strftime("%H:%M:%S")
                 now = datetime.datetime.now()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
                 current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
-                cv2.putText(frame,"SUNUCU : "+current_time , (450, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                 cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
 
                 if not arayuz_frame_queue.full():
@@ -710,27 +713,33 @@ class YKI_PROCESS():
                     break
         cv2.destroyAllWindows()
 
+    def kalman_predict(self,numpy_arr,arr_size):
+    
+        #! Kalman burada uygulanacak
+
+
+        
+        calculated_pwm_array = numpy_arr 
+        return calculated_pwm_array[0]
+
     def PWM(self):
         self.PWM_sunucusu_oluştur()
         pwm_data_queue,pwm_trigger = self.event_map[5]
+
+        stored_packets = np.zeros((5, 3),dtype=np.uint32)
+        id_correction = 0
 
         while True:
             if pwm_trigger.is_set():
                 if not pwm_data_queue.empty():
                     pwm_array= pwm_data_queue.get()
-                    #!------------------------------
 
-                    #! KALMAN BURADA UYGULANABİLİR - 1
+                    stored_packets[pwm_array[2]%6-1]=pwm_array #! BURADA DELAY VAR...
+                    if pwm_array[2]%5 == 4:
+                        print("Packet Ready:\n",stored_packets,"\n")
+                        predicted_pwm=self.kalman_predict(numpy_arr=stored_packets,arr_size=5) 
+                        self.pwm_gonder(pwm_array=predicted_pwm)
 
-                    #!------------------------------
-
-                    self.pwm_gonder(pwm_array=pwm_array)
-
-                    #!------------------------------
-
-                    #! KALMAN BURADA UYGULANABİLİR - 2
-
-                    #!------------------------------
 
     def UI_FRAME(self):
         self.ArayuzFrame_sunucusu_oluştur()
@@ -858,7 +867,7 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.92",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.65",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 

@@ -23,7 +23,7 @@ class Detection:
                         'frame_id':frame_id
                         }"""
         
-        pwm_verileri = np.array([1500,1500,frame_id])
+        pwm_verileri = np.array([1500,1500,frame_id],dtype=np.uint32)
         
         x, y = frame.shape[0], frame.shape[1]
 
@@ -79,7 +79,7 @@ class Detection:
                         'pwmy': pwm_y,
                         'frame_id': frame_id
                         }"""
-        pwm_verileri = np.array([pwm_x,pwm_y,frame_id])
+        pwm_verileri = np.array([pwm_x,pwm_y,frame_id],dtype=np.uint32)
         return pwm_verileri
 
 
