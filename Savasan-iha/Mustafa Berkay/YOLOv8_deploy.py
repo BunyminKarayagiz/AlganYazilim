@@ -12,7 +12,7 @@ class Detection:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print("Using Device: ", self.device)
 
-    def model_predict(self, frame,frame_id):
+    def model_predict(self, frame,frame_id:int):
         #results = self.model.predict(frame, verbose=False)
         results = self.model.track(source=frame, conf=0.3, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
         # ----------------------detect/track etmediği durum için düzenlenecek----------------------------
@@ -23,7 +23,9 @@ class Detection:
                         'frame_id':frame_id
                         }"""
         
-        pwm_verileri = np.array([1500,1500,frame_id],dtype=np.uint32)
+        """pwm_verileri = np.array([1500,1500,frame_id],dtype=np.uint32)"""
+
+        pwm_verileri:tuple = (1500,1500,frame_id)
         
         x, y = frame.shape[0], frame.shape[1]
 
@@ -50,8 +52,6 @@ class Detection:
 
                 return pwm_verileri, annotated_frame, locked_or_not
             
-            
-            
         return pwm_verileri, annotated_frame, locked_or_not
 
     def coordinates_to_pwm(self, x_center, y_center,frame_id):
@@ -74,12 +74,15 @@ class Detection:
             pwm_x = 1500
             pwm_y = 1500
 
-        """pwm_verileri = {
-                        'pwmx': pwm_x,
-                        'pwmy': pwm_y,
-                        'frame_id': frame_id
-                        }"""
-        pwm_verileri = np.array([pwm_x,pwm_y,frame_id],dtype=np.uint32)
+        # pwm_verileri = {
+        #                 'pwmx': pwm_x,
+        #                 'pwmy': pwm_y,
+        #                 'frame_id': frame_id
+        #                 }
+        
+        # pwm_verileri = np.array([pwm_x,pwm_y,frame_id],dtype=np.uint32)_
+        pwm_verileri:tuple = (pwm_x,pwm_y,frame_id)
+
         return pwm_verileri
 
 

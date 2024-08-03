@@ -8,7 +8,7 @@ class iha_haberlesme():
 
         #UDP-1 bağlantı ayarları
         self.udp_host = host_ip
-        self.udp_port = 9999  #Şimdilik elle seçiliyor.Port kapatılamaz ise devamında enumerator kullanılabilir.
+        self.udp_port = 5555
         self.capture_obj=Client_Udp.Client(self.udp_host,self.udp_port)
 
     def send_video(self):
@@ -21,7 +21,7 @@ class iha_haberlesme():
 
 if __name__ == "__main__":
 
-    iha_obj=iha_haberlesme("10.241.105.236")
+    iha_obj=iha_haberlesme("10.80.1.60")
     
     video_thread = threading.Thread(target=iha_obj.send_video)
     video_thread.run()

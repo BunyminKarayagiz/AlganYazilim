@@ -8,25 +8,27 @@ import numpy as np
 class Server():
  #65536
  #1000000
-    def __init__(self,port=5555):
+    def __init__(self,port=5555,name="UNNAMED"):
         self.BUFF_SIZE = 65536   # Kullanılabilecek veri bellek boyutu
         self.udp_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)  # UDP için temel tanımlama 
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)  # UDP için temel tanımlama
         self.port = port
+        self.name = name
 
         self.host_name = socket.gethostname()
         self.host_ip = socket.gethostbyname(self.host_name)
 
     def create_server(self):
         self.udp_socket.bind((self.host_ip, self.port))
-        print('UDP-Server Listening at:', (self.host_ip, self.port))
+        print(f'{self.name} Server Listening at:', (self.host_ip, self.port))
 
     def recv_frame_from_client(self):
         data , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)
-        # data = base64.b64decode(message, ' /')
-        # npdata = np.fromstring(data, dtype=np.uint8)
-        # frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
-        return data
+        #! SADECE LOCALDE ÇALIŞTIRMAK İÇİN 
+        data = base64.b64decode(data, ' /')
+        npdata = np.fromstring(data, dtype=np.uint8)
+        frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
+        return frame
 
     def send_frame_to_client(self,frame): #! Denenmedi. Düzeltilmesi gerekebilir...
         self.conn.sendto(frame.tobytes())

@@ -255,7 +255,7 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.65") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.60") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     m_planner_connection_status = False
     while not m_planner_connection_status:

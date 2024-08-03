@@ -22,21 +22,22 @@ from logging_setup import setup_logging, start_log_listener
 from termcolor import colored, cprint
 import pickle
 import SimplifiedTelemetry
+import numba
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
-#!Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
-#!Ana_sunucuya veri gönderimi :        Kusurlu(Kısmen çözüldü)
-#!Telemetri verilerinin alınması :     Kusurlu(Kısmen çözüldü)
+#?Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
+#?Ana_sunucuya veri gönderimi :        Kusurlu(Kısmen çözüldü)
+#?Telemetri verilerinin alınması :     Kusurlu(Kısmen çözüldü)
 #!Yonelim modunda rakip seçimi:        Eksik
 #!Aşırı yönelim(pwm):                   Eksik
 #!Hava savunma sistemi:                Eksik
 #!Pwm veri doğruluğu:                  Test edilecek
-#!Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
+#?Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
 #!Logger                                Kusurlu/Eksik
 #!Qr için timeout                       Eksik(İptal edildi.)
 #!Kalman ile rota tahmin                Eksik
-#!Kalman array için gecikmesi           Kusurlu
+#?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 class Yerİstasyonu():
@@ -47,11 +48,11 @@ class Yerİstasyonu():
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
-        self.Server_yönelim = Server_Tcp.Server(9002,name="YÖNELİM")
-        self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
-        self.Server_mod = Server_Tcp.Server(9003,name="MOD")
-        self.Server_kamikaze = Server_Tcp.Server(9004,name="KAMIKAZE")
-        self.Server_UI_telem = Server_Tcp.Server(9005,name="UI_TELEM")
+        self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
+        self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
+        self.Server_mod = Server_Tcp.Server(PORT=9003,name="MOD")
+        self.Server_kamikaze = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
+        self.Server_UI_telem = Server_Tcp.Server(PORT=9005,name="UI_TELEM")
 
         #Sunucu durumları için kullanılacak değişkenler
         self.ana_sunucu_status = False
@@ -240,6 +241,7 @@ class Yerİstasyonu():
     
     def kamikaze_time_recv(self):
         print("Waiting for kamikaze_time_oacket")
+        time.sleep(1)
         while True:
             try:
                 self.kamikaze_packet=self.Server_kamikaze.recv_tcp_message()
@@ -423,18 +425,20 @@ class Yerİstasyonu():
 
 class YKI_PROCESS():
 
-    def __init__(self,fark,event_map,SHUTDOWN_KEY,queue_size=1):
+    def __init__(self,fark,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"):
+
         self.fark = fark
 
-        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\V5_best.pt")
-        self.Server_pwm = Server_Tcp.Server(9001,name="PWM")
-        self.Server_UIframe = Server_Udp.Server(11000)
-        self.Server_udp = Server_Udp.Server()
+        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
+        self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
+        self.Server_UIframe = Server_Udp.Server(port=11000,name="UI-Frame")
+        self.Server_udp = Server_Udp.Server(port=5555,name="IHA-FRAME")
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
 
         self.görüntü_sunucusu=False
         self.UIframe_sunucusu=False
         self.PWM_sunucusu=False
+        self.frame_debug_mode = frame_debug_mode
 
         #MultiProcess-Mod Objeleri
         self.capture_queue = mp.Queue(maxsize=queue_size)
@@ -462,7 +466,6 @@ class YKI_PROCESS():
         return connection_status
 
     def PWM_sunucusu_oluştur(self):
-
         connection_status=False
         while not connection_status:
             try:
@@ -489,9 +492,9 @@ class YKI_PROCESS():
         self.UIframe_sunucusu = connection_status
         return connection_status
 
-    def pwm_gonder(self,pwm_array):
+    def pwm_gonder(self,pwm_tuple):
         try:
-            self.Server_pwm.send_data_to_client(pickle.dumps(pwm_array))
+            self.Server_pwm.send_data_to_client(pickle.dumps(pwm_tuple))
         except Exception as e:
             print("PWM SUNUCU HATASI : ",e)
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
@@ -526,19 +529,38 @@ class YKI_PROCESS():
         process_name = mp.current_process().name
         cprint(f"Starting Capture-process: {process_name}","green")
 
+
         self.Görüntü_sunucusu_oluştur()
-        codec_1 = av.CodecContext.create('h264', 'r')
-        frame_id = 0
-        while True:
-            try:
-                data = self.Server_udp.recv_frame_from_client()
-                packet = av.Packet(data)
-                frames = codec_1.decode(packet)
-                for frame in frames:
+        if self.frame_debug_mode == "IHA":
+            codec_1 = av.CodecContext.create('h264', 'r')
+            frame_id = 0
+            while True:
+                try:
+                    data = self.Server_udp.recv_frame_from_client()
+                    packet = av.Packet(data)
+                    frames = codec_1.decode(packet)
+                    for frame in frames:
+                        try:
+                            img = frame.to_image()
+                            frame = np.array(img)
+                            #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            if not self.capture_queue.full():
+                                self.capture_queue.put((frame,frame_id))
+                                frame_id += 1
+                                #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
+                            else:
+                                #print("FRAME : CAPTURE_QUEUE FULL...")
+                                pass
+                        except Exception as e:
+                            print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
+                except Exception as e:
+                    print("FRAME : RECEIVE ERROR ->",e)
+        elif self.frame_debug_mode == "LOCAL":
+            frame_id = 0
+            while True:
+                try:
+                    frame = self.Server_udp.recv_frame_from_client()
                     try:
-                        img = frame.to_image()
-                        frame = np.array(img)
-                        #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         if not self.capture_queue.full():
                             self.capture_queue.put((frame,frame_id))
                             frame_id += 1
@@ -548,8 +570,8 @@ class YKI_PROCESS():
                             pass
                     except Exception as e:
                         print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
-            except Exception as e:
-                print("FRAME : RECEIVE ERROR ->",e)
+                except Exception as e:
+                    print("FRAME : RECEIVE ERROR ->",e)
 
     def process_frames(self, num):
         process_name = mp.current_process().name
@@ -580,7 +602,7 @@ class YKI_PROCESS():
                 #print(f"{process_name} -> ",frame_id)
 
                 if event_message == "kilitlenme":
-                    pwm_array, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
+                    pwm_tuple, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
 
                     #* 4 SANIYE-KILITLENME
                     if lockedOrNot == 1 and locked_prev == 0:
@@ -591,8 +613,8 @@ class YKI_PROCESS():
 
                     #Hedef Görüldü. Yönelim modu devre dışı.
                             self.trigger_event(4,"STOP")
-                            pwm_data_queue.put(pwm_array)
-                            pwm_trigger.set()
+                            pwm_data_queue.put(pwm_tuple)
+                            #pwm_trigger.set()
 
 
                     if lockedOrNot == 0 and locked_prev== 1:
@@ -603,7 +625,7 @@ class YKI_PROCESS():
 
                     #Hedef kayboldu. Yönelim Moduna geri dön. Pwm modunu kapat
                             self.trigger_event(4,"yonelim")
-                            pwm_trigger.clear()
+                            #pwm_trigger.clear()
 
                     if lockedOrNot == 1 and locked_prev== 1:
                             lock_elapsed_time= time.perf_counter() - lock_start_time
@@ -618,10 +640,10 @@ class YKI_PROCESS():
                                 kilitlenme_bilgisi=True
                                 is_locked=1
                                 self.trigger_event(4,"yonelim")
-                                pwm_trigger.clear()
+                                #pwm_trigger.clear()
                                 
-                    if pwm_array[0] != 1500 or pwm_array[1] != 1500: #pwm_array -> [0]=pwmx , [1]=pwmy
-                        self.trigger_event(5,pwm_array)
+                    if pwm_tuple[0] != 1500 or pwm_tuple[1] != 1500: #pwm_tuple -> [0]=pwmx , [1]=pwmy
+                        self.trigger_event(5,pwm_tuple)
                     # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
                         
                     if is_locked == 1 and sent_once == 0:
@@ -695,7 +717,7 @@ class YKI_PROCESS():
                 
                 frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                 now = datetime.datetime.now()
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
                 current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                 cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
@@ -714,48 +736,43 @@ class YKI_PROCESS():
                     break
         cv2.destroyAllWindows()
 
-    def kalman_predict(self,numpy_arr,arr_size):
+    def kalman_predict(self,numpy_arr,arr_size=5):
     
         #! Kalman burada uygulanacak
 
+        return numpy_arr[0]
 
-        
-        calculated_pwm_array = numpy_arr 
-        return calculated_pwm_array[0]
-
+    #! ANA FONKSİYONLAR
     def PWM(self):
         self.PWM_sunucusu_oluştur()
-        pwm_data_queue,pwm_trigger = self.event_map[5]
+        pwm_data_queue, pwm_trigger = self.event_map[5]
 
-        stored_packets = np.zeros((5, 3),dtype=np.uint32)
-        id_correction = 0
+        stored_packets = [0,0,0,0,0]
+        packet_counter = 0
 
         while True:
-            if pwm_trigger.is_set():
-                if not pwm_data_queue.empty():
-                    pwm_array= pwm_data_queue.get()
-
-                    stored_packets[pwm_array[2]%6-1]=pwm_array #! BURADA DELAY VAR...
-                    if pwm_array[2]%5 == 4:
-                        print("Packet Ready:\n",stored_packets,"\n")
-                        predicted_pwm=self.kalman_predict(numpy_arr=stored_packets,arr_size=5) 
-                        self.pwm_gonder(pwm_array=predicted_pwm)
-
+            if not pwm_data_queue.empty():
+                pwm_tuple= pwm_data_queue.get()
+                stored_packets[pwm_tuple[2]%6-1]=pwm_tuple #! BURADA DELAY VAR...
+                packet_counter += 1
+                if packet_counter == 5:
+                    packet_counter = 0
+                    print("Packet Ready:\n",stored_packets,"\n")
+                    self.kalman_predict(numpy_arr=stored_packets,arr_size=5)
+                    self.pwm_gonder(pwm_tuple=self.kalman_predict(numpy_arr=stored_packets,arr_size=5))
 
     def UI_FRAME(self):
         self.ArayuzFrame_sunucusu_oluştur()
-
         (arayuz_frame_queue,arayuz_telem_queue) =self.event_map[9]
         if not arayuz_frame_queue.empty():
             try:
                 frame = self.arayuz_frame_queue.get()
-                resized_frame = cv2.resize(frame, (480,320), interpolation=cv2.INTER_LINEAR)
+                resized_frame = cv2.resize(frame, (480,320), interpolation=cv2.INTER_AREA)
                 _, encoded_frame = cv2.imencode('.jpg', resized_frame) #TODO Bu komuta ihtiyaç olmayabilir.
                 self.ArayuzFrame_gonder(encoded_frame)
             except Exception as e:
                 print("UI_FRAME :",e)
-            
-    #! ANA FONKSİYONLAR
+
     def process_manager(self):
         th1=threading.Thread(target=self.PWM)
         th2=threading.Thread(target=self.UI_FRAME)
@@ -775,7 +792,6 @@ class YKI_PROCESS():
         p3.start()
         #p4.start()
         p6.start()
-
         return th1,th2,p1,p2,p3,p4,p6
 
     def start_stop(self,listener_process):
@@ -798,7 +814,6 @@ class YKI_PROCESS():
             #cprint("Frame-3 process terminated.","red","on_white", attrs=["bold"])
             p6.terminate()
             cprint("Display process terminated..\n","red","on_white", attrs=["bold"])
-
 
             p1.join()
             cprint("Capture process joined..","red","on_white", attrs=["bold"])
@@ -868,11 +883,11 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.65",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.60",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 
-    yki_process = YKI_PROCESS(queue_size=2,fark=fark,event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #TODO queue_size test + "sunucu+fark"
+    yki_process = YKI_PROCESS(queue_size=2,fark=fark,event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY,frame_debug_mode="LOCAL") #TODO queue_size test + "sunucu+fark"
 
     görev_kontrol = threading.Thread(target=yer_istasyonu.ANA_GOREV_KONTROL)
     görev_kontrol.daemon = True
