@@ -316,10 +316,10 @@ if __name__ == '__main__':
 
     while True:
         time.sleep(0.5)
-        print("SERVO:8", iha_path.servo8)
-        print("SERVO:6", iha_path.servo6)
+        print("SERVO:8", iha_path.ch8)
+        print("SERVO:6", iha_path.ch6)
 
-        if (iha_path.servo6 > 1600 and iha_path.servo8 > 1600):  # High High
+        if (iha_path.ch6 > 1600 and iha_path.ch8 > 1600):  # High High
             iha_obj.mod = "AUTO" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "AUTO"
@@ -328,7 +328,7 @@ if __name__ == '__main__':
             print("SELECTED MOD : AUTO")
 
                 
-        if ((iha_path.servo6 >= 1400 and iha_path.servo6 <= 1600) and iha_path.servo8 > 1600):  # Mid High
+        if ((iha_path.ch6 >= 1400 and iha_path.ch6 <= 1600) and iha_path.ch8 > 1600):  # Mid High
             iha_obj.mod = "FBWA" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "FBWA"
@@ -337,7 +337,7 @@ if __name__ == '__main__':
             print("SELECTED MOD : FBWA")
         
 
-        if (iha_path.servo6 < 1400 and iha_path.servo8 > 1600):  # LOW High
+        if (iha_path.ch6 < 1400 and iha_path.ch8 > 1600):  # LOW High
             iha_obj.mod = "RTL" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "RTL"
@@ -346,7 +346,7 @@ if __name__ == '__main__':
             print("SELECTED MOD : RTL")
         
             
-        if (iha_path.servo6 > 1600 and iha_path.servo8 < 1400):  # ch6: High, ch8: LOW
+        if (iha_path.ch6 > 1600 and iha_path.ch8 < 1400):  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
@@ -354,7 +354,7 @@ if __name__ == '__main__':
             print("SELECTED MOD : KAMIKAZE")
 
 
-        if (iha_path.servo6 >= 1600 and (iha_path.servo8 > 1400 and iha_path.servo8 < 1600)):  # ch6: High, ch8: Mid
+        if (iha_path.ch6 >= 1600 and (iha_path.ch8 > 1400 and iha_path.ch8 < 1600)):  # ch6: High, ch8: Mid
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()
