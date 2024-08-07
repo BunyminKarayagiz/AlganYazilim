@@ -23,11 +23,12 @@ from termcolor import colored, cprint
 import pickle
 import SimplifiedTelemetry
 import numba
+import tkinter as tk
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
 #?Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
-#?Ana_sunucuya veri gönderimi :        Kusurlu(Kısmen çözüldü)
+#?Ana_sunucuya veri gönderimi :        Kusurlu(Çözüldü)
 #?Telemetri verilerinin alınması :     Kusurlu(Kısmen çözüldü)
 #!Yonelim modunda rakip seçimi:        Eksik
 #!Aşırı yönelim(pwm):                   Eksik
@@ -53,6 +54,7 @@ class Yerİstasyonu():
         self.Server_mod = Server_Tcp.Server(PORT=9003,name="MOD")
         self.Server_kamikaze = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
         self.Server_UI_telem = Server_Tcp.Server(PORT=9005,name="UI_TELEM")
+        self.Server_YKI_ONAY = Server_Tcp.Server(PORT=9006,name="YKI_ONAY")
 
         #Sunucu durumları için kullanılacak değişkenler
         self.ana_sunucu_status = False
@@ -60,6 +62,7 @@ class Yerİstasyonu():
         self.Mod_sunucusu=False
         self.kamikaze_sunucusu=False
         self.UI_telem_sunucusu = False
+        self.YKI_ONAY_sunucusu = False
         self.MAV_PROXY_sunucusu=False
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
 
@@ -83,6 +86,7 @@ class Yerİstasyonu():
         self.fark = 0
         self.is_qrAvailable = False
         self.is_qr_transmitted = "False"
+        self.Yki_onayi_verildi = False
 
         #GÖREV_MODU SEÇİMİ
         self.event_map = event_map
@@ -197,6 +201,21 @@ class Yerİstasyonu():
         self.UI_telem_sunucusu = connection_status
         return connection_status  
 
+    def YKI_ONAY_sunucusu_oluştur(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_YKI_ONAY.creat_server()
+                connection_status=True
+                print("YKI_ONAY : SERVER OLUSTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                print("YKI_ONAY : SERVER OLUSTURURKEN HATA : ", e , " \n")
+                print("YKI_ONAY : SERVER YENIDEN BAGLANIYOR...\n")
+                self.Server_YKI_ONAY.reconnect()
+                print("YKI_ONAY : SERVER OLUSTURULDU\n")
+        self.YKI_ONAY_sunucusu = connection_status
+        return connection_status
+
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_number, message): #*message -> "kilitlenme" veya "kamikaze"
         try:
@@ -240,7 +259,7 @@ class Yerİstasyonu():
                 #TODO EKLEME YAPILACAK
     
     def kamikaze_time_recv(self):
-        print("Waiting for kamikaze_time_oacket")
+        print("Waiting for kamikaze_time_packet")
         time.sleep(1)
         while True:
             try:
@@ -252,13 +271,14 @@ class Yerİstasyonu():
 
     #! ANA FONKSİYONLAR
     def sunuculari_oluştur(self):
-        #t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)  # YKI_PROCESS  içinde kullanıldı.
+        #t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
         #t2 = threading.Thread(target=self.PWM_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
         t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)
         t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
         t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
         t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
         #t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur) # UI_TELEM içine taşındı.
+        t8 = threading.Thread(target=self.YKI_ONAY_sunucusu_oluştur)
         #t1.start()
         #t2.start()
         t3.start()
@@ -266,8 +286,29 @@ class Yerİstasyonu():
         t5.start()
         t6.start()
         #t7.start()
+        t8.start()
         t5.join()
-        return t3,t4,t5,t6
+        return t3,t4,t5,t6,t8
+
+    def yki_onay_ver(self):
+        if self.Yki_onayi_verildi == False:
+            self.Server_YKI_ONAY.send_data_to_client("ALGAN".encode())
+            self.Yki_onayi_verildi = True
+            cprint(f"ONAY VERILDI ---> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
+        else:
+            self.Server_YKI_ONAY.send_data_to_client("RED".encode())
+            self.Yki_onayi_verildi = False
+            cprint(f"ONAY REDDEDILDI ---> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
+
+
+    def init_gui(self):
+        root = tk.Tk()
+        root.title("Ground Control Station")
+
+        send_button = tk.Button(root, text="ONAY VER/REDDET", command=self.yki_onay_ver,width=20, height=2, padx=20, pady=10, font=('Helvetica', 14))
+        send_button.pack(pady=20)
+        # Run the GUI event 
+        root.mainloop()
 
     def yonelim(self,num=4):
         event_queue,event_trigger = self.event_map[num]
@@ -371,7 +412,14 @@ class Yerİstasyonu():
         th3 = threading.Thread(target=self.UI_TELEM)
         th3.start()
 
+
         time.sleep(10)
+
+        if self.YKI_ONAY_sunucusu == True:
+            th4 = threading.Thread(target=self.init_gui)
+            th4.start()
+        else:
+            print("YKI ONAY ARAYUZU PAS GECILDI..")
 
         while True:
             try:
@@ -529,7 +577,6 @@ class YKI_PROCESS():
         process_name = mp.current_process().name
         cprint(f"Starting Capture-process: {process_name}","green")
 
-
         self.Görüntü_sunucusu_oluştur()
         if self.frame_debug_mode == "IHA":
             codec_1 = av.CodecContext.create('h264', 'r')
@@ -555,6 +602,7 @@ class YKI_PROCESS():
                             print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
                 except Exception as e:
                     print("FRAME : RECEIVE ERROR ->",e)
+
         elif self.frame_debug_mode == "LOCAL":
             frame_id = 0
             while True:
@@ -736,11 +784,11 @@ class YKI_PROCESS():
                     break
         cv2.destroyAllWindows()
 
-    def kalman_predict(self,numpy_arr,arr_size=5):
+    def kalman_predict(self,kalman_buffer,buffer_size=5):
     
         #! Kalman burada uygulanacak
 
-        return numpy_arr[0]
+        return kalman_buffer[0]
 
     #! ANA FONKSİYONLAR
     def PWM(self):
@@ -749,17 +797,17 @@ class YKI_PROCESS():
 
         stored_packets = [0,0,0,0,0]
         packet_counter = 0
-
         while True:
             if not pwm_data_queue.empty():
                 pwm_tuple= pwm_data_queue.get()
-                stored_packets[pwm_tuple[2]%6-1]=pwm_tuple #! BURADA DELAY VAR...
-                packet_counter += 1
+                stored_packets[packet_counter]=pwm_tuple
+                packet_counter +=1
+
                 if packet_counter == 5:
                     packet_counter = 0
                     print("Packet Ready:\n",stored_packets,"\n")
-                    self.kalman_predict(numpy_arr=stored_packets,arr_size=5)
-                    self.pwm_gonder(pwm_tuple=self.kalman_predict(numpy_arr=stored_packets,arr_size=5))
+                    self.pwm_gonder(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
+                    stored_packets = [0,0,0,0,0]
 
     def UI_FRAME(self):
         self.ArayuzFrame_sunucusu_oluştur()
@@ -883,11 +931,11 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.60",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("192.168.1.236",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 
-    yki_process = YKI_PROCESS(queue_size=2,fark=fark,event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY,frame_debug_mode="LOCAL") #TODO queue_size test + "sunucu+fark"
+    yki_process = YKI_PROCESS(queue_size=2,fark=fark,event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY,frame_debug_mode="IHA") #TODO queue_size test + "sunucu+fark"
 
     görev_kontrol = threading.Thread(target=yer_istasyonu.ANA_GOREV_KONTROL)
     görev_kontrol.daemon = True
