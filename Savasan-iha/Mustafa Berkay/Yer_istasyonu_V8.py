@@ -554,7 +554,7 @@ class Yerİstasyonu():
             except Exception as e :
                 print("KAMIKAZE : SUNUCUDAN QR-KONUM ALINIRKEN HATA -> ",e)
                 #TODO EKLEME YAPILACAK
-    
+
     def kamikaze_time_recv(self):
         print("Waiting for kamikaze_time_packet")
         time.sleep(1)
@@ -568,7 +568,7 @@ class Yerİstasyonu():
 
     #! ANA FONKSİYONLAR
     def sunuculari_oluştur(self):
-        
+
         self.anasunucuya_baglan()
         self.senkron_local_saat()
 
