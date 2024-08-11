@@ -1,13 +1,13 @@
 import time
 from pymavlink import mavutil
-import sys
-
+import datetime
+import pytz
 
 class Telemetry:
     def __init__(self, Mp_Ip, frequency_hz=40):
         self.Mp_Ip = Mp_Ip
         self.frequency_hz = frequency_hz
-        self.master = self.connect()
+        self.master = None
         self.telemetry_data = {
             'RC_CHANNELS': None,
             'VFR_HUD': None,
@@ -15,6 +15,7 @@ class Telemetry:
             'SERVO_OUTPUT_RAW': None,
             'SYS_STATUS': None,
             'POWER_STATUS': None,
+            'SYSTEM_TIME': None,
             'VIBRATION': None
         }
         self.simplified_telemetry_data = {
@@ -23,21 +24,20 @@ class Telemetry:
             'GPS_RAW_INT': None,
             'SERVO_OUTPUT_RAW': None,
             'SYS_STATUS': None,
+            'SYSTEM_TIME': None,
             'POWER_STATUS': None,
             'VIBRATION': None
         }
         self.start_time = time.time()
 
     def connect(self):
-        # Create the connection
-        port = ('tcp:' + (self.Mp_Ip)  + ':14550')
+        port = ('tcp:' + (self.Mp_Ip) + ':14550')
         self.master = mavutil.mavlink_connection(port)
-        # Wait a heartbeat before sending commands
         self.master.wait_heartbeat()
         return self.master
 
     def request_message_interval(self, message_id):
-        interval_us = 1e6 / self.frequency_hz  # Frequency in Hz to interval in microseconds
+        interval_us = 1e6 / self.frequency_hz
         self.master.mav.command_long_send(
             self.master.target_system, self.master.target_component,
             mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, 0,
@@ -57,6 +57,11 @@ class Telemetry:
             self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_POWER_STATUS)
             self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_VIBRATION)
             self.start_time = time.time()
+
+    def unix_to_datetime(self, unix_time):
+        # UNIX zaman damgasını datetime objesine dönüştür ve Türkiye saatine ayarla
+        dt = datetime.datetime.fromtimestamp(unix_time, pytz.timezone('Europe/Istanbul'))
+        return dt.strftime("%d-%m-%Y %H:%M:%S.%f")[:-3]
 
     def update_simplified_data(self, msg, msg_type):
         if msg_type == 'RC_CHANNELS':
@@ -89,6 +94,12 @@ class Telemetry:
                 'Vcc': msg.Vcc,
                 'Vservo': msg.Vservo
             }
+        elif msg_type == 'SYSTEM_TIME':
+            # time_unix_usec değeri mikro saniye cinsinden olduğundan bunu saniye cinsine çeviriyoruz.
+            unix_time = msg.time_unix_usec / 1e6
+            self.simplified_telemetry_data[msg_type] = {
+                'Time': self.unix_to_datetime(unix_time)
+            }
         elif msg_type == 'VIBRATION':
             self.simplified_telemetry_data[msg_type] = {
                 'vibration_x': msg.vibration_x,
@@ -108,6 +119,12 @@ class Telemetry:
             if msg_type in self.telemetry_data:
                 self.telemetry_data[msg_type] = msg.to_dict()
                 self.update_simplified_data(msg, msg_type)
+
+            # gps_saati verisini çekme ve formatlama
+            gps_saati_unix = self.telemetry_data['SYSTEM_TIME']['time_unix_usec'] / 1e6 if self.telemetry_data[
+                                                                                                'SYSTEM_TIME'] and 'time_unix_usec' in self.telemetry_data['SYSTEM_TIME'] else None
+            gps_saati_formatted = self.unix_to_datetime(gps_saati_unix) if gps_saati_unix else None
+
             telemetry_output = {
                 "takim_numarasi": 1,
                 "iha_enlem": self.telemetry_data['GPS_RAW_INT']['lat'] / 1e7 if self.telemetry_data[
@@ -134,30 +151,24 @@ class Telemetry:
                                                                                              'SYS_STATUS'] and 'battery_remaining' in
                                                                                          self.telemetry_data[
                                                                                              'SYS_STATUS'] else None,
-                "iha_otonom": 1,  # Assuming this is a static value
-                "iha_kilitlenme": 1,  # Assuming this is a static value
-                "hedef_merkez_X": 300,  # Example value, replace with actual data if available
-                "hedef_merkez_Y": 230,  # Example value, replace with actual data if available
-                "hedef_genislik": 30,  # Example value, replace with actual data if available
-                "hedef_yukseklik": 43,  # Example value, replace with actual data if available
-                "gps_saati": {
-                    "saat": time.gmtime().tm_hour,
-                    "dakika": time.gmtime().tm_min,
-                    "saniye": time.gmtime().tm_sec,
-                    "milisaniye": int((time.time() % 1) * 1000)
-                }
+                "iha_otonom": 1,
+                "iha_kilitlenme": 1,
+                "hedef_merkez_X": 300,
+                "hedef_merkez_Y": 230,
+                "hedef_genislik": 30,
+                "hedef_yukseklik": 43,
+                "gps_saati": gps_saati_formatted
             }
 
             return [telemetry_output, self.simplified_telemetry_data]
         except Exception as e:
             print(f"Error: {e}")
-            return [self.telemetry_data,self.simplified_telemetry_data]
-
-
+            return [self.telemetry_data, self.simplified_telemetry_data]
 
 """if __name__ == "__main__":
     telemetry = Telemetry("127.0.0.1")
+    telemetry.master = telemetry.connect()
     while True:
         simplified_data, full_data = telemetry.telemetry_packet()
-        print(sys.getsizeof(full_data))
-        print(sys.getsizeof(simplified_data))"""
+        print(simplified_data)
+        print(full_data)"""
