@@ -113,42 +113,43 @@ def tele():
     gelen = json.loads(request.data)
     print(gelen)
     gelenveri = {
-        "sistemSaati": {
-            "saat": 6,
-            "dakika": 53,
-            "saniye": 42,
-            "milisaniye": 500
+        "sunucusaati": {
+            "gun": 13,
+            "saat": 11,
+            "dakika": 38,
+            "saniye": 38,
+            "milisaniye": 739
         },
-        "konumBilgileri": [
+        "konumBilgileri":[
             {
                 "takim_numarasi": 1,
-                "iha_enlem": -35.1864710,
-                "iha_boylam": 149.1420221,
-                "iha_irtifa": 50,
-                "iha_dikilme": 5,
-                "iha_yonelme": 256,
-                "iha_yatis": 0,
-                "zaman_farki": 93
-            },
+                "iha_enlem": 41.5118256,
+                "iha_boylam": 36.11993,
+                "iha_irtifa": 36.0,
+                "iha_dikilme":-8.0,
+                "iha_yonelme": 127,
+                "iha_yatis": 19.0,
+                "iha_hizi": 41.0,
+                "zaman_farki": 467},
             {
                 "takim_numarasi": 2,
-                "iha_enlem": -35.1827881,
-                "iha_boylam": 149.1362715,
-                "iha_irtifa": 60,
-                "iha_dikilme": 5,
-                "iha_yonelme": 256,
-                "iha_yatis": 0,
-                "zaman_farki": 74
-            },
+                "iha_enlem": 41.5100365,
+                "iha_boylam": 36.11837,
+                "iha_irtifa": 44.0,
+                "iha_dikilme": 24.0,
+                "iha_yonelme": 277.0,
+                "iha_yatis":-37.0,
+                "iha_hizi": 40.0,
+                "zaman_farki": 248},
             {
                 "takim_numarasi": 3,
-                "iha_enlem": -35.1939238,
-                "iha_boylam": 149.1358852,
-                "iha_irtifa": 70,
-                "iha_dikilme": 5,
-                "iha_yonelme": 256,
-                "iha_yatis": 0,
-                "zaman_farki": 43
+                "iha_enlem": 41.5123138,
+                "iha_boylam": 36.12,
+                "iha_irtifa": 32.0, "iha_dikilme": 9.0,
+                "iha_yonelme": 13,
+                "iha_yatis":-30.0,
+                "iha_hizi": 45.0,
+                "zaman_farki": 30
             }
         ]
     }  # Test verileri

@@ -8,6 +8,7 @@ import Server_Tcp
 import ana_sunucu_islemleri
 import threading
 import cv2
+import pyvirtualcam
 import YOLOv8_deploy
 import json
 import time, datetime
@@ -429,7 +430,7 @@ class YKI_PROCESS():
 
         self.fark = fark
 
-        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
         self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
         self.Server_UIframe = Server_Udp.Server(port=11000,name="UI-Frame")
         self.Server_udp = Server_Udp.Server(port=5555,name="IHA-FRAME")
@@ -447,6 +448,9 @@ class YKI_PROCESS():
 
         self.qr_coordinat = ""
         self.qr = QR_Detection()
+
+        #Video kaydetme parametreleri
+
 
     #! SUNUCU FONKSİYONLARI
     def Görüntü_sunucusu_oluştur(self):
@@ -706,34 +710,39 @@ class YKI_PROCESS():
         
         arayuz_frame_queue , arayuz_telem_queue=self.event_map[9]
         
+        fourrcc = cv2.VideoWriter_fourcc(*'MP4V')
+        videoKayit = cv2.VideoWriter('video.mp4', fourrcc, 30.0, (640, 480))
+        
         is_stream_available = False
         frame_count:float= 0.0
         fps:float = 0.0
-        while True:
-            if not self.display_queue.empty():
-                if not is_stream_available:
-                    fps_start_time = time.perf_counter()
-                    is_stream_available = True
-                
-                frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
-                now = datetime.datetime.now()
-                #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        with pyvirtualcam.Camera(width=640,height=480,fps=30) as cam:
+            while True:
+                if not self.display_queue.empty():
+                    if not is_stream_available:
+                        fps_start_time = time.perf_counter()
+                        is_stream_available = True
 
-                current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
-                cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
-                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
+                    now = datetime.datetime.now()
+                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
+                    cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    videoKayit.write(frame)    
+                    if not arayuz_frame_queue.full():
+                        arayuz_frame_queue.put(frame)
+                    cam.send(frame=frame)
+                    cv2.imshow('Camera', frame)
+                    fps = frame_count / (time.perf_counter() - fps_start_time)
+                    frame_count += 1.0
 
-                if not arayuz_frame_queue.full():
-                    arayuz_frame_queue.put(frame)
+                else:
+                    pass
 
-                cv2.imshow('Camera', frame)
-                fps = frame_count / (time.perf_counter() - fps_start_time)
-                frame_count += 1.0
-            else:
-                pass
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+        videoKayit.release()
         cv2.destroyAllWindows()
 
     def kalman_predict(self,numpy_arr,arr_size=5):
@@ -753,6 +762,7 @@ class YKI_PROCESS():
         while True:
             if not pwm_data_queue.empty():
                 pwm_tuple= pwm_data_queue.get()
+                print("PWM: ",pwm_tuple)
                 stored_packets[pwm_tuple[2]%6-1]=pwm_tuple #! BURADA DELAY VAR...
                 packet_counter += 1
                 if packet_counter == 5:
@@ -883,7 +893,7 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu = Yerİstasyonu("10.80.1.60",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu = Yerİstasyonu("10.80.1.51",event_map=event_map,SHUTDOWN_KEY=SHUTDOWN_KEY) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
     yer_istasyonu.anasunucuya_baglan()
     fark = yer_istasyonu.senkron_local_saat()
 

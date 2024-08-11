@@ -255,7 +255,7 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.60") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.51") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     m_planner_connection_status = False
     while not m_planner_connection_status:
@@ -285,7 +285,7 @@ if __name__ == '__main__':
         time.sleep(0.5)
         print("SERVO:8", iha_path.servo8)
         print("SERVO:6", iha_path.servo6)
-        if (iha_path.servo6 > 1600 and iha_path.servo8 > 1600):  # High High
+        if (iha_path.servo6 > 1600 and iha_path.servo7 > 1600):  # High High
             iha_obj.mod = "AUTO" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "AUTO"
@@ -293,7 +293,7 @@ if __name__ == '__main__':
                 iha_path.set_ap_mode("AUTO")
             print("SELECTED MOD : AUTO")
                 
-        if ((iha_path.servo6 >= 1400 and iha_path.servo6 <= 1600) and iha_path.servo8 > 1600):  # Mid High
+        if ((iha_path.servo6 >= 1400 and iha_path.servo6 <= 1600) and iha_path.servo7 > 1600):  # Mid High
             iha_obj.mod = "FBWA" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "FBWA"
@@ -301,7 +301,7 @@ if __name__ == '__main__':
                 iha_path.set_ap_mode("FBWA")
             print("SELECTED MOD : FBWA")
         
-        if (iha_path.servo6 < 1400 and iha_path.servo8 > 1600):  # LOW High
+        if (iha_path.servo6 < 1400 and iha_path.servo7 > 1600):  # LOW High
             iha_obj.mod = "RTL" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "RTL"
@@ -310,7 +310,7 @@ if __name__ == '__main__':
             print("SELECTED MOD : RTL")
         
             
-        if (iha_path.servo6 > 1600 and iha_path.servo8 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
+        if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
@@ -322,7 +322,7 @@ if __name__ == '__main__':
                     print("DEBUG MOD ON...\n\n")
                     time.sleep(9999)
 
-        if (iha_path.servo6 >= 1600 and (iha_path.servo8 > 1400 and iha_path.servo8 < 1600)) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: Mid
+        if (iha_path.servo6 >= 1600 and (iha_path.servo7 > 1400 and iha_path.servo7 < 1600)) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: Mid
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()
