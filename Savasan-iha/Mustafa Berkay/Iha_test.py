@@ -24,12 +24,15 @@ class Iha():
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
         self.TCP_mod=Client_Tcp.Client(host_ip,9003)
         self.TCP_kamikaze=Client_Tcp.Client(host_ip,9004)
+        self.TCP_YKI_ONAY=Client_Tcp.Client(host_ip,9006)
         self.yönelim_yapılacak_rakip=""
         self.mevcut_mod =""
         self.onceki_mod =""
 
         self.yönelim_release_event = threading.Event()
         self.kamikaze_release_event = threading.Event()
+
+        self.YKI_ONAYI_VERILDI = False
 
     def Yonelim_sunucusuna_baglan(self):
         connection=False
@@ -60,6 +63,16 @@ class Iha():
                 print("MOD SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("MOD SERVER: baglanırken hata: ", e)
+
+    def YKI_ONAY_sunucusuna_baglan(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_YKI_ONAY.connect_to_server()
+                connection=True
+                print("YKI_ONAY SERVER: BAĞLANDI.")
+            except (ConnectionError , Exception) as e:
+                print("YKI_ONAY SERVER: baglanırken hata: ", e)
                 
     def kamikaze_sunucusuna_baglan(self):
         connection=False
@@ -96,14 +109,29 @@ class Iha():
             iha.set_ap_mode(str(mod_kodu))
 
     def sunuculara_baglan(self):
+        self.Mod_sunucusuna_baglan()
         self.Yonelim_sunucusuna_baglan()
         self.PWM_sunucusuna_baglan()
         self.kamikaze_sunucusuna_baglan()
+        self.YKI_ONAY_sunucusuna_baglan()
+        
 
-
+    def Yki_confirm(self):    
+        while True:
+            try:
+                ONAY=self.TCP_YKI_ONAY.client_recv_message().decode();
+                print("YKI ONAY -> ",ONAY)
+                if ONAY == "ALGAN":
+                    self.YKI_ONAYI_VERILDI = True
+                    print("YKI ONAYI ALINDI..")
+                else:
+                    self.YKI_ONAYI_VERILDI = False
+                    print("YKI ONAYI REDDEDILDI..")
+            except Exception as e:
+                print("YKI ONAYI BEKLERKEN HATA : ",e)
+                self.YKI_ONAYI_VERILDI = False
 
     #KİLİTLENME FONKSİYONLARI
-
     def receive_pwm(self):
         pwm_array = np.zeros((1,3),dtype=np.uint32)
         while True:
@@ -115,11 +143,14 @@ class Iha():
                     if iha_path.get_ap_mode() != "FBWA" :
                             print("AP MODE SET TO FBWA...")
                             iha_path.set_ap_mode("FBWA")
-                    # pwmX = pwm_array[0]
-                    # pwmY = pwm_array[1]
-                    iha_path.set_rc_channel(1, pwm_array[0])
-                    iha_path.set_rc_channel(2, pwm_array[1])
-                    iha_path.set_rc_channel(3, 1500)
+
+                    if self.YKI_ONAYI_VERILDI == True:
+                        iha_path.set_rc_channel(1, pwm_array[0]) #pwmX
+                        iha_path.set_rc_channel(2, pwm_array[1]) #pwmY
+                        iha_path.set_rc_channel(3, 1500)
+                    else:
+                        print("PWM-YONELIM ICIN YKI ONAYI GEREKLI...")
+
 
                 except Exception as e :
                     print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
@@ -158,8 +189,8 @@ class Iha():
                 except Exception as e:
                     print("YONELIM SERVER: Veri çekilirken hata :", e)
 
-    # KAMIKAZE FONKSİYONLARI
 
+    # KAMIKAZE FONKSİYONLARI
     def qr_konum_al(self):
             is_qr_available = False
             while not is_qr_available:
@@ -212,43 +243,46 @@ class Iha():
                     print("KAMIKAZE -> AKTIF")
                     self.kamikaze_release_event.clear()
 
-                    
-                #qr_enlem, qr_boylam = json.loads(self.yönelim_yapılacak_rakip)["qrEnlem"], json.loads(self.yönelim_yapılacak_rakip)["qrBoylam"]
-                qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
-                print("QR MESAFE", qr_mesafe)
-                if not qr_gidiyor and not kalkista and qr_mesafe > 0.15:  # and iha.pos_alt_rel > 100:
-                    print('qr_gidiyor')
-                    if iha_path.get_ap_mode() != "GUIDED":
-                        iha_path.set_ap_mode("GUIDED")
-                    qr_git = LocationGlobalRelative(qr_enlem, qr_boylam, 100)
-                    iha_path.set_rc_channel(3, 1500)
-                    iha_path.goto(qr_git)
-                    qr_gidiyor = True
-                if qr_mesafe < 0.08 and qr_gidiyor:  # 150 metre
-                    if iha_path.get_ap_mode() != "FBWA":
-                        iha_path.set_ap_mode("FBWA")
-                        kamikaze_start= datetime.datetime.now()
-                        self.TCP_kamikaze.send_message_to_server(kamikaze_start)
-                    iha_path.set_rc_channel(1, 1500)  # Channel 1 is for Roll Input,
-                    iha_path.set_rc_channel(2, 1100)  # Channel 2 is for Pitch Input,
-                    iha_path.set_rc_channel(3, 1100)  # Channel 3 is for Throttle Input,
-                if iha_path.pos_alt_rel < 60:
-                    iha_path.set_rc_channel(1, 1500)
-                    iha_path.set_rc_channel(2, 1900)
-                    iha_path.set_rc_channel(3, 1600)
-                    # 169.254.148.157
-                    qr_gidiyor = False
-                    kalkista = True
-                if kalkista and iha_path.pos_alt_rel < 80:
-                    print("kalkiyor")
-                    iha_path.set_rc_channel(1, 1500)
-                    iha_path.set_rc_channel(2, 1900)
-                    iha_path.set_rc_channel(3, 1600)
-                if kalkista and iha_path.pos_alt_rel > 30:
-                    print("kalkis bitti AUTO")
-                    if iha_path.get_ap_mode() != "AUTO":
-                        iha_path.set_ap_mode("AUTO")
-                    kalkista = False
+                if self.YKI_ONAYI_VERILDI == True:
+                    print("YKI_ONAYI : ",self.YKI_ONAYI_VERILDI)
+                    #qr_enlem, qr_boylam = json.loads(self.yönelim_yapılacak_rakip)["qrEnlem"], json.loads(self.yönelim_yapılacak_rakip)["qrBoylam"]
+                    qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
+                    print("QR MESAFE", qr_mesafe)
+                    if not qr_gidiyor and not kalkista and qr_mesafe > 0.15:  # and iha.pos_alt_rel > 100:
+                        print('qr_gidiyor')
+                        if iha_path.get_ap_mode() != "GUIDED":
+                            iha_path.set_ap_mode("GUIDED")
+                        qr_git = LocationGlobalRelative(qr_enlem, qr_boylam, 100)
+                        iha_path.set_rc_channel(3, 1500)
+                        iha_path.goto(qr_git)
+                        qr_gidiyor = True
+                    if qr_mesafe < 0.08 and qr_gidiyor:  # 150 metre
+                        if iha_path.get_ap_mode() != "FBWA":
+                            iha_path.set_ap_mode("FBWA")
+                            kamikaze_start= datetime.datetime.now()
+                            self.TCP_kamikaze.send_message_to_server(kamikaze_start)
+                        iha_path.set_rc_channel(1, 1500)  # Channel 1 is for Roll Input,
+                        iha_path.set_rc_channel(2, 1100)  # Channel 2 is for Pitch Input,
+                        iha_path.set_rc_channel(3, 1100)  # Channel 3 is for Throttle Input,
+                    if iha_path.pos_alt_rel < 60:
+                        iha_path.set_rc_channel(1, 1500)
+                        iha_path.set_rc_channel(2, 1900)
+                        iha_path.set_rc_channel(3, 1600)
+                        # 169.254.148.157
+                        qr_gidiyor = False
+                        kalkista = True
+                    if kalkista and iha_path.pos_alt_rel < 80:
+                        print("kalkiyor")
+                        iha_path.set_rc_channel(1, 1500)
+                        iha_path.set_rc_channel(2, 1900)
+                        iha_path.set_rc_channel(3, 1600)
+                    if kalkista and iha_path.pos_alt_rel > 30:
+                        print("kalkis bitti AUTO")
+                        if iha_path.get_ap_mode() != "AUTO":
+                            iha_path.set_ap_mode("AUTO")
+                        kalkista = False
+                else:
+                    print("YKI_ONAYI BEKLENIYOR...")
 
         except Exception as e:
             print("ERROR KAMIKAZE ->" + str(e))
@@ -257,72 +291,74 @@ if __name__ == '__main__':
 
     iha_obj = Iha("10.80.1.51") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
-    m_planner_connection_status = False
-    while not m_planner_connection_status:
-        try:    
+    MissionPlanner_OR_PIXHAWK_Connection = False
+    while not MissionPlanner_OR_PIXHAWK_Connection:
+        try:
             iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
-            m_planner_connection_status = True
+            MissionPlanner_OR_PIXHAWK_Connection = True
         except Exception as e:
-            print("M_PLANNER CONNECTION ERROR : ",e)
+            print("M_PLANNER/PIXHAWK CONNECTION ERROR : ",e)
+            time.sleep(0.2)
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
-    iha_obj.Mod_sunucusuna_baglan()
     iha_obj.sunuculara_baglan()
-    DEBUG = input("Input 'DEBUG_LOCK' or 'DEBUG_QR' for DEBUG_MODE...\n>")
 
     kamikaze_thread = threading.Thread(target=iha_obj.kamikaze_yönelim, args=(iha_path,))
     pwm_thread = threading.Thread(target=iha_obj.receive_pwm)
     yonelim_thread = threading.Thread(target=iha_obj.yönelim_yap)
+    Yki_onay_thread = threading.Thread(target=iha_obj.Yki_confirm)
 
     kamikaze_thread.start()
     pwm_thread.start()
     yonelim_thread.start()
+    Yki_onay_thread.start()
 
     time.sleep(2)
 
     while True:
+        selected_servo_ch_6 = iha_path.servo6
+        selected_servo_ch_8 = iha_path.servo7
         time.sleep(0.5)
-        print("SERVO:8", iha_path.servo8)
-        print("SERVO:6", iha_path.servo6)
-        if (iha_path.servo6 > 1600 and iha_path.servo7 > 1600):  # High High
+        print("SERVO:8", selected_servo_ch_8)
+        print("SERVO:6", selected_servo_ch_6)
+
+        if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # High High
             iha_obj.mod = "AUTO" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "AUTO"
             if iha_path.get_ap_mode()!="AUTO":
                 iha_path.set_ap_mode("AUTO")
             print("SELECTED MOD : AUTO")
-                
-        if ((iha_path.servo6 >= 1400 and iha_path.servo6 <= 1600) and iha_path.servo7 > 1600):  # Mid High
+
+
+        if ((selected_servo_ch_6 >= 1400 and selected_servo_ch_6 <= 1600) and selected_servo_ch_8 > 1600):  # Mid High
             iha_obj.mod = "FBWA" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "FBWA"
             if iha_path.get_ap_mode()!="FBWA":
                 iha_path.set_ap_mode("FBWA")
             print("SELECTED MOD : FBWA")
-        
-        if (iha_path.servo6 < 1400 and iha_path.servo7 > 1600):  # LOW High
+
+
+        if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 > 1600):  # LOW High
             iha_obj.mod = "RTL" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "RTL"
             if iha_path.get_ap_mode()!="RTL":
                 iha_path.set_ap_mode("RTL")
             print("SELECTED MOD : RTL")
-        
-            
-        if (iha_path.servo6 > 1600 and iha_path.servo7 < 1400) or DEBUG=="DEBUG_QR":  # ch6: High, ch8: LOW
+
+
+        if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 < 1400):  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
             iha_obj.onceki_mod = "kamikaze"
             print("SELECTED MOD : KAMIKAZE")
 
-            if DEBUG == "DEBUG_QR":
-                while True:
-                    print("DEBUG MOD ON...\n\n")
-                    time.sleep(9999)
 
-        if (iha_path.servo6 >= 1600 and (iha_path.servo7 > 1400 and iha_path.servo7 < 1600)) or DEBUG=="DEBUG_LOCK":  # ch6: High, ch8: Mid
+        if (selected_servo_ch_6 >= 1600 and (selected_servo_ch_8 > 1400 and selected_servo_ch_8 < 1600)):  # ch6: High, ch8: Mid
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()
@@ -330,8 +366,3 @@ if __name__ == '__main__':
             if iha_path.get_ap_mode()!="FBWA":
                 iha_path.set_ap_mode("FBWA")
             print("SELECTED MOD : KILITLENME")
-                        
-            if DEBUG == "DEBUG_kilitlenme":
-                while True:
-                    print("DEBUG MOD ON...\n\n")
-                    time.sleep(9999)

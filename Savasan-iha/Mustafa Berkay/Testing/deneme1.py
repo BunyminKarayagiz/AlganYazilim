@@ -2,9 +2,10 @@ import socket
 import av
 import numpy as np
 import cv2
+import time
 
 # Define the IP and port to listen on
-UDP_IP = "10.0.0.240"  # Listen on all available network interfaces
+UDP_IP = "10.80.1.60"  # Listen on all available network interfaces
 UDP_PORT = 5555
 
 # Create a UDP socket
@@ -19,6 +20,9 @@ buffer_size = 65535
 # Create a codec context for H.264 decoding
 codec = av.CodecContext.create('h264', 'r')
 counter = 0
+frame_count:float= 0.0
+fps:float = 0.0
+fps_start_time = time.perf_counter()
 while True:
     # Receive data from the socket
     data, addr = sock.recvfrom(buffer_size)
@@ -38,10 +42,14 @@ while True:
             # Convert the image to a numpy array (OpenCV format)
             frame = np.array(img)
             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            
 
             # Display the frame
-            cv2.imshow('Received Frame', frame_bgr)
+            cv2.putText(frame_bgr, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
 
+            cv2.imshow('Received Frame', frame_bgr)
+            fps = frame_count / (time.perf_counter() - fps_start_time)
+            frame_count += 1.0
             # Break the loop on 'q' key press
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

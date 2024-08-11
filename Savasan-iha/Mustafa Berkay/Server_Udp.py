@@ -23,10 +23,10 @@ class Server():
         print(f'{self.name} Server Listening at:', (self.host_ip, self.port))
 
     def recv_frame_from_client(self):
-        data , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)
-        #! SADECE LOCALDE ÇALIŞTIRMAK İÇİN 
-        data = base64.b64decode(data, ' /')
-        npdata = np.fromstring(data, dtype=np.uint8)
+        frame , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)
+        #! SADECE LOCALDE ÇALIŞTIRMAK İÇİN
+        frame = base64.b64decode(frame, ' /')
+        npdata = np.fromstring(frame, dtype=np.uint8)
         frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
         return frame
 
