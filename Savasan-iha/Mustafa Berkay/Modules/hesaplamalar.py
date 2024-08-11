@@ -14,7 +14,11 @@ class Hesaplamalar():
                 "enlem": '',
                 "boylam": '',
                 "irtifa": '',
-                "hiz": ''}
+                "hiz": '',
+                "dikilme":'',
+                "yonelme":'',
+                "yatis":'',
+                }
             fark = abs(i["iha_yonelme"] - bizim_yonelim_acimiz)
             if fark > 180:
                 aradaki_fark = 360 - fark
@@ -26,6 +30,9 @@ class Hesaplamalar():
                 rakip_telemetri["boylam"] = i["iha_boylam"]
                 rakip_telemetri["irtifa"] = i["iha_irtifa"]
                 rakip_telemetri["hiz"] = i["iha_hiz"]
+                rakip_telemetri["dikilme"]=i["iha_dikilme"]
+                rakip_telemetri["yonelme"]=i["iha_yonelme"]
+                rakip_telemetri["yatis"]=i["iha_yatis"]
                 self.rakip_telemetri_verileri.append(rakip_telemetri)
         return self.rakip_telemetri_verileri
 

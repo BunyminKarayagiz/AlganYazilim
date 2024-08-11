@@ -8,6 +8,7 @@ from Modules import Server_Tcp
 from Modules import ana_sunucu_islemleri
 import threading
 import cv2
+import pyvirtualcam
 import YOLOv8_deploy
 import json
 import time, datetime
@@ -483,34 +484,39 @@ class Yerİstasyonu():
         
         arayuz_frame_queue , arayuz_telem_queue=self.event_map[9]
         
+        fourrcc = cv2.VideoWriter_fourcc(*'MP4V')
+        videoKayit = cv2.VideoWriter('video.mp4', fourrcc, 30.0, (640, 480))
+        
         is_stream_available = False
         frame_count:float= 0.0
         fps:float = 0.0
-        while True:
-            if not self.display_queue.empty():
-                if not is_stream_available:
-                    fps_start_time = time.perf_counter()
-                    is_stream_available = True
-                
-                frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
-                now = datetime.datetime.now()
-                #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        with pyvirtualcam.Camera(width=640,height=480,fps=30) as cam:
+            while True:
+                if not self.display_queue.empty():
+                    if not is_stream_available:
+                        fps_start_time = time.perf_counter()
+                        is_stream_available = True
 
-                current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
-                cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
-                cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
+                    now = datetime.datetime.now()
+                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
+                    cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    videoKayit.write(frame)    
+                    if not arayuz_frame_queue.full():
+                        arayuz_frame_queue.put(frame)
+                    cam.send(frame=frame)
+                    cv2.imshow('Camera', frame)
+                    fps = frame_count / (time.perf_counter() - fps_start_time)
+                    frame_count += 1.0
 
-                if not arayuz_frame_queue.full():
-                    arayuz_frame_queue.put(frame)
+                else:
+                    pass
 
-                cv2.imshow('Camera', frame)
-                fps = frame_count / (time.perf_counter() - fps_start_time)
-                frame_count += 1.0
-            else:
-                pass
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+        videoKayit.release()
         cv2.destroyAllWindows()
 
     def kalman_predict(self,kalman_buffer,buffer_size=5):
