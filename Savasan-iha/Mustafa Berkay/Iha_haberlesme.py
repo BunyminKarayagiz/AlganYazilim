@@ -1,5 +1,5 @@
 import socket
-import Client_Tcp , Client_Udp
+from Modules import Client_Tcp , Client_Udp
 import threading
 
 class iha_haberlesme():

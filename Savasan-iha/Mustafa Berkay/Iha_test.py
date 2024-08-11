@@ -1,12 +1,12 @@
 import argparse
 import json
 import numpy as np
-import path
+from Modules import path
 import pickle
     
 import time , datetime
 import threading
-import Client_Tcp
+from Modules import Client_Tcp
 
 from vincenty import vincenty
 from dronekit import LocationGlobalRelative

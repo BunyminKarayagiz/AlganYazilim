@@ -2,28 +2,29 @@
 # from pyzbar import pyzbar
 
 import av
-import Server_Udp
-import Server_Tcp
+from Modules import Server_Udp
+from Modules import Server_Tcp
 # from path import Plane
-import ana_sunucu_islemleri
+from Modules import ana_sunucu_islemleri
 import threading
 import cv2
 import YOLOv8_deploy
 import json
 import time, datetime
-import mavproxy2
-import hesaplamalar
-from qr_detection import QR_Detection
+#from Modules import mavproxy2
+from Modules import hesaplamalar
+from Modules.qr_detection import QR_Detection
 import multiprocessing as mp
 import numpy as np
 import os
-from custom_decorators import perf_counter,debug,memoize
+from Modules.custom_decorators import perf_counter,debug,memoize
 from logging_setup import setup_logging, start_log_listener
-from termcolor import colored, cprint
+from termcolor import cprint
 import pickle
-import SimplifiedTelemetry
+from Modules import SimplifiedTelemetry
 import numba
 import tkinter as tk
+import icecream
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
@@ -49,7 +50,7 @@ class Yerİstasyonu():
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         
-        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
    
         self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
         self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
