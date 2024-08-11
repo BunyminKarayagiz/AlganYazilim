@@ -109,10 +109,12 @@ class Iha():
             iha.set_ap_mode(str(mod_kodu))
 
     def sunuculara_baglan(self):
+        self.Mod_sunucusuna_baglan()
         self.Yonelim_sunucusuna_baglan()
         self.PWM_sunucusuna_baglan()
         self.kamikaze_sunucusuna_baglan()
         self.YKI_ONAY_sunucusuna_baglan()
+        
 
     def Yki_confirm(self):    
         while True:
@@ -287,19 +289,19 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.0.0.236") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.60") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     MissionPlanner_OR_PIXHAWK_Connection = False
     while not MissionPlanner_OR_PIXHAWK_Connection:
-        try:    
-            iha_path = iha_obj.IHA_Raspberry_Connect() #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
+        try:
+            iha_path = iha_obj.IHA_MissionPlanner_Connect(5762) #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK.
             MissionPlanner_OR_PIXHAWK_Connection = True
         except Exception as e:
             print("M_PLANNER/PIXHAWK CONNECTION ERROR : ",e)
+            time.sleep(0.2)
 
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
-    iha_obj.Mod_sunucusuna_baglan()
     iha_obj.sunuculara_baglan()
 
     kamikaze_thread = threading.Thread(target=iha_obj.kamikaze_yönelim, args=(iha_path,))
@@ -315,11 +317,13 @@ if __name__ == '__main__':
     time.sleep(2)
 
     while True:
+        selected_servo_ch_6 = iha_path.servo6
+        selected_servo_ch_8 = iha_path.servo7
         time.sleep(0.5)
-        print("SERVO:8", iha_path.ch8)
-        print("SERVO:6", iha_path.ch6)
+        print("SERVO:8", selected_servo_ch_8)
+        print("SERVO:6", selected_servo_ch_6)
 
-        if (iha_path.ch6 > 1600 and iha_path.ch8 > 1600):  # High High
+        if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # High High
             iha_obj.mod = "AUTO" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "AUTO"
@@ -327,26 +331,26 @@ if __name__ == '__main__':
                 iha_path.set_ap_mode("AUTO")
             print("SELECTED MOD : AUTO")
 
-                
-        if ((iha_path.ch6 >= 1400 and iha_path.ch6 <= 1600) and iha_path.ch8 > 1600):  # Mid High
+
+        if ((selected_servo_ch_6 >= 1400 and selected_servo_ch_6 <= 1600) and selected_servo_ch_8 > 1600):  # Mid High
             iha_obj.mod = "FBWA" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "FBWA"
             if iha_path.get_ap_mode()!="FBWA":
                 iha_path.set_ap_mode("FBWA")
             print("SELECTED MOD : FBWA")
-        
 
-        if (iha_path.ch6 < 1400 and iha_path.ch8 > 1600):  # LOW High
+
+        if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 > 1600):  # LOW High
             iha_obj.mod = "RTL" 
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "RTL"
             if iha_path.get_ap_mode()!="RTL":
                 iha_path.set_ap_mode("RTL")
             print("SELECTED MOD : RTL")
-        
-            
-        if (iha_path.ch6 > 1600 and iha_path.ch8 < 1400):  # ch6: High, ch8: LOW
+
+
+        if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 < 1400):  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
@@ -354,7 +358,7 @@ if __name__ == '__main__':
             print("SELECTED MOD : KAMIKAZE")
 
 
-        if (iha_path.ch6 >= 1600 and (iha_path.ch8 > 1400 and iha_path.ch8 < 1600)):  # ch6: High, ch8: Mid
+        if (selected_servo_ch_6 >= 1600 and (selected_servo_ch_8 > 1400 and selected_servo_ch_8 < 1600)):  # ch6: High, ch8: Mid
             iha_obj.mod = "kilitlenme"
             iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()
@@ -362,4 +366,3 @@ if __name__ == '__main__':
             if iha_path.get_ap_mode()!="FBWA":
                 iha_path.set_ap_mode("FBWA")
             print("SELECTED MOD : KILITLENME")
-                        

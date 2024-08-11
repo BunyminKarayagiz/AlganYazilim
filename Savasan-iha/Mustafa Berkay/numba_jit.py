@@ -9,8 +9,4 @@ class computations:
     @numba.jit
     def kalman(array:numpy.array):
 
-
-        
         return array
-    
-
