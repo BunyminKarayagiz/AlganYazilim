@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from fonksiyonlar import *
+from fonksiyonlar2 import *
 import json
 import subprocess
 import ana_sunucu_islemleri
@@ -18,8 +18,10 @@ try:
         yarıçap = float(i["hssYaricap"])
         fence_konumları.append((enlem, boylam, yarıçap))
     fence_dosya_kaydetme(fence_konumları, ucus_alanı, 'hss.waypoints')
+    saptıran_noktalar = []
+    guncel_wp = []
     for i in range(5):
-        #fence_konumları = fencenokta_okuma("hss.waypoints")
+        fence_konumları = fencenokta_okuma("hss.waypoints")
 
 
         target_locations = wp_nokta_okuma("waypoints.waypoints")
@@ -33,16 +35,19 @@ try:
             for fence in fence_kartezyen:
                 uzaklık = nokta_nokta(wp, fence)
                 if uzaklık - x < fence[2]:
-                    print("Çemberin içinde olan nokta silindi", wp_kartezyen.index(wp) + 1)
+
                     silinecekler.append(wp)
         for i in silinecekler:
-            wp_kartezyen.remove(i)
-
-
+            try:
+                wp_kartezyen.remove(i)
+            except:
+                continue
+        cizim_listesi = [(fence_kartezyen, 'kırmızı'), (wp_kartezyen, 'yeşil'), (ucus_alanı_kartezyen, 'mavi')]
+        ciz(cizim_listesi)
 
 
         yeni_wp_kartezyen = []
-        saptıran_noktalar = []
+
         for wp in wp_kartezyen:
             try:
                 sonraki_konum = wp_kartezyen[wp_kartezyen.index(wp) + 1]
@@ -100,21 +105,23 @@ try:
             except IndexError:
                 onceki_konum = yeni_wp_kartezyen[-1]
             aci = calculate_turn_angle(onceki_konum, wp, sonraki_konum)
-            print(f"Acı {yeni_wp_kartezyen.index(onceki_konum)},{yeni_wp_kartezyen.index(wp)},{yeni_wp_kartezyen.index(sonraki_konum)} : {aci}")
+            once_dis = nokta_nokta(onceki_konum, wp)
+            sonra_dis = nokta_nokta(wp, sonraki_konum)
+            if once_dis < 20 or sonra_dis < 20:
+                if wp not in saptıran_noktalar:
+                    silincekler.append(wp)
             if aci < 60:
                 print("Dönüş açısı 30 dereceden küçük")
                 if wp not in saptıran_noktalar:
-                    if wp not in silinecekler:
-                        silincekler.append(wp)
+                    silincekler.append(wp)
                 else:
                     nokta1=orta_nokta(onceki_konum, wp)
                     nokta2=orta_nokta(wp, sonraki_konum)
-            if aci > 60 and aci < 135:
-                print("Dönüş açısı 60 ile 135 derece arasında")
+            if aci > 60 and aci < 150:
+                print("Dönüş açısı 60 ile 150 derece arasında")
                 nokta1 = orta_nokta(onceki_konum, wp)
                 nokta2 = orta_nokta(wp, sonraki_konum)
-                if wp not in silinecekler:
-                    silinecekler.append(wp)
+                silinecekler.append(wp)
             if nokta1 != None and nokta2 != None:
                 if nokta1 not in wp_kartezyen:
                     wp_kartezyen.append(nokta1)
@@ -123,9 +130,36 @@ try:
             else:
                 if wp not in wp_kartezyen and wp not in silinecekler:
                     wp_kartezyen.append(wp)
-
+        for i in silinecekler:
+            try:
+                wp_kartezyen.remove(i)
+            except:
+                continue
+        guncel_wp=wp_kartezyen
 
         yeni_rota = []
+
+        for wp in wp_kartezyen:
+            try:
+                sonraki_konum = wp_kartezyen[wp_kartezyen.index(wp) + 1]
+            except IndexError:
+                sonraki_konum = wp_kartezyen[0]
+            try:
+                onceki_konum = wp_kartezyen[wp_kartezyen.index(wp) - 1]
+            except IndexError:
+                onceki_konum = wp_kartezyen[-1]
+            once= nokta_nokta(onceki_konum, wp)
+            sonra= nokta_nokta(wp, sonraki_konum)
+            if once < 30 or sonra < 30:
+                if wp or onceki_konum or sonraki_konum not in saptıran_noktalar:
+                    silinecekler.append(wp)
+        for i in silinecekler:
+            try:
+                wp_kartezyen.remove(i)
+            except:
+                continue
+
+
         for nokta in wp_kartezyen:
             yeni_nokta = kartezyen_to_enlem_boylam(nokta, home_konumu)
             yeni_rota.append(yeni_nokta)
@@ -134,13 +168,16 @@ try:
         print("Rota oluşturuldu")
         print("olşturulan rota waypoints.waypoints dosyasına yazıldı.")
 
-    cizim_listesi = [(fence_kartezyen, 'kırmızı'), (wp_kartezyen, 'yeşil'), (ucus_alanı_kartezyen, 'mavi')]
-    ciz(cizim_listesi)
+        cizim_listesi = [(fence_kartezyen, 'kırmızı'), (wp_kartezyen, 'yeşil'), (ucus_alanı_kartezyen, 'mavi')]
+        ciz(cizim_listesi)
+
 
 
 
 except KeyboardInterrupt:
     print("Görev tamamlandı")
+except:
+    fence_dosya_kaydetme(fence_konumları, ucus_alanı, 'hss.waypoints')
 
 
 
