@@ -498,14 +498,14 @@ class Yerİstasyonu():
 
                     frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                     now = datetime.datetime.now()
-                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                     cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     videoKayit.write(frame)    
                     if not arayuz_frame_queue.full():
                         arayuz_frame_queue.put(frame)
-                    cam.send(frame=frame)
+                    cam.send(frame= virtual_frame)
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
@@ -985,7 +985,7 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
+    yer_istasyonu_obj = Yerİstasyonu("10.80.1.51",
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      frame_debug_mode="LOCAL",
