@@ -510,7 +510,6 @@ class Yerİstasyonu():
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
-
                 else:
                     pass
 
@@ -544,7 +543,6 @@ class Yerİstasyonu():
 
     #! KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
     def get_qrCoord(self,timeout=1): #TODO Timeout özelliği eklenecek...
-
         if self.is_qrAvailable == True:
             try:
                 _, self.qr_coordinat = self.ana_sunucu.qr_koordinat_al()
@@ -568,7 +566,6 @@ class Yerİstasyonu():
 
     #! ANA FONKSİYONLAR
     def sunuculari_oluştur(self):
-
         self.anasunucuya_baglan()
         self.senkron_local_saat()
 
@@ -694,45 +691,6 @@ class Yerİstasyonu():
                     self.pwm_gonder(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
                     stored_packets = [0,0,0,0,0]
 
-    def terminate_all(self):
-        try:
-            self.SHUTDOWN_KEY = ""
-            while self.SHUTDOWN_KEY !="ALGAN":
-                self.SHUTDOWN_KEY=input("SHUTDOWN KEY -> ALGAN\n")
-
-
-        except Exception as e:
-            cprint(f"Error during shutdown: {e}","red","on_white", attrs=["bold"])
-        except KeyboardInterrupt:
-            cprint("Shutting down...","red","on_white", attrs=["bold"])
-
-            p1.terminate()
-            cprint("Capture process terminated...","red","on_white", attrs=["bold"])
-            p2.terminate()
-            cprint("Frame-1 process terminated..","red","on_white", attrs=["bold"])
-            p3.terminate()
-            cprint("Frame-2 process terminated.","red","on_white", attrs=["bold"])
-            #p4.terminate()
-            #cprint("Frame-3 process terminated.","red","on_white", attrs=["bold"])
-            p6.terminate()
-            cprint("Display process terminated..\n","red","on_white", attrs=["bold"])
-
-            p1.join()
-            cprint("Capture process joined..","red","on_white", attrs=["bold"])
-            p2.join()
-            cprint("Frame-1 process joined..","red","on_white", attrs=["bold"])
-            p3.join()
-            cprint("Frame-2 process joined..","red","on_white", attrs=["bold"])
-            #p4.join()
-            #cprint("Frame-3 process joined..","red","on_white", attrs=["bold"])
-            p6.join()
-            cprint("Display process joined..\n","red","on_white", attrs=["bold"])
-
-            listener_process.terminate()
-            cprint("Listener process terminated..","red","on_white", attrs=["bold"])
-            listener_process.join()
-            cprint("Listener process joined..\n","red","on_white", attrs=["bold"])
-
     def ana_sunucu_manager(self,num=6):
         event_queue,event_trigger = self.event_map[num]
         lock_once_event,qr_once_event = event_map[7]
@@ -804,60 +762,88 @@ class Yerİstasyonu():
         #p4.start()
         p5.start()
 
+        return th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5
 
-        return th1,th2,th3,th4,th5  , p1,p2,p3,p4,p5
+    def terminate_all(self,p1,p2,p3,p4,p5):
+            
+            p1.terminate()
+            cprint("Capture process terminated...","red","on_white", attrs=["bold"])
+            p2.terminate()
+            cprint("Frame-1 process terminated..","red","on_white", attrs=["bold"])
+            p3.terminate()
+            cprint("Frame-2 process terminated.","red","on_white", attrs=["bold"])
+            #p4.terminate()
+            #cprint("Frame-3 process terminated.","red","on_white", attrs=["bold"])
+            p5.terminate()
+            cprint("Display process terminated..\n","red","on_white", attrs=["bold"])
+
+            p1.join()
+            cprint("Capture process joined..","red","on_white", attrs=["bold"])
+            p2.join()
+            cprint("Frame-1 process joined..","red","on_white", attrs=["bold"])
+            p3.join()
+            cprint("Frame-2 process joined..","red","on_white", attrs=["bold"])
+            #p4.join()
+            #cprint("Frame-3 process joined..","red","on_white", attrs=["bold"])
+            p5.join()
+            cprint("Display process joined..\n","red","on_white", attrs=["bold"])
+
+            # listener_process.terminate()
+            # cprint("Listener process terminated..","red","on_white", attrs=["bold"])
+            # listener_process.join()
+            # cprint("Listener process joined..\n","red","on_white", attrs=["bold"])
 
     def ANA_GOREV_KONTROL(self):
         th1,th2,th3,th4,th5  , p1,p2,p3,p4,p5 = self.process_flow_manager()
-
         time.sleep(10)
-
         while True:
             try:
                 self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
             except Exception as e:
                 cprint(f"MOD : Secilen modu alirken hata -> {e}","red",attrs=["bold"]) #TODO EKLENECEK...
 
-            if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
-                self.trigger_event(1,"kilitlenme")
-                self.trigger_event(2,"kilitlenme")
-                self.trigger_event(4,"yonelim")
-                self.önceki_mod = "kilitlenme"
-                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+            try:
+                if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
+                    self.trigger_event(1,"kilitlenme")
+                    self.trigger_event(2,"kilitlenme")
+                    self.trigger_event(4,"yonelim")
+                    self.önceki_mod = "kilitlenme"
+                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
-            elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
-                self.trigger_event(1,"kamikaze")
-                self.trigger_event(2,"kamikaze")
-                self.trigger_event(4,"qr")
-                self.önceki_mod = "kamikaze"
-                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
+                    self.trigger_event(1,"kamikaze")
+                    self.trigger_event(2,"kamikaze")
+                    self.trigger_event(4,"qr")
+                    self.önceki_mod = "kamikaze"
+                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
-            elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
-                self.trigger_event(1,"AUTO")
-                self.trigger_event(2,"AUTO")
-                self.trigger_event(4,"yonelim")
-                self.önceki_mod = "AUTO"
-                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
-            
-            elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
-                self.trigger_event(1,"FBWA")
-                self.trigger_event(2,"FBWA")
-                self.trigger_event(4,"yonelim")
-                self.önceki_mod = "FBWA"
-                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
-            
-            elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
-                self.trigger_event(1,"RTL")
-                self.trigger_event(2,"RTL")
-                self.trigger_event(4,"yonelim")
-                self.önceki_mod = "RTL"
-                cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
-            
-            else:
-                cprint(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
-            
-            if self.SHUTDOWN_KEY == "ALGAN":
+                elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
+                    self.trigger_event(1,"AUTO")
+                    self.trigger_event(2,"AUTO")
+                    self.trigger_event(4,"yonelim")
+                    self.önceki_mod = "AUTO"
+                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                
+                elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
+                    self.trigger_event(1,"FBWA")
+                    self.trigger_event(2,"FBWA")
+                    self.trigger_event(4,"yonelim")
+                    self.önceki_mod = "FBWA"
+                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                
+                elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
+                    self.trigger_event(1,"RTL")
+                    self.trigger_event(2,"RTL")
+                    self.trigger_event(4,"yonelim")
+                    self.önceki_mod = "RTL"
+                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                
+                else:
+                    cprint(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
+            except KeyboardInterrupt:     
+                # if self.SHUTDOWN_KEY == "ALGAN":
                 cprint("Final Shutdown..","red","on_white", attrs=["bold"])
+                self.terminate_all(p1=p1,p2=p2,p3=p3,p4=p4,p5=p5)
                 break
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
@@ -986,7 +972,7 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
+    yer_istasyonu_obj = Yerİstasyonu("10.241.161.85",
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      frame_debug_mode="LOCAL",
