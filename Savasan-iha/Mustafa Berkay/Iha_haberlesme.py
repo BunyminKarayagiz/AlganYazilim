@@ -1,5 +1,5 @@
 import socket
-import Client_Tcp , Client_Udp
+from Modules import Client_Tcp , Client_Udp
 import threading
 
 class iha_haberlesme():
@@ -21,7 +21,7 @@ class iha_haberlesme():
 
 if __name__ == "__main__":
 
-    iha_obj=iha_haberlesme("10.80.1.51")
+    iha_obj=iha_haberlesme("10.241.161.85")
     
     video_thread = threading.Thread(target=iha_obj.send_video)
     video_thread.run()
