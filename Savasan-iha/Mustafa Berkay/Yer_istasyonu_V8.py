@@ -25,7 +25,7 @@ import pickle
 from Modules import SimplifiedTelemetry
 import numba
 import tkinter as tk
-import icecream
+
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
@@ -51,7 +51,7 @@ class Yerİstasyonu():
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         
-        self.yolo_model = YOLOv8_deploy.Detection(os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
    
         self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
         self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
@@ -106,6 +106,13 @@ class Yerİstasyonu():
         self.secilen_görev_modu="kilitlenme"
         self.önceki_mod = ""
         self.sunucu_saati:str = ""
+
+        # Telemetri paketi için PWM'den veriler alınmalı
+        self.x_center=0
+        self.y_center=0
+        self.width=0
+        self.height=0
+        self.rakip=0
 
     #! SUNUCU FONKSİYONLARI
     def senkron_local_saat(self):
@@ -385,6 +392,12 @@ class Yerİstasyonu():
 
                 if event_message == "kilitlenme":
                     pwm_tuple, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
+                    # Burada pwm_tuple dan çekilen veriler telemetri paketinin içinde kullanılacak şekilde düzenlenmeli
+                    self.rakip= pwm_tuple[3]
+                    self.x_center =pwm_tuple[4]
+                    self.y_center = pwm_tuple[5]
+                    self.width =  pwm_tuple[6]
+                    self.height = pwm_tuple[7]
 
                     #* 4 SANIYE-KILITLENME
                     if lockedOrNot == 1 and locked_prev == 0:
@@ -504,14 +517,14 @@ class Yerİstasyonu():
 
                     frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                     now = datetime.datetime.now()
-                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                     cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     videoKayit.write(frame)    
                     if not arayuz_frame_queue.full():
                         arayuz_frame_queue.put(frame)
-                    cam.send(frame=frame)
+                    cam.send(frame= virtual_frame)
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
@@ -634,7 +647,6 @@ class Yerİstasyonu():
                 event_message = event_queue.get()
                 print("Yonelim received event : ",event_message)
                 event_trigger.clear()
-
             try:
                 bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
                 # bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
@@ -695,9 +707,9 @@ class Yerİstasyonu():
 
     def PWM(self):
         self.PWM_sunucusu_oluştur()
-        pwm_data_queue, pwm_trigger = self.event_map[5]
+        pwm_data_queue, pwm_trigger = self.event_map[5] 
 
-        stored_packets = [0,0,0,0,0]
+        stored_packets = [0,0,0,0,0,0,0,0]
         packet_counter = 0
         while True:
             if not pwm_data_queue.empty():
@@ -709,7 +721,7 @@ class Yerİstasyonu():
                     packet_counter = 0
                     print("Packet Ready:\n",stored_packets,"\n")
                     self.pwm_gonder(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
-                    stored_packets = [0,0,0,0,0]
+                    stored_packets = [0,0,0,0,0,0,0,0]
 
     def ana_sunucu_manager(self,num=6):
         event_queue,event_trigger = self.event_map[num]
@@ -881,8 +893,8 @@ class gui:
         #GUI INIT
         self.root = tk.Tk()
         self.root.title("Ground Control Station")
-        lock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
-        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
+        lock_img = tk.PhotoImage(file=os.getcwd()+'\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
+        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
         self.lock_img = lock_img.subsample(6, 6) 
         self.unlock_img = unlock_img.subsample(6, 6) 
         
