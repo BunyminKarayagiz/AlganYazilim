@@ -2,7 +2,6 @@ import time
 from pymavlink import mavutil
 import sys
 
-
 class Telemetry:
     def __init__(self, Mp_Ip, frequency_hz=40):
         self.Mp_Ip = Mp_Ip

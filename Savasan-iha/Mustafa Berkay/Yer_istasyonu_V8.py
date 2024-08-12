@@ -88,7 +88,10 @@ class Yerİstasyonu():
         self.yönelim_obj=hesaplamalar.Hesaplamalar()
 
         #M.PLANNER bilgisayarından telemetri verisi çekmek için kullanılacak obje
-        #self.mavlink_obj = SimplifiedTelemetry.Telemetry(mavlink_ip) #! MULTIPROCESS ILE ÇAKIŞMA VAR.
+        #! MULTIPROCESS ILE ÇAKIŞMA VAR.
+        #? yonelim icine tasındı.Yerine mavlink_ip getirildi.      
+        #self.mavlink_obj = SimplifiedTelemetry.Telemetry(mavlink_ip) 
+        self.mavlink_ip = mavlink_ip
 
         self.fark = 0
         self.is_qrAvailable = False
@@ -169,18 +172,19 @@ class Yerİstasyonu():
         return connection_status
 
     def MAV_PROXY_sunucusu_oluştur(self):
+        mavlink_obj = SimplifiedTelemetry.Telemetry(self.mavlink_ip) 
         connection_status = False
         while not connection_status:
             try:
-                self.mavlink_obj.connect()
+                mavlink_obj.connect()
                 connection_status = True
                 print("MAVLINK : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
                 print("MAVLINK SERVER: oluştururken hata : ", e , " \n")
                 print("MAVLINK SERVER: yeniden bağlanılıyor...\n")
-                connection_status=self.mavlink_obj.connect()
+                connection_status=mavlink_obj.connect()
         self.MAV_PROXY_sunucusu=connection_status
-        return connection_status
+        return connection_status,mavlink_obj
 
     def kamikaze_sunucusu_oluştur(self):
         connection_status=False
@@ -481,7 +485,8 @@ class Yerİstasyonu():
     def display_frames(self):
         process_name = mp.current_process().name
         cprint(f"Starting Display process: {process_name}","green")
-        
+        event_message=""
+        display_process_queue,display_process_event = self.event_map[10]
         arayuz_frame_queue , arayuz_telem_queue=self.event_map[9]
         
         fourrcc = cv2.VideoWriter_fourcc(*'MP4V')
@@ -513,8 +518,19 @@ class Yerİstasyonu():
                 else:
                     pass
 
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                
+                if display_process_event.is_set():
+                    time.sleep(0.01)
+                    event_message = display_process_queue.get()
+                    cprint(f"{process_name} received event: {event_message}","red")
+                    display_process_event.clear()
+
+                if event_message=="stop_capture":
+                    videoKayit.release()
+
+
         videoKayit.release()
         cv2.destroyAllWindows()
 
@@ -569,13 +585,14 @@ class Yerİstasyonu():
         self.anasunucuya_baglan()
         self.senkron_local_saat()
 
-        #t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
-        #t2 = threading.Thread(target=self.PWM_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
+        print("Sunucular bekleniyor...")
+        t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
+        t2 = threading.Thread(target=self.PWM_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
         t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)
-        t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur)
+        t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur) #Multiprocess ile uyumlu değil. "yonelim" içine alındı.
         t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
         t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
-        #t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur) # UI_TELEM içine taşındı.
+        t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur) # UI_TELEM içine taşındı.
         t8 = threading.Thread(target=self.YKI_ONAY_sunucusu_oluştur)
 
         #t1.start()
@@ -586,8 +603,9 @@ class Yerİstasyonu():
         t6.start()
         #t7.start()
         t8.start()
+
         t5.join()
-        return t3,t4,t5,t6,t8
+        return t1,t2,t3,t4,t5,t6,t7,t8
 
     def yki_onay_ver(self):
         if self.YKI_ONAY_sunucusu:
@@ -604,6 +622,8 @@ class Yerİstasyonu():
             return False
 
     def yonelim(self,num=4):
+        ret,mavlink_obj=self.MAV_PROXY_sunucusu_oluştur()
+        
         event_queue,event_trigger = self.event_map[num]
         event_message = ""
         timer_start = time.perf_counter()
@@ -616,16 +636,16 @@ class Yerİstasyonu():
                 event_trigger.clear()
 
             try:
-                #bizim_telemetri,ui_telemetri=self.mavlink_obj.telemetry_packet()
-                bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
-                                   "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,
-                                   "iha_kilitlenme": 1,"hedef_merkez_X": 300,"hedef_merkez_Y": 230,"hedef_genislik": 30,
-                                   "hedef_yukseklik": 43,"gps_saati": {"saat": time.gmtime().tm_hour,
-                                                                       "dakika": time.gmtime().tm_min,
-                                                                       "saniye": time.gmtime().tm_sec,
-                                                                       "milisaniye": int((time.time() % 1) * 1000)
-                                                                       }
-                                    }
+                bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
+                # bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
+                #                    "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,
+                #                    "iha_kilitlenme": 1,"hedef_merkez_X": 300,"hedef_merkez_Y": 230,"hedef_genislik": 30,
+                #                    "hedef_yukseklik": 43,"gps_saati": {"saat": time.gmtime().tm_hour,
+                #                                                        "dakika": time.gmtime().tm_min,
+                #                                                        "saniye": time.gmtime().tm_sec,
+                #                                                        "milisaniye": int((time.time() % 1) * 1000)
+                #                                                        }
+                #                     }
                 #arayüze gidecek telemetri eklenecek.
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 0.8 :
@@ -672,7 +692,7 @@ class Yerİstasyonu():
                 self.ArayuzFrame_gonder(encoded_frame)
             except Exception as e:
                 print("UI_FRAME :",e)
-                
+
     def PWM(self):
         self.PWM_sunucusu_oluştur()
         pwm_data_queue, pwm_trigger = self.event_map[5]
@@ -705,6 +725,7 @@ class Yerİstasyonu():
         lock_timer = time.perf_counter()
         
         th1= threading.Thread(target=self.kamikaze_time_recv)
+        th1.daemon = True
         th1.start()
 
         while True:
@@ -741,6 +762,9 @@ class Yerİstasyonu():
         th4 = threading.Thread(target=self.PWM)
         th5 = threading.Thread(target=self.UI_FRAME)
 
+        th1.daemon = True
+        th2.daemon = True
+        th3.daemon = True
         th4.daemon = True
         th5.daemon = True
 
@@ -765,7 +789,6 @@ class Yerİstasyonu():
         return th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5
 
     def terminate_all(self,p1,p2,p3,p4,p5):
-            
             p1.terminate()
             cprint("Capture process terminated...","red","on_white", attrs=["bold"])
             p2.terminate()
@@ -794,8 +817,10 @@ class Yerİstasyonu():
             # cprint("Listener process joined..\n","red","on_white", attrs=["bold"])
 
     def ANA_GOREV_KONTROL(self):
-        th1,th2,th3,th4,th5  , p1,p2,p3,p4,p5 = self.process_flow_manager()
-        time.sleep(10)
+        th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5 = self.process_flow_manager()
+
+        time.sleep(2)
+
         while True:
             try:
                 self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
@@ -803,6 +828,11 @@ class Yerİstasyonu():
                 cprint(f"MOD : Secilen modu alirken hata -> {e}","red",attrs=["bold"]) #TODO EKLENECEK...
 
             try:
+                if self.SHUTDOWN_KEY == "ALGAN":
+                    cprint("Final Shutdown..","red","on_white", attrs=["bold"])
+                    self.terminate_all(p1=p1,p2=p2,p3=p3,p4=p4,p5=p5)
+                    break
+
                 if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
                     self.trigger_event(1,"kilitlenme")
                     self.trigger_event(2,"kilitlenme")
@@ -823,28 +853,27 @@ class Yerİstasyonu():
                     self.trigger_event(4,"yonelim")
                     self.önceki_mod = "AUTO"
                     cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
-                
+
                 elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
                     self.trigger_event(1,"FBWA")
                     self.trigger_event(2,"FBWA")
                     self.trigger_event(4,"yonelim")
                     self.önceki_mod = "FBWA"
                     cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
-                
+
                 elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
                     self.trigger_event(1,"RTL")
                     self.trigger_event(2,"RTL")
                     self.trigger_event(4,"yonelim")
                     self.önceki_mod = "RTL"
                     cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
-                
+
                 else:
                     cprint(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
-            except KeyboardInterrupt:     
-                # if self.SHUTDOWN_KEY == "ALGAN":
-                cprint("Final Shutdown..","red","on_white", attrs=["bold"])
-                self.terminate_all(p1=p1,p2=p2,p3=p3,p4=p4,p5=p5)
-                break
+
+            except Exception as e:
+                print("ANA_GOREV_KONTROL HATA: ",e)
+
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
 class gui:
@@ -865,6 +894,8 @@ class gui:
         self.indicator_YKI_ONAY = tk.Label(self.root, text="YKI_Onay", width=20, height=2, bg='red', font=('Helvetica', 12))
         self.indicator1_MAV_PROXY = tk.Label(self.root, text="MavProxy", width=20, height=2, bg='red', font=('Helvetica', 12))
         self.send_button = tk.Button(self.root, text="ONAY VER/REDDET", image = self.lock_img, command=Yer_istasyonu_obj.yki_onay_ver, font=('Helvetica', 14))
+        self.exit_button = tk.Button(self.root, text="EXIT YKI", command=self.close_all, font=('Helvetica', 14))
+        self.exit_button.pack(pady=20)
         self.indicator_anasunucu.pack(pady=10)
         self.indicator_yonelim.pack(pady=10)
         self.indicator_mod.pack(pady=10)
@@ -873,6 +904,7 @@ class gui:
         self.indicator_YKI_ONAY.pack(pady=10)
         self.indicator1_MAV_PROXY.pack(pady=10)
         self.send_button.pack(pady=20)
+        
 
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
@@ -920,10 +952,19 @@ class gui:
         # Schedule the next update
         self.root.after(500, self.server_status_check)
 
-    def run(self):# Run the GUI event 
-        self.root.after(500, self.server_status_check)
-        self.root.mainloop()
+    def close_all(self):
+        print("GUI: ('close_all') CALLED")
+        yer_istasyonu_obj.trigger_event(event_number=10,message="stop_capture")
+        time.sleep(3)
+        yer_istasyonu_obj.SHUTDOWN_KEY = "ALGAN"
+        self.root.destroy()
 
+    def run(self):# Run the GUI event
+        try:
+            self.root.after(500, self.server_status_check)
+            self.root.mainloop()
+        except KeyboardInterrupt:
+            print("KEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\n")
 
 def create_event_map():
     #Process frames
@@ -951,7 +992,11 @@ def create_event_map():
     arayuz_frame_queue = mp.Queue()
     arayuz_telem_queue = mp.Queue()
 
-    #event_map -> (1,2,3):process_frames <> (4,5):pwm-yonelim switch <> (6):Ana Sunucu
+    display_process_queue=mp.Queue()
+    display_process_event=mp.Event()
+
+
+    #event_map -> (1,2,3):process_frames <> (4,5):pwm-yonelim switch <> (6):Ana Sunucu <> (7,8):DEPRECATED <> (9):Arayüz veri yolları <> (10):Video kayıta erişim
     event_map = {
     1: (message_queue_1, event_1),
     2: (message_queue_2, event_2),
@@ -961,7 +1006,8 @@ def create_event_map():
     6: (ana_sunucu_queue,sunucu_event),
     7: (lock_once_event,qr_once_event),
     8: (lock_outer_event,qr_outer_event),
-    9: (arayuz_frame_queue,arayuz_telem_queue)
+    9: (arayuz_frame_queue,arayuz_telem_queue),
+    10:(display_process_queue,display_process_event),
     #TODO EKLENECEK
     }
     return event_map
@@ -972,13 +1018,14 @@ if __name__ == '__main__':
     log_queue, listener_process = start_log_listener()
     setup_logging(log_queue)
 
-    yer_istasyonu_obj = Yerİstasyonu("10.241.161.85",
+#! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
+    yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      frame_debug_mode="LOCAL",
                                      queue_size=2
-                                     ) #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
-    
+                                     )
+
     Gui_obj = gui(Yer_istasyonu_obj=yer_istasyonu_obj)
 
     görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
@@ -986,3 +1033,5 @@ if __name__ == '__main__':
     görev_kontrol.start()
 
     Gui_obj.run()
+
+    cprint("FINAL","red",attrs=["bold"])
