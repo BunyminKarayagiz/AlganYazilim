@@ -51,7 +51,7 @@ class Yerİstasyonu():
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
    
         self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
         self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
@@ -331,7 +331,7 @@ class Yerİstasyonu():
                         try:
                             img = frame.to_image()
                             frame = np.array(img)
-                            #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                             if not self.capture_queue.full():
                                 self.capture_queue.put((frame,frame_id))
                                 frame_id += 1
@@ -517,14 +517,16 @@ class Yerİstasyonu():
 
                     frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                     now = datetime.datetime.now()
-                    virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    #virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    virtual_frame = frame
                     current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                     cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
-                    videoKayit.write(frame)    
+                    videoKayit.write(frame)
                     if not arayuz_frame_queue.full():
                         arayuz_frame_queue.put(frame)
                     cam.send(frame= virtual_frame)
+                    #cam.send(frame= frame)
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
@@ -893,8 +895,9 @@ class gui:
         #GUI INIT
         self.root = tk.Tk()
         self.root.title("Ground Control Station")
-        lock_img = tk.PhotoImage(file=os.getcwd()+'\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
-        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
+        print("Current Working Directory :",os.getcwd())
+        lock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
+        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
         self.lock_img = lock_img.subsample(6, 6) 
         self.unlock_img = unlock_img.subsample(6, 6) 
         
@@ -1031,10 +1034,10 @@ if __name__ == '__main__':
     setup_logging(log_queue)
 
 #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
-    yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
+    yer_istasyonu_obj = Yerİstasyonu("10.0.0.236",
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
-                                     frame_debug_mode="LOCAL",
+                                     frame_debug_mode="IHA",
                                      queue_size=2
                                      )
 

@@ -1,0 +1,158 @@
+import cv2
+import numpy as np
+import multiprocessing as mp
+from ultralytics import YOLO
+import torch
+
+buffer_size = 10
+camera = 0
+
+class Detection:
+
+    def __init__(self, path):
+        self.model = YOLO(path)
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print("Using Device: ", self.device)
+
+    """def read_camera(frame_queue, stop_event):
+        cap = cv2.VideoCapture(camera)
+
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+
+            if not ret:
+                break
+            
+            if frame_queue.full():
+                frame_queue.get()
+            frame_queue.put(frame)
+
+        cap.release()""" #!bunun yerine def __call__ geldi
+
+    def model_predict(self, frame,frame_id):
+        #results = self.model.predict(frame, verbose=False)
+        results = self.model.track(source=frame, conf=0.6, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
+        # ----------------------detect/track etmediği durum için düzenlenecek----------------------------
+
+        """pwm_verileri = {
+                        'pwmx': 1500,
+                        'pwmy': 1500,
+                        'frame_id':frame_id
+                        }"""
+        
+        pwm_verileri = np.array([1500,1500,frame_id],dtype=np.uint32)
+        
+        x, y = frame.shape[0], frame.shape[1]
+
+        target_area_y1, target_area_y2 = (int(x * 0.10), int(x * 0.90))
+        target_area_x1, target_area_x2 = (int(y * 0.25), int(y * 0.75))
+
+        cv2.rectangle(frame, (target_area_x1, target_area_y1), (target_area_x2, target_area_y2), (255, 0, 0), 2) #RGB
+
+        locked_or_not = False
+        if results:
+            annotated_frame = results[0].plot()
+
+            boxes = results[0].boxes.xyxy.cpu().tolist()
+
+            for box in boxes:
+                x1, y1, x2, y2 = box
+                x_center = int((x1 + x2) / 2)
+                y_center = int((y1 + y2) / 2)
+
+                pwm_verileri = self.coordinates_to_pwm(x_center, y_center,frame_id)
+
+                if(target_area_x1<x1 and target_area_x2>x2 and target_area_y1<y1 and target_area_y2>y2):
+                    locked_or_not = True
+
+                return pwm_verileri, annotated_frame, locked_or_not
+            
+        return pwm_verileri, annotated_frame, locked_or_not
+    
+    def coordinates_to_pwm(self, x_center, y_center,frame_id):
+        screen_width = 640
+        screen_height = 480
+        min_pwm = 1100
+        max_pwm = 1900
+        
+        pwm_x = int((x_center / screen_width) * (max_pwm - min_pwm) + min_pwm)
+        pwm_y = int((y_center / screen_height) * (max_pwm - min_pwm) + min_pwm)
+
+        if pwm_y > 1500:
+            fark = pwm_y - 1500
+            pwm_y = 1500 - fark
+        else : 
+            fark = 1500 - pwm_y
+            pwm_y = 1500 + fark
+
+        if x_center == 0 and y_center == 0:
+            pwm_x = 1500
+            pwm_y = 1500
+
+        """pwm_verileri = {
+                        'pwmx': pwm_x,
+                        'pwmy': pwm_y,
+                        'frame_id': frame_id
+                        }"""
+        pwm_verileri = np.array([pwm_x,pwm_y,frame_id],dtype=np.uint32)
+        return pwm_verileri
+
+    def process_frames(frame_queue, stop_event):
+
+        while not stop_event.is_set():
+            if frame_queue.qsize() >= 5:
+                frames = []
+
+                for _ in range(5):
+                    frames.append(frame_queue.get())
+
+                for i, frame in enumerate(frames):
+                    cv2.imshow(f"Frame {i+1}", frame)
+
+                cv2.waitKey(1000)
+
+                for i in range(5):
+                    cv2.destroyWindow(f"Frame {i+1}")
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        cv2.destroyAllWindows()
+
+    def __call__(self):
+
+        cap = cv2.VideoCapture(0)  # webcam
+        frame_id = 0
+
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+
+            if ret:
+                frame = cv2.resize(frame, (640, 480))
+                pwm_verileri, annotated_frame, locked_or_not = self.model_predict(frame, frame_id)
+                cv2.imshow("YOLOv8 Tracking", annotated_frame)
+                print("PWM Verileri: ", pwm_verileri)
+
+            if frame_queue.full():
+                frame_queue()
+            frame_queue.put(frame)
+            
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    frame_queue = mp.Queue(maxsize=buffer_size)
+    stop_event = mp.Event() 
+
+    detection = Detection('C:\\Users\\asus\\AlganYazilim\\Calismalar\\Behcet\\V5_best.pt')  
+
+    read_process = mp.Process(target=Detection.model_predict, args=(frame_queue, stop_event))
+    process_process = mp.Process(target=Detection.process_frames, args=(frame_queue, stop_event))
+
+    read_process.start()
+    process_process.start()
+
+    read_process.join()
+    process_process.join()
