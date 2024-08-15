@@ -372,6 +372,7 @@ class Yerİstasyonu():
         ana_sunucu_queue,sunucu_event = self.event_map[6]
         lock_once_event,qr_once_event = self.event_map[7]
         lock_outer_event,qr_outer_event = self.event_map[8]
+        pwm_for_telemetri_queue,pwm_telemetri_event = self.event_map[11]
 
         lockedOrNot = 0
         locked_prev = 0
@@ -393,11 +394,8 @@ class Yerİstasyonu():
                 if event_message == "kilitlenme":
                     pwm_tuple, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
                     # Burada pwm_tuple dan çekilen veriler telemetri paketinin içinde kullanılacak şekilde düzenlenmeli
-                    self.rakip= pwm_tuple[3]
-                    self.x_center =pwm_tuple[4]
-                    self.y_center = pwm_tuple[5]
-                    self.width =  pwm_tuple[6]
-                    self.height = pwm_tuple[7]
+                    if not pwm_for_telemetri_queue.full():
+                        pwm_for_telemetri_queue.put(pwm_tuple)
 
                     #* 4 SANIYE-KILITLENME
                     if lockedOrNot == 1 and locked_prev == 0:
@@ -638,6 +636,7 @@ class Yerİstasyonu():
         ret,mavlink_obj=self.MAV_PROXY_sunucusu_oluştur()
         
         event_queue,event_trigger = self.event_map[num]
+        pwm_for_telemetri_queue,pwm_for_telemetri_event = self.event_map[11]
         event_message = ""
         timer_start = time.perf_counter()
 
@@ -648,7 +647,19 @@ class Yerİstasyonu():
                 print("Yonelim received event : ",event_message)
                 event_trigger.clear()
             try:
+                """if not pwm_for_telemetri_queue.empty():
+                    pwm_tuple = pwm_for_telemetri_queue.get()
+                else:
+                    pwm_tuple = (0,0,0,0,0,0,0)"""
+                print("QUEUQ: ",pwm_for_telemetri_queue.get())
+
                 bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
+                """bizim_telemetri["iha_kilitlenme"] = pwm_tuple[3]
+                bizim_telemetri["hedef_merkez_X"] = pwm_tuple[4]
+                bizim_telemetri["hedef_merkez_Y"] = pwm_tuple[5]
+                bizim_telemetri["hedef_genislik"] = pwm_tuple[6]
+                bizim_telemetri["hedef_yukseklik"] = pwm_tuple[7]"""
+
                 # bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
                 #                    "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,
                 #                    "iha_kilitlenme": 1,"hedef_merkez_X": 300,"hedef_merkez_Y": 230,"hedef_genislik": 30,
@@ -719,7 +730,7 @@ class Yerİstasyonu():
 
                 if packet_counter == 5:
                     packet_counter = 0
-                    print("Packet Ready:\n",stored_packets,"\n")
+                    #print("Packet Ready:\n",stored_packets,"\n")
                     self.pwm_gonder(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
                     stored_packets = [0,0,0,0,0,0,0,0]
 
@@ -993,6 +1004,9 @@ def create_event_map():
     pwm_data_queue = mp.Queue()
     pwm_event = mp.Event()
 
+    pwm_for_telemtri_queue = mp.Queue()
+    pwm_for_telemetri_event= mp.Event()
+
     ana_sunucu_queue = mp.Queue()
     sunucu_event =  mp.Event()
 
@@ -1020,6 +1034,7 @@ def create_event_map():
     8: (lock_outer_event,qr_outer_event),
     9: (arayuz_frame_queue,arayuz_telem_queue),
     10:(display_process_queue,display_process_event),
+    11:(pwm_for_telemtri_queue,pwm_for_telemetri_event),
     #TODO EKLENECEK
     }
     return event_map
@@ -1031,7 +1046,7 @@ if __name__ == '__main__':
     setup_logging(log_queue)
 
 #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
-    yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
+    yer_istasyonu_obj = Yerİstasyonu("10.80.1.116",
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      frame_debug_mode="LOCAL",
