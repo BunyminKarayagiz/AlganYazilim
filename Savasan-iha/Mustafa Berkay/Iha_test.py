@@ -20,8 +20,8 @@ class Iha():
     def __init__(self,host_ip) -> None:
 
         # TCP Configurations
-        self.TCP_yonelim=Client_Tcp.Client(host_ip,9002)
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
+        self.TCP_yonelim=Client_Tcp.Client(host_ip,9002)
         self.TCP_mod=Client_Tcp.Client(host_ip,9003)
         self.TCP_kamikaze=Client_Tcp.Client(host_ip,9004)
         self.TCP_YKI_ONAY=Client_Tcp.Client(host_ip,9006)

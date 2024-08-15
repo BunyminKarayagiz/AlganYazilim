@@ -99,9 +99,9 @@ class App(customtkinter.CTk):
         current_position = self.map_widget.get_position()
         self.marker_list.append(self.map_widget.set_marker(current_position[0], current_position[1]))
 
-    def set_marker(self,lat,lon,rotation):
+    def set_marker(self,lat,lon,rotation,plane_id="plane_[id?]"):
         rotated_icon = ImageTk.PhotoImage(self.plane_image.rotate(rotation,PIL.Image.NEAREST,expand=1))
-        self.marker_list.append(self.map_widget.set_marker(lat,lon,text="plane_[id]",icon=rotated_icon))
+        self.marker_list.append(self.map_widget.set_marker(lat,lon,text=f'plane_[{plane_id}]',icon=rotated_icon))
 
     def clear_marker_event(self):
         for marker in self.marker_list:
