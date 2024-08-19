@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from fonksiyonlar2 import *
+from fonksiyonlar import *
 import json
 import subprocess
 import ana_sunucu_islemleri
@@ -21,7 +21,7 @@ try:
     saptıran_noktalar = []
     guncel_wp = []
     for i in range(5):
-        fence_konumları = fencenokta_okuma("hss.waypoints")
+        #fence_konumları = fencenokta_okuma("hss.waypoints")
 
 
         target_locations = wp_nokta_okuma("waypoints.waypoints")
@@ -42,8 +42,6 @@ try:
                 wp_kartezyen.remove(i)
             except:
                 continue
-        cizim_listesi = [(fence_kartezyen, 'kırmızı'), (wp_kartezyen, 'yeşil'), (ucus_alanı_kartezyen, 'mavi')]
-        ciz(cizim_listesi)
 
 
         yeni_wp_kartezyen = []
@@ -168,8 +166,8 @@ try:
         print("Rota oluşturuldu")
         print("olşturulan rota waypoints.waypoints dosyasına yazıldı.")
 
-        cizim_listesi = [(fence_kartezyen, 'kırmızı'), (wp_kartezyen, 'yeşil'), (ucus_alanı_kartezyen, 'mavi')]
-        ciz(cizim_listesi)
+    cizim_listesi = [(fence_kartezyen, 'kırmızı'), (wp_kartezyen, 'yeşil'), (ucus_alanı_kartezyen, 'mavi')]
+    ciz(cizim_listesi)
 
 
 
