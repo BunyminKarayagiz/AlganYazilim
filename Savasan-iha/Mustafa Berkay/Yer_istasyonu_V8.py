@@ -59,6 +59,7 @@ class Yerİstasyonu():
         self.Server_kamikaze = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
         self.Server_UI_telem = Server_Tcp.Server(PORT=9005,name="UI_TELEM")
         self.Server_YKI_ONAY = Server_Tcp.Server(PORT=9006,name="YKI_ONAY")
+        self.Server_ID=Server_Tcp.Server(PORT=9010,name="ID")
         
         self.Server_UIframe = Server_Udp.Server(port=11000,name="UI-Frame")
         self.Server_udp = Server_Udp.Server(port=5555,name="IHA-FRAME")
@@ -76,6 +77,7 @@ class Yerİstasyonu():
         self.görüntü_sunucusu=False
         self.UIframe_sunucusu=False
         self.PWM_sunucusu=False
+        self.ID_sunucusu=False
 
         self.frame_debug_mode = frame_debug_mode
 
@@ -296,6 +298,21 @@ class Yerİstasyonu():
             print("PWM SUNUCU HATASI : ",e)
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
             self.Server_pwm.reconnect()
+
+    def ID_sunucusu_oluştur(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_ID.creat_server()
+                connection_status=True
+                print("ID : SERVER OLUŞTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                print("ID : SERVER oluştururken hata : ", e , " \n")
+                print("ID : SERVER yeniden bağlanılıyor...\n")
+                self.Server_ID.reconnect()
+                print("ID : SERVER OLUŞTURULDU\n")
+        self.ID_sunucusu = connection_status
+        return connection_status
 
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_number, message):
@@ -607,6 +624,7 @@ class Yerİstasyonu():
         t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
         t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur) # UI_TELEM içine taşındı.
         t8 = threading.Thread(target=self.YKI_ONAY_sunucusu_oluştur)
+        t9 = threading.Thread(target=self.ID_sunucusu_oluştur)
 
         #t1.start()
         #t2.start()
@@ -616,9 +634,10 @@ class Yerİstasyonu():
         t6.start()
         #t7.start()
         t8.start()
+        t9.start()
 
         t5.join()
-        return t1,t2,t3,t4,t5,t6,t7,t8
+        return t1,t2,t3,t4,t5,t6,t7,t8,t9
 
     def yki_onay_ver(self):
         if self.YKI_ONAY_sunucusu:
@@ -659,9 +678,15 @@ class Yerİstasyonu():
                 #                                                        }
                 #                     }
                 #arayüze gidecek telemetri eklenecek.
+
                 if bizim_telemetri is not None:
-                    if time.perf_counter() - timer_start > 0.8 :
+                    if time.perf_counter() - timer_start > 1 :
                         rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
+                        try:
+                            if not self.ID_sunucusu:
+                                self.Server_ID.send_data_to_client(rakip_telemetri)
+                        except Exception as e:
+                            print("ID : DATA SENDING ERROR -> ",e)
                         timer_start=time.perf_counter()
 
             except Exception as e:

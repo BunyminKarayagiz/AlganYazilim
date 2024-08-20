@@ -21,10 +21,12 @@ class Iha():
 
         # TCP Configurations
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
-        self.TCP_yonelim=Client_Tcp.Client(host_ip,9002)
+        self.TCP_kamikazeyonelim=Client_Tcp.Client(host_ip,9002)
         self.TCP_mod=Client_Tcp.Client(host_ip,9003)
         self.TCP_kamikaze=Client_Tcp.Client(host_ip,9004)
         self.TCP_YKI_ONAY=Client_Tcp.Client(host_ip,9006)
+        self.TCP_Yonelim=Client_Tcp.Client(host_ip,9011)
+
         self.yönelim_yapılacak_rakip=""
         self.mevcut_mod =""
         self.onceki_mod =""
@@ -34,11 +36,21 @@ class Iha():
 
         self.YKI_ONAYI_VERILDI = False
 
-    def Yonelim_sunucusuna_baglan(self):
+    def KamikazeYonelim_sunucusuna_baglan(self):
         connection=False
         while not connection:
             try:
                 self.TCP_yonelim.connect_to_server()
+                connection=True
+                print("KamikazeYONELIM SERVER: BAĞLANDI.")
+            except (ConnectionError , Exception) as e:
+                print("KamikazeYONELIM SERVER: baglanırken hata: ", e)
+
+    def Yonelim_sunucusuna_baglan(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_Yonelim.connect_to_server()
                 connection=True
                 print("YONELIM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
@@ -113,9 +125,10 @@ class Iha():
         self.Yonelim_sunucusuna_baglan()
         self.PWM_sunucusuna_baglan()
         self.kamikaze_sunucusuna_baglan()
-        self.YKI_ONAY_sunucusuna_baglan()  
+        self.YKI_ONAY_sunucusuna_baglan()
+        self.KamikazeYonelim_sunucusuna_baglan()
 
-    def Yki_confirm(self):    
+    def Yki_confirm(self):
         while True:
             try:
                 ONAY=self.TCP_YKI_ONAY.client_recv_message().decode();
@@ -168,7 +181,7 @@ class Iha():
                     pass
                 try:
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
-                    self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
+                    self.yönelim_yapılacak_rakip = self.TCP_Yonelim.client_recv_message()
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
 
                     try:
@@ -180,7 +193,7 @@ class Iha():
                         
                         ----------------------------------------------"""
 
-
+                        pass
                     except Exception as e:
                         print("KONTROL(Telem) : YÖNELİRKEN HATA ->",e)
 
@@ -195,16 +208,16 @@ class Iha():
             while not is_qr_available:
                 try:
                     print("QR-KONUM BEKLENİYOR..")
-                    self.yönelim_yapılacak_rakip = json.loads(self.TCP_yonelim.client_recv_message())
+                    self.yönelim_yapılacak_rakip = json.loads(self.TCP_kamikazeyonelim.client_recv_message())
                     print("RAKİP:",self.yönelim_yapılacak_rakip)
                     self.yönelim_yapılacak_rakip=json.loads(self.yönelim_yapılacak_rakip)
                     if self.yönelim_yapılacak_rakip == None:
                         print("QRKONUM = None >> Reset")
-                        self.TCP_yonelim.send_message_to_server(is_qr_available)
+                        self.TCP_kamikazeyonelim.send_message_to_server(is_qr_available)
                     else:
                         print("QR-KONUM : ", self.yönelim_yapılacak_rakip)
                         is_qr_available = True
-                        self.TCP_yonelim.send_message_to_server(is_qr_available)
+                        self.TCP_kamikazeyonelim.send_message_to_server(is_qr_available)
                     
                     return is_qr_available
                 
