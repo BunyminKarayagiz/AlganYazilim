@@ -115,8 +115,8 @@ try:
                 else:
                     nokta1=orta_nokta(onceki_konum, wp)
                     nokta2=orta_nokta(wp, sonraki_konum)
-            if aci > 60 and aci < 150:
-                print("Dönüş açısı 60 ile 150 derece arasında")
+            if aci > 60 and aci < 120:
+                print("Dönüş açısı 60 ile 120 derece arasında")
                 nokta1 = orta_nokta(onceki_konum, wp)
                 nokta2 = orta_nokta(wp, sonraki_konum)
                 silinecekler.append(wp)
