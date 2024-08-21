@@ -88,16 +88,14 @@ class Plane():
         self.gps_time = 0.0
 
     def _connect(self, connection_string):  # -- (private) Connect to Vehicle
-
         """ (private) connect with the autopilot
 
         Input:
             connection_string   - connection string (mavproxy style)
         """
         self.vehicle = connect(connection_string, baud=115200, heartbeat_timeout=60)
-        #self.master = self.vehicle.alganrc
+        # self.master = self.vehicle.alganrc
         self._setup_listeners()
-
 
     def _setup_listeners(self):  # -- (private) Set up listeners
         # ----------------------------
@@ -527,7 +525,6 @@ class Plane():
             }
         }
         return self.mesaj
-
 
     def arm_mavlink(self):
         self.master.mav.command_long_send(

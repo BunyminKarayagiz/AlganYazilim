@@ -22,7 +22,7 @@ class Plane:
         self.marker_list = []
         self.Prediction = []
 
-        self.Start_looping()
+        self.start_looping()
 
     def append_data(self, new_data: Dict[str, Any]):
         with self.lock:
@@ -37,23 +37,22 @@ class Plane:
 
 #! ROUTE PREDICTION
     def predict_next_position(self,x, y, speed, roll_degree):
-            self.Prediction.clear()
-            direction_radians = math.radians(roll_degree)
+        #     self.Prediction.clear()
+        #     direction_radians = math.radians(roll_degree)
     
-        # Calculate displacement
-            delta_x = speed * math.cos(direction_radians)
-            delta_y = speed * math.sin(direction_radians)
+        # # Calculate displacement
+        #     delta_x = speed * math.cos(direction_radians)
+        #     delta_y = speed * math.sin(direction_radians)
     
-        # Predicted next position
-            next_x = x + delta_x
-            next_y = y + delta_y
-            self.Prediction.append(self.UI.set_plane(lat=next_x,lon=next_y,rotation=0,plane_id=f"{self.takim_numarasi}-Predict"))
-            Cprint.rgbprint(f"Plane {self.takim_numarasi} processing data: {self.data}",color=self.color)
+        # # Predicted next position
+        #     next_x = x + delta_x
+        #     next_y = y + delta_y
+        #     self.Prediction.append(self.UI.set_plane(lat=next_x,lon=next_y,rotation=0,plane_id=f"{self.takim_numarasi}-Predict"))
+        #    Cprint.rgbprint(f"Plane {self.takim_numarasi} processing data: {self.data}",color=self.color)
             time.sleep(1)
 
     def start_looping(self):
         pass
-
 
 #!CLASS MAIN
 class FlightTracker:
@@ -62,10 +61,11 @@ class FlightTracker:
         self.UI=App()
 
         self.TK_INIT_TIME_SEC = 2
-        self.TK_INTERVAL_TIME_SEC = 2
+        self.TK_INTERVAL_TIME_SEC = 1
 
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
+
         self.Algan_ID = "1"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.ana_sunucu_status = False
@@ -171,9 +171,6 @@ class FlightTracker:
 
         # #? USER_CODE_END
 
-
-
-
         #!Testing
         self.anasunucuya_baglan()
         self.connect_mission()
@@ -221,7 +218,7 @@ class FlightTracker:
 
 
 if __name__ == "__main__":
-    tracker=FlightTracker("10.0.0.236") #Yazılım bilgisayarı IP -> 10.0.0.236
+    tracker=FlightTracker("10.80.1.62") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op)
     main_op.start()
     tracker.start_ui()

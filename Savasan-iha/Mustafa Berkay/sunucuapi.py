@@ -9,8 +9,6 @@ from termcolor import colored, cprint
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 
-
-
 @app.route('/api/hss_koordinatlari', methods=["GET"])
 def get_hss_coord():
     hava_savunma_sistemleri = {
@@ -86,6 +84,7 @@ veri1=[{
     "iha_dikilme": 0,
     "iha_yonelme": 0,
     "iha_yatis": 0,
+    "iha_hizi":0,
     "zaman_farki": 0
 }]
 veri2=[{
@@ -96,6 +95,7 @@ veri2=[{
     "iha_dikilme": 0,
     "iha_yonelme": 0,
     "iha_yatis": 0,
+    "iha_hizi":0,
     "zaman_farki": 0
 }]
 
@@ -103,7 +103,7 @@ veri2=[{
 def giris():
     # gelen değişkeni kullanıcı adını ve sifreyi döndürüyor.
     gelen = json.loads(request.data)
-    if girisveri == gelen:
+    if gelen in girisveri:
         print(gelen["kadi"].upper() + " Giris Yapti")
         return "200"
     else:

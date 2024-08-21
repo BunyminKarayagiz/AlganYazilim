@@ -10,6 +10,7 @@ from Modules import Client_Tcp
 
 from vincenty import vincenty
 from dronekit import LocationGlobalRelative
+
 #!      Sorunlar
 #!Kamikaze dalış güvenliği         Test edilecek[KRITIK]
 #!PWM ile takip                     Eksik
