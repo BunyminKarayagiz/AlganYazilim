@@ -128,24 +128,48 @@ def wp_konum_hesapla(target_locations,ucusalani):
 
 def fence_konum_hesapla(fence_konumları):
     fence_kartezyen = []
-    for i in fence_konumları:
-        y_ussu = (i[0], home_konumu[1])
-        x_ussu = (home_konumu[0], i[1])
+    if len(fence_konumları)==0:
+        return fence_kartezyen
+    try:
+        for i in fence_konumları:
+            y_ussu = (i[0], home_konumu[1])
+            x_ussu = (home_konumu[0], i[1])
 
-        x_mesafe = vincenty.vincenty(x_ussu, home_konumu)
-        y_mesafe = vincenty.vincenty(y_ussu, home_konumu)
-        # Burada eğer konum home konumunun olunda kalıyorsa x_mesafe değerini -1 ile çarp
-        if i[1] < home_konumu[1]:
-            x_mesafe = x_mesafe * -1000
-        else:
-            x_mesafe = x_mesafe * 1000
+            x_mesafe = vincenty.vincenty(x_ussu, home_konumu)
+            y_mesafe = vincenty.vincenty(y_ussu, home_konumu)
+            # Burada eğer konum home konumunun olunda kalıyorsa x_mesafe değerini -1 ile çarp
+            if i[1] < home_konumu[1]:
+                x_mesafe = x_mesafe * -1000
+            else:
+                x_mesafe = x_mesafe * 1000
 
-        if i[0] < home_konumu[0]:
-            y_mesafe = y_mesafe * -1000
-        else:
-            y_mesafe = y_mesafe * 1000
-        nokta = (x_mesafe, y_mesafe, i[2])
-        fence_kartezyen.append(nokta)
+            if i[0] < home_konumu[0]:
+                y_mesafe = y_mesafe * -1000
+            else:
+                y_mesafe = y_mesafe * 1000
+            nokta = (x_mesafe, y_mesafe, i[2])
+            fence_kartezyen.append(nokta)
+    except TypeError:
+       i= fence_konumları
+       y_ussu = (i[0], home_konumu[1])
+       x_ussu = (home_konumu[0], i[1])
+
+       x_mesafe = vincenty.vincenty(x_ussu, home_konumu)
+       y_mesafe = vincenty.vincenty(y_ussu, home_konumu)
+       # Burada eğer konum home konumunun olunda kalıyorsa x_mesafe değerini -1 ile çarp
+       if i[1] < home_konumu[1]:
+           x_mesafe = x_mesafe * -1000
+       else:
+           x_mesafe = x_mesafe * 1000
+
+       if i[0] < home_konumu[0]:
+           y_mesafe = y_mesafe * -1000
+       else:
+           y_mesafe = y_mesafe * 1000
+       nokta = (x_mesafe, y_mesafe, i[2])
+       fence_kartezyen.append(nokta)
+
+
     return fence_kartezyen
 
 
