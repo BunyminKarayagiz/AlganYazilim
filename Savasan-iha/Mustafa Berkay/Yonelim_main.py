@@ -3,7 +3,7 @@ from Modules import Client_Tcp ,Server_Tcp
 import threading,time
 from Modules import ana_sunucu_islemleri
 import json
-from Modules import path
+from Modules import path_drone as path
 import argparse
 from typing import Dict,Any
 import rgbprint as Cprint
@@ -20,7 +20,12 @@ class Plane:
         self.UI = UI
         self.limit = limit
         self.marker_list = []
+
+        #Tahminleme için kullanılan parametreler
         self.Prediction = []
+        self.precision_Val = 111320 # 1 metre için lat lon çözünürlüğü
+        self.fallback_ratio = 20 # %1
+        self.fallback_ratio_final = (100-self.fallback_ratio) / 100
 
         self.start_looping()
 
@@ -28,28 +33,55 @@ class Plane:
         with self.lock:
             if len(self.data) > self.limit:
                 self.data.pop(0)
-            Cprint.rgbprint(f"Plane {self.takim_numarasi} Present Data: {self.data}",color=self.color)
+            #Cprint.rgbprint(f"Plane {self.takim_numarasi} Present Data: {self.data}",color=self.color)
             if len(self.marker_list) >= self.limit:
                 (self.marker_list.pop(0)).delete()
             self.marker_list.append(self.UI.set_plane(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],rotation=new_data['iha_yonelme'],plane_id=self.takim_numarasi))
-            self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'])
+            self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],rotation=new_data['iha_yonelme'])
             self.data.append(new_data)
 
 #! ROUTE PREDICTION
-    def predict_next_position(self,x, y, speed, roll_degree):
-        #     self.Prediction.clear()
-        #     direction_radians = math.radians(roll_degree)
-    
-        # # Calculate displacement
-        #     delta_x = speed * math.cos(direction_radians)
-        #     delta_y = speed * math.sin(direction_radians)
-    
-        # # Predicted next position
-        #     next_x = x + delta_x
-        #     next_y = y + delta_y
-        #     self.Prediction.append(self.UI.set_plane(lat=next_x,lon=next_y,rotation=0,plane_id=f"{self.takim_numarasi}-Predict"))
-        #    Cprint.rgbprint(f"Plane {self.takim_numarasi} processing data: {self.data}",color=self.color)
-            time.sleep(1)
+    def predict_next_position(self,x, y, speed, roll_degree,rotation):
+        if self.Prediction:
+            (self.Prediction.pop(0)).delete()
+            (self.Prediction.pop(0)).delete()
+        print("\nrakip_yatis:",roll_degree)
+        print(f"rakip_boylam:{x}\nrakip_enlem:{y}\nrakip_hiz:{speed}")
+
+        try:
+
+            abs_speed= speed / self.precision_Val
+
+            next_x = x + abs_speed * math.sin(rotation)
+            next_y = y + abs_speed * math.cos(rotation)
+
+            #Calculate with fallback ratio
+            next_x_w_ratio = x + abs_speed * math.sin(rotation) *self.fallback_ratio_final
+            next_y_w_ratio = y + abs_speed * math.cos(rotation) *self.fallback_ratio_final
+            
+
+        except Exception as e:
+            print("Calculation Error ->",e)
+
+        print(f"Next_x ={next_x}\nNext_y ={next_y}")
+
+
+
+
+            # direction_radians = math.radians(roll_degree)
+        
+            # Calculate displacement
+            #     delta_x = speed * math.cos(direction_radians)
+            #     delta_y = speed * math.sin(direction_radians)
+        
+            # Predicted next position
+            #     next_x = x + delta_x
+            #     next_y = y + delta_y
+        self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation,plane_id=f"Predict")) #plane_id=f"{self.takim_numarasi}-Predict")
+        self.Prediction.append(self.UI.set_plane(lat=next_y_w_ratio,lon=next_x_w_ratio,rotation=rotation,plane_id=f"Fallback_Predict"))
+        
+            #    Cprint.rgbprint(f"Plane {self.takim_numarasi} processing data: {self.data}",color=self.color)
+            #time.sleep(1)
 
     def start_looping(self):
         pass

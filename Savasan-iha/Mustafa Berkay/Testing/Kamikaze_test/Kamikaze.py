@@ -20,7 +20,10 @@ if __name__ == "__main__":
         while mainloop:
                 if not iha_path.is_armed():
                         print("ARMING...")
-                        iha_path.arm_mavlink()
-                        print("ARM SUCCESS..")
-                        
+                        iha_path.arm()
+                        if iha_path.is_armed():
+                                print("ARMED..")
+                        else:
+                                print("ARM FAILURE..")
+
                 time.sleep(0.3)
