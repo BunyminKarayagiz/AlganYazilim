@@ -183,25 +183,27 @@ class Iha():
                 try:
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
                     self.yönelim_yapılacak_rakip = self.TCP_Yonelim.client_recv_message()
+                    rakip_enlem,rakip_boylam = self.yönelim_yapılacak_rakip
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
 
                     try:
-                        """------------------------------------------
-                        
-                        
-                            YÖNELİM KONTROL KODU BURAYA YAZILACAK
-                        
-                        
-                        ----------------------------------------------"""
+                        if self.YKI_ONAYI_VERILDI == True:
+                            if iha_path.get_ap_mode() != "GUIDED":
+                                iha_path.set_ap_mode("GUIDED")
+                            qr_git = LocationGlobalRelative(rakip_enlem, rakip_boylam, 100)
+                            #iha_path.set_rc_channel(3, 1500)
+                            iha_path.goto(qr_git)
+                        else:
+                            print("YKI_ONAYI BEKLENIYOR...")
 
-                        pass
+                        
+
                     except Exception as e:
                         print("KONTROL(Telem) : YÖNELİRKEN HATA ->",e)
 
 
                 except Exception as e:
                     print("YONELIM SERVER: Veri çekilirken hata :", e)
-
 
     # KAMIKAZE FONKSİYONLARI
     def qr_konum_al(self):
@@ -302,7 +304,7 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.60") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.0.0.236") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     MissionPlanner_OR_PIXHAWK_Connection = False
     while not MissionPlanner_OR_PIXHAWK_Connection:

@@ -13,6 +13,7 @@ import math
 #!CLASS OBJ
 class Plane:
     def __init__(self, takim_numarasi: int, UI ,limit = 5):
+
         self.takim_numarasi = takim_numarasi
         self.data = []
         self.lock = threading.Lock()
@@ -37,8 +38,10 @@ class Plane:
             if len(self.marker_list) >= self.limit:
                 (self.marker_list.pop(0)).delete()
             self.marker_list.append(self.UI.set_plane(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],rotation=new_data['iha_yonelme'],plane_id=self.takim_numarasi))
-            self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],rotation=new_data['iha_yonelme'])
+            longitude,latitude=self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],rotation=new_data['iha_yonelme'])
             self.data.append(new_data)
+
+            return longitude,latitude
 
 #! ROUTE PREDICTION
     def predict_next_position(self,x, y, speed, roll_degree,rotation):
@@ -49,7 +52,6 @@ class Plane:
         print(f"rakip_boylam:{x}\nrakip_enlem:{y}\nrakip_hiz:{speed}")
 
         try:
-
             abs_speed= speed / self.precision_Val
 
             next_x = x + abs_speed * math.sin(rotation)
@@ -59,14 +61,10 @@ class Plane:
             next_x_w_ratio = x + abs_speed * math.sin(rotation) *self.fallback_ratio_final
             next_y_w_ratio = y + abs_speed * math.cos(rotation) *self.fallback_ratio_final
             
-
         except Exception as e:
             print("Calculation Error ->",e)
 
         print(f"Next_x ={next_x}\nNext_y ={next_y}")
-
-
-
 
             # direction_radians = math.radians(roll_degree)
         
@@ -79,9 +77,9 @@ class Plane:
             #     next_y = y + delta_y
         self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation,plane_id=f"Predict")) #plane_id=f"{self.takim_numarasi}-Predict")
         self.Prediction.append(self.UI.set_plane(lat=next_y_w_ratio,lon=next_x_w_ratio,rotation=rotation,plane_id=f"Fallback_Predict"))
-        
             #    Cprint.rgbprint(f"Plane {self.takim_numarasi} processing data: {self.data}",color=self.color)
             #time.sleep(1)
+        return next_x,next_y
 
     def start_looping(self):
         pass
@@ -161,6 +159,12 @@ class FlightTracker:
         except Exception as e:
             print("TELEM SERVER : Telemetri Receive Error ->",e)
 
+    def send_coord_to_uav(self,coord_data):
+        try:
+            self.TCP_Iha_yonelim.send_data_to_client(coord_data)        
+        except Exception as e:
+            print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
+
     def process_data_stream(self, data_stream: str):
         parsed_data = json.loads(data_stream)["konumBilgileri"]
 
@@ -170,7 +174,8 @@ class FlightTracker:
                 print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                 self.add_plane(takim_numarasi)
 
-            self.planes[takim_numarasi].append_data(entry)
+            lon_track,lat_track = self.planes[takim_numarasi].append_data(entry)
+            return (lon_track,lat_track)
 
     def add_plane(self, takim_numarasi: int):
         new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,limit=7)
@@ -188,35 +193,36 @@ class FlightTracker:
         self.UI.start()
 
 #! MAIN
-    def main_op(self):
+    def main_op(self,mode):
+        print("Current Working Mode : ",mode)
 
-        # self.Yonelim_sunucusu_oluştur()
-        # self.Telemetri_sunucusuna_baglan()
-        # time.sleep(self.TK_INIT_TIME_SEC)
-        # mainloop=False
+        if mode == "IHA":
 
-        # if self.Telem_client_status:
-        #     while not mainloop:
-        #         telemetri_cevabı = self.ID_Client.client_recv_message()
-        #         self.process_data_stream(telemetri_cevabı)
-        #         time.sleep(self.TK_INTERVAL_TIME_SEC)
+            self.Yonelim_sunucusu_oluştur()
+            self.Telemetri_sunucusuna_baglan()
+            time.sleep(self.TK_INIT_TIME_SEC)
+            mainloop=False
 
-        # #? USER_CODE_END
+            if self.Telem_client_status:
+                while not mainloop:
+                    telemetri_cevabı = self.ID_Client.client_recv_message()
+                    coord_data=self.process_data_stream(telemetri_cevabı)
+                    self.send_coord_to_uav(coord_data=coord_data)
+                    #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerektirse açılabilir..
 
+        if mode == "Monitor":
         #!Testing
-        self.anasunucuya_baglan()
-        self.connect_mission()
-        time.sleep(self.TK_INIT_TIME_SEC)
-        mainloop=False
+            self.anasunucuya_baglan()
+            self.connect_mission()
+            time.sleep(self.TK_INIT_TIME_SEC)
+            mainloop=False
 
-        #? USER_CODE_START
-        while not mainloop:
-            self.get_plane_data() #self.bizim_veri = get_plane_data
-            durum_kodu,telemetri_cevabı = self.ana_sunucu.sunucuya_postala(self.bizim_veri)
-            self.process_data_stream(telemetri_cevabı)
-            time.sleep(self.TK_INTERVAL_TIME_SEC)
-
-        # #? USER_CODE_END
+            #? USER_CODE_START
+            while not mainloop:
+                self.get_plane_data() #self.bizim_veri = get_plane_data
+                durum_kodu,telemetri_cevabı = self.ana_sunucu.sunucuya_postala(self.bizim_veri)
+                self.process_data_stream(telemetri_cevabı)
+                time.sleep(self.TK_INTERVAL_TIME_SEC)
 
 #!Testing
     def add_plane_for_testing(self,start_lat,start_lon,limit,rotation,plane_id):
@@ -248,9 +254,10 @@ class FlightTracker:
                     "iha_hizi": self.iha.airspeed,
                     "zaman_farki": 500}
 
-
 if __name__ == "__main__":
-    tracker=FlightTracker("10.80.1.62") #Yazılım bilgisayarı IP -> 10.0.0.236
-    main_op=threading.Thread(target=tracker.main_op)
+    Mode = "IHA" #Monitor/IHA
+    
+    tracker=FlightTracker("10.0.0.236") #Yazılım bilgisayarı IP -> 10.0.0.236
+    main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()
