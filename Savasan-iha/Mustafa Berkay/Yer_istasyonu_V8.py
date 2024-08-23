@@ -51,7 +51,7 @@ class Yerİstasyonu():
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
    
         self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
         self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
@@ -918,8 +918,8 @@ class gui:
         #GUI INIT
         self.root = tk.Tk()
         self.root.title("Ground Control Station")
-        lock_img = tk.PhotoImage(file=os.getcwd()+'\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
-        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
+        lock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
+        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
         self.lock_img = lock_img.subsample(6, 6) 
         self.unlock_img = unlock_img.subsample(6, 6) 
         
@@ -1059,7 +1059,7 @@ if __name__ == '__main__':
     yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
-                                     frame_debug_mode="LOCAL",
+                                     frame_debug_mode="IHA",
                                      queue_size=2
                                      )
 

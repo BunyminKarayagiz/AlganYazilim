@@ -28,7 +28,7 @@ class Plane:
         self.fallback_ratio = 20 # %1
         self.fallback_ratio_final = (100-self.fallback_ratio) / 100
 
-        self.start_looping()
+        #self.start_looping()
 
     def append_data(self, new_data: Dict[str, Any]):
         with self.lock:
