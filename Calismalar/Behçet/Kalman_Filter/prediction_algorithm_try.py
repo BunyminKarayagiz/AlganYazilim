@@ -73,6 +73,11 @@ class KalmanFilter:
         """
 
     def predict(self):
+        
+        statePre = self.kf.predict()
+        return statePre
+    
+    def predict(self):
         """
         #* bakilacak
         acceleration = 0.5
@@ -82,7 +87,9 @@ class KalmanFilter:
         self.kf.statePre += self.kf.controlMatrix @ control_input
         """
         statePre = self.kf.predict()
+        self.kf.errorCovPre = self.kf.transitionMatrix @ self.kf.errorCovPost @ self.kf.transitionMatrix.T + self.kf.processNoiseCov
         return statePre
+
 
     def correct(self, measurement):
         start_time = time.perf_counter()
