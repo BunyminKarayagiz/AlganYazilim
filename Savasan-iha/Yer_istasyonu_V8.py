@@ -26,7 +26,6 @@ from Modules import SimplifiedTelemetry
 import numba
 import tkinter as tk
 
-
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
 #?Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
@@ -43,16 +42,15 @@ import tkinter as tk
 #?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
-class Yerİstasyonu():
-
-    def __init__(self,mavlink_ip,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"): #TODO
-
+class server_manager:
+    def __init__(self,mavlink_ip) -> None:
+        
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
+        self.mavlink_ip = mavlink_ip
         
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
-   
+        #* Servers
         self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
         self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
         self.Server_mod = Server_Tcp.Server(PORT=9003,name="MOD")
@@ -60,13 +58,10 @@ class Yerİstasyonu():
         self.Server_UI_telem = Server_Tcp.Server(PORT=9005,name="UI_TELEM")
         self.Server_YKI_ONAY = Server_Tcp.Server(PORT=9006,name="YKI_ONAY")
         self.Server_ID=Server_Tcp.Server(PORT=9010,name="ID")
-        
         self.Server_UIframe = Server_Udp.Server(port=11000,name="UI-Frame")
         self.Server_udp = Server_Udp.Server(port=5555,name="IHA-FRAME")
-
-        self.SHUTDOWN_KEY = SHUTDOWN_KEY
-
-        #Sunucu durumları için kullanılacak değişkenler
+        
+        #* Server States
         self.ana_sunucu_status = False
         self.Yönelim_sunucusu=False
         self.Mod_sunucusu=False
@@ -79,44 +74,6 @@ class Yerİstasyonu():
         self.PWM_sunucusu=False
         self.ID_sunucusu=False
 
-        self.frame_debug_mode = frame_debug_mode
-
-        #MultiProcess-Mod Objeleri
-        self.capture_queue = mp.Queue(maxsize=queue_size)
-        self.display_queue = mp.Queue(maxsize=queue_size)
-        self.event_map = event_map
-        
-        #YÖNELİM yapılacak uçağın seçilmesi için kullanılacak obje
-        self.yönelim_obj=hesaplamalar.Hesaplamalar()
-
-        #M.PLANNER bilgisayarından telemetri verisi çekmek için kullanılacak obje
-        #! MULTIPROCESS ILE ÇAKIŞMA VAR.
-        #? yonelim icine tasındı.Yerine mavlink_ip getirildi.      
-        #self.mavlink_obj = SimplifiedTelemetry.Telemetry(mavlink_ip) 
-        self.mavlink_ip = mavlink_ip
-
-        self.fark = 0
-        self.is_qrAvailable = False
-        self.is_qr_transmitted = "False"
-        self.Yki_onayi_verildi = False
-        
-        self.qr_coordinat = ""
-        self.qr = QR_Detection()
-
-        #GÖREV_MODU SEÇİMİ
-        self.event_map = event_map
-        self.secilen_görev_modu="kilitlenme"
-        self.önceki_mod = ""
-        self.sunucu_saati:str = ""
-
-        # Telemetri paketi için PWM'den veriler alınmalı
-        self.x_center=0
-        self.y_center=0
-        self.width=0
-        self.height=0
-        self.rakip=0
-
-    #! SUNUCU FONKSİYONLARI
     def senkron_local_saat(self):
         status_code, sunuc_saati = self.ana_sunucu.sunucu_saati_al()
         local_saat = datetime.datetime.today()
@@ -152,8 +109,7 @@ class Yerİstasyonu():
         connection_status=False
         while not connection_status:
             try:
-                self.Server_yönelim.creat_server()
-                connection_status=True
+                connection_status = self.Server_yönelim.creat_server()
                 print("YONELİM : SERVER OLUŞTURULDU")
             except (ConnectionError, Exception) as e:
                 print("YÖNELİM SERVER: oluştururken hata : ", e , " \n")
@@ -291,7 +247,7 @@ class Yerİstasyonu():
             print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
             self.Server_pwm.reconnect()
 
-    def ArayuzFrame_gonder(self,frame): #!Denenmedi...
+    def ArayuzFrame_gonder(self,frame): #!Denenmedi... 
         try:
             self.Server_UIframe.send_frame_to_client(frame)
         except Exception as e:
@@ -314,6 +270,77 @@ class Yerİstasyonu():
         self.ID_sunucusu = connection_status
         return connection_status
 
+    def sunuculari_oluştur(self):
+        self.anasunucuya_baglan()
+        self.senkron_local_saat()
+
+        print("Sunucular bekleniyor...")
+        t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)
+        t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
+        t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)
+        t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur) #Multiprocess ile uyumlu değil. "yonelim" içine alındı.
+        t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
+        t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
+        t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur)
+        t8 = threading.Thread(target=self.YKI_ONAY_sunucusu_oluştur)
+        t9 = threading.Thread(target=self.ID_sunucusu_oluştur)
+
+        t1.start()
+        t2.start()
+        t3.start()
+        t4.start()
+        t5.start()
+        t6.start()
+        t7.start()
+        t8.start()
+        t9.start()
+        
+        return t1,t2,t3,t4,t5,t6,t7,t8,t9
+
+class Yerİstasyonu():
+
+    def __init__(self,event_map,SHUTDOWN_KEY,server_manager,queue_size=1,frame_debug_mode="IHA"): #TODO
+
+        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
+        self._sv = server_manager
+
+        self.frame_debug_mode = frame_debug_mode
+        self.SHUTDOWN_KEY = SHUTDOWN_KEY
+
+        # *MultiProcess-Mod Objeleri
+        self.capture_queue = mp.Queue(maxsize=queue_size)
+        self.display_queue = mp.Queue(maxsize=queue_size)
+        self.event_map = event_map
+        
+        # *YÖNELİM yapılacak uçağın seçilmesi için kullanılacak obje
+        self.yönelim_obj=hesaplamalar.Hesaplamalar()
+
+        #M.PLANNER bilgisayarından telemetri verisi çekmek için kullanılacak obje
+        #! MULTIPROCESS ILE ÇAKIŞMA VAR.
+        #? yonelim icine tasındı.Yerine mavlink_ip getirildi.
+        #self.mavlink_obj = SimplifiedTelemetry.Telemetry(mavlink_ip)
+
+        self.fark = 0
+        self.is_qrAvailable = False
+        self.is_qr_transmitted = "False"
+        self.Yki_onayi_verildi = False
+        
+        self.qr_coordinat = ""
+        self.qr = QR_Detection()
+
+        # *GÖREV_MODU SEÇİMİ
+        self.event_map = event_map
+        self.secilen_görev_modu="kilitlenme"
+        self.önceki_mod = ""
+        self.sunucu_saati:str = ""
+
+        # Telemetri paketi için PWM'den veriler alınmalı
+        self.x_center=0
+        self.y_center=0
+        self.width=0
+        self.height=0
+        self.rakip=0
+
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_number, message):
         try:
@@ -335,49 +362,54 @@ class Yerİstasyonu():
         process_name = mp.current_process().name
         cprint(f"Starting Capture-process: {process_name}","green")
 
-        self.Görüntü_sunucusu_oluştur()
-        if self.frame_debug_mode == "IHA":
-            codec_1 = av.CodecContext.create('h264', 'r')
-            frame_id = 0
-            while True:
-                try:
-                    data = self.Server_udp.recv_frame_from_client()
-                    packet = av.Packet(data)
-                    frames = codec_1.decode(packet)
-                    for frame in frames:
+        while True:
+            if self._sv.görüntü_sunucusu:
+                print("Video Server ONLINE...")
+                if self.frame_debug_mode == "IHA":
+                    codec_1 = av.CodecContext.create('h264', 'r')
+                    frame_id = 0
+                    while True:
                         try:
-                            img = frame.to_image()
-                            frame = np.array(img)
-                            #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                            if not self.capture_queue.full():
-                                self.capture_queue.put((frame,frame_id))
-                                frame_id += 1
-                                #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
-                            else:
-                                #print("FRAME : CAPTURE_QUEUE FULL...")
-                                pass
+                            data = self._sv.Server_udp.recv_frame_from_client()
+                            packet = av.Packet(data)
+                            frames = codec_1.decode(packet)
+                            for frame in frames:
+                                try:
+                                    img = frame.to_image()
+                                    frame = np.array(img)
+                                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                    if not self.capture_queue.full():
+                                        self.capture_queue.put((frame,frame_id))
+                                        frame_id += 1
+                                        #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
+                                    else:
+                                        #print("FRAME : CAPTURE_QUEUE FULL...")
+                                        pass
+                                except Exception as e:
+                                    print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
                         except Exception as e:
-                            print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
-                except Exception as e:
-                    print("FRAME : RECEIVE ERROR ->",e)
+                            print("FRAME : RECEIVE ERROR ->",e)
 
-        elif self.frame_debug_mode == "LOCAL":
-            frame_id = 0
-            while True:
-                try:
-                    frame = self.Server_udp.recv_frame_from_client()
-                    try:
-                        if not self.capture_queue.full():
-                            self.capture_queue.put((frame,frame_id))
-                            frame_id += 1
-                            #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
-                        else:
-                            #print("FRAME : CAPTURE_QUEUE FULL...")
-                            pass
-                    except Exception as e:
-                        print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
-                except Exception as e:
-                    print("FRAME : RECEIVE ERROR ->",e)
+                elif self.frame_debug_mode == "LOCAL":
+                    frame_id = 0
+                    while True:
+                        try:
+                            frame = self.Server_udp.recv_frame_from_client()
+                            try:
+                                if not self.capture_queue.full():
+                                    self.capture_queue.put((frame,frame_id))
+                                    frame_id += 1
+                                    #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
+                                else:
+                                    #print("FRAME : CAPTURE_QUEUE FULL...")
+                                    pass
+                            except Exception as e:
+                                print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
+                        except Exception as e:
+                            print("FRAME : RECEIVE ERROR ->",e)
+            else:
+                print("Video Server Down...Reconnecting....")
+                time.sleep(1)
 
     def process_frames(self, num):
         process_name = mp.current_process().name
@@ -573,11 +605,11 @@ class Yerİstasyonu():
     #! KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
     def yonelim_gonder(self,hedef): #TODO Yeniden bağlanma durumları kontrol edilecek...
         try:
-            self.Server_yönelim.send_data_to_client(json.dumps(hedef).encode())
+            self._sv.Server_yönelim.send_data_to_client(json.dumps(hedef).encode())
         except Exception as e:
             print("YONELİM : VERİ GÖNDERİLİRKEN HATA --> ",e)
             print("YONELİM YENİDEN BAĞLANIYOR...")
-            self.Server_yönelim.reconnect()
+            self._sv.Server_yönelim.reconnect()
 
     def rakip_sec(self,bizim_telemetri,rakip_telemetri): #? Ekleme yapılabilir...
             try:
@@ -604,43 +636,16 @@ class Yerİstasyonu():
         time.sleep(1)
         while True:
             try:
-                self.kamikaze_packet=self.Server_kamikaze.recv_tcp_message()
+                self.kamikaze_packet=self._sv.Server_kamikaze.recv_tcp_message()
                 print(self.kamikaze_packet)
                 print("Kamikaze_start received...")
             except Exception as e:
                 print("Kamikaze_start ERROR :",e)
 
     #! ANA FONKSİYONLAR
-    def sunuculari_oluştur(self):
-        self.anasunucuya_baglan()
-        self.senkron_local_saat()
-
-        print("Sunucular bekleniyor...")
-        t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
-        t2 = threading.Thread(target=self.PWM_sunucusu_oluştur) # YKI_PROCESS  içinde kullanıldı.
-        t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)
-        t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur) #Multiprocess ile uyumlu değil. "yonelim" içine alındı.
-        t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
-        t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
-        t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur) # UI_TELEM içine taşındı.
-        t8 = threading.Thread(target=self.YKI_ONAY_sunucusu_oluştur)
-        t9 = threading.Thread(target=self.ID_sunucusu_oluştur)
-
-        #t1.start()
-        #t2.start()
-        t3.start()
-        #t4.start()
-        t5.start()
-        t6.start()
-        #t7.start()
-        t8.start()
-        t9.start()
-
-        t5.join()
-        return t1,t2,t3,t4,t5,t6,t7,t8,t9
-
     def yki_onay_ver(self):
         if self.YKI_ONAY_sunucusu:
+            cprint(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
             if self.Yki_onayi_verildi == False:
                 self.Server_YKI_ONAY.send_data_to_client("ALGAN".encode())
                 self.Yki_onayi_verildi = True
@@ -650,11 +655,11 @@ class Yerİstasyonu():
                 self.Yki_onayi_verildi = False
                 cprint(f"ONAY REDDEDILDI ---> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
         else:
-            cprint(f"YKI ONAY : SUNUCU KAPALI / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
+            cprint(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
             return False
 
     def yonelim(self,num=4):
-        ret,mavlink_obj=self.MAV_PROXY_sunucusu_oluştur()
+        ret,mavlink_obj=self._sv.MAV_PROXY_sunucusu_oluştur()
         
         event_queue,event_trigger = self.event_map[num]
         event_message = ""
@@ -681,10 +686,10 @@ class Yerİstasyonu():
 
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 1 :
-                        rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
+                        rakip_telemetri=self._sv.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         try:
                             if not self.ID_sunucusu:
-                                self.Server_ID.send_data_to_client(rakip_telemetri)
+                                self._sv.Server_ID.send_data_to_client(rakip_telemetri)
                         except Exception as e:
                             print("ID : DATA SENDING ERROR -> ",e)
                         timer_start=time.perf_counter()
@@ -745,7 +750,7 @@ class Yerİstasyonu():
                 if packet_counter == 5:
                     packet_counter = 0
                     print("Packet Ready:\n",stored_packets,"\n")
-                    self.pwm_gonder(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
+                    self._sv.pwm_gonder(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
                     stored_packets = [0,0,0,0,0,0,0,0]
 
     def ana_sunucu_manager(self,num=6):
@@ -860,7 +865,7 @@ class Yerİstasyonu():
 
         while True:
             try:
-                self.secilen_görev_modu = self.Server_mod.recv_tcp_message()
+                self.secilen_görev_modu = self._sv.Server_mod.recv_tcp_message()
             except Exception as e:
                 cprint(f"MOD : Secilen modu alirken hata -> {e}","red",attrs=["bold"]) #TODO EKLENECEK...
 
@@ -914,14 +919,14 @@ class Yerİstasyonu():
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
 class gui:
-    def __init__(self,Yer_istasyonu_obj) -> None:
+    def __init__(self,Yer_istasyonu_obj,server_manager) -> None:
         #GUI INIT
         self.root = tk.Tk()
         self.root.title("Ground Control Station")
         lock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
         unlock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
-        self.lock_img = lock_img.subsample(6, 6) 
-        self.unlock_img = unlock_img.subsample(6, 6) 
+        self.lock_img = lock_img.subsample(6, 6)
+        self.unlock_img = unlock_img.subsample(6, 6)
         
         self.indicator_anasunucu = tk.Label(self.root, text="AnaSunucu", width=20, height=2, bg='red', font=('Helvetica', 12))
         self.indicator_yonelim = tk.Label(self.root, text="Yonelim", width=20, height=2, bg='red', font=('Helvetica', 12))
@@ -942,7 +947,7 @@ class gui:
         self.indicator1_MAV_PROXY.pack(pady=10)
         self.send_button.pack(pady=20)
         
-
+        self._sv = server_manager
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
     def server_status_check(self):
@@ -951,43 +956,43 @@ class gui:
         else:
             self.send_button.config(image=self.lock_img)
 
-        if self.Yer_istasyonu_obj.ana_sunucu_status:
+        if self._sv.ana_sunucu_status:
             self.indicator_anasunucu.config(bg='green')
         else:
             self.indicator_anasunucu.config(bg='red')
         
-        if self.Yer_istasyonu_obj.Yönelim_sunucusu:
+        if self._sv.Yönelim_sunucusu:
             self.indicator_yonelim.config(bg='green')
         else:
             self.indicator_yonelim.config(bg='red')
 
-        if self.Yer_istasyonu_obj.kamikaze_sunucusu:
+        if self._sv.kamikaze_sunucusu:
             self.indicator_mod.config(bg='green')
         else:
             self.indicator_mod.config(bg='red')
 
-        if self.Yer_istasyonu_obj.kamikaze_sunucusu:
+        if self._sv.kamikaze_sunucusu:
             self.indicator_kamikaze.config(bg='green')
         else:
             self.indicator_kamikaze.config(bg='red')
 
-        if self.Yer_istasyonu_obj.UI_telem_sunucusu:
+        if self._sv.UI_telem_sunucusu:
             self.indicator_UI_telem.config(bg='green')
         else:
             self.indicator_UI_telem.config(bg='red')
 
-        if self.Yer_istasyonu_obj.YKI_ONAY_sunucusu:
+        if self._sv.YKI_ONAY_sunucusu:
             self.indicator_YKI_ONAY.config(bg='green')
         else:
             self.indicator_YKI_ONAY.config(bg='red')
 
-        if self.Yer_istasyonu_obj.MAV_PROXY_sunucusu:
+        if self._sv.MAV_PROXY_sunucusu:
             self.indicator1_MAV_PROXY.config(bg='green')
         else:
             self.indicator1_MAV_PROXY.config(bg='red')
         
         # Schedule the next update
-        self.root.after(500, self.server_status_check)
+        self.root.after(1000, self.server_status_check)
 
     def close_all(self):
         print("GUI: ('close_all') CALLED")
@@ -1052,14 +1057,14 @@ def create_event_map():
 if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
-    log_queue, listener_process = start_log_listener()
-    setup_logging(log_queue)
 
 #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
-    yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
+
+    server_manager_obj = server_manager(mavlink_ip="10.80.1.60")
+    yer_istasyonu_obj = Yerİstasyonu(frame_debug_mode="IHA",
+                                     server_manager=server_manager_obj,
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
-                                     frame_debug_mode="IHA",
                                      queue_size=2
                                      )
 

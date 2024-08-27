@@ -8,12 +8,14 @@ class Server():
         self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.PORT = PORT
         self.name=name
+        print(f"SERVER INIT -> {self.name}")
 
     def creat_server(self):
         self.tcp_socket.bind((self.server_ip, self.PORT))
         self.tcp_socket.listen()
         self.conn, self.addr = self.tcp_socket.accept()
         print(f"{self.name} : Connect with{self.addr}")
+        return True
 
     def reconnect(self):
         connection=False
@@ -24,7 +26,6 @@ class Server():
             connection=True
         except Exception as e:
             print("Yeniden bağlanırken hata: ",e)
-
         return connection 
 
     def recv_tcp_message(self):
