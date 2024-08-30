@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 from ultralytics import YOLO
 from prediction_algorithm_try import KalmanFilter
+from colorama import Fore, init
+import time
 
 class Detection:
  
@@ -13,11 +15,13 @@ class Detection:
         print("Using Device: ", self.device)
         self.datas = []
         self.kalman = KalmanFilter()
+        init(autoreset=True)
 
     def model_predict(self, frame, frame_id=0):
-        results = self.model.track(source=frame, conf=0.7, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
-        
-        pwm_verileri:tuple = (1500,1500,frame_id,0,0,0,0,0)
+        results = self.model.track(source=frame, conf=0.5, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
+
+        kalmanPWM = None
+        pwm_verileri:tuple = (1500, 1500, frame_id, 0, 0, 0, 0, 0)
         
         x, y = frame.shape[0], frame.shape[1]
 
@@ -27,37 +31,55 @@ class Detection:
         cv2.rectangle(frame, (target_area_x1, target_area_y1), (target_area_x2, target_area_y2), (0, 0, 255), 2) # RGB
 
         locked_or_not = False
+        highest_confidence = 0
+        best_box = None
+
         if results:
             annotated_frame = results[0].plot()
             boxes = results[0].boxes.xyxy.cpu().tolist()
+            confidences = results[0].boxes.conf.cpu().tolist()
 
-            for box in boxes:
-                x1, y1, x2, y2 = box
+            for box, conf in zip(boxes, confidences):
+                if conf > highest_confidence:
+                    highest_confidence = conf
+                    best_box = box
+
+            if best_box:
+                x1, y1, x2, y2 = best_box
                 x_center = int((x1 + x2) / 2)
                 y_center = int((y1 + y2) / 2)
                 width = x2 - x1
                 height = y2 - y1
+
                 pwm_verileri = self.coordinates_to_pwm(x_center, y_center, frame_id, width, height)
+                kalmanPWM = self.kalman_filter(x_center, y_center)
 
-                data = self.kalman_filter(x_center, y_center)
- 
-                if(target_area_x1 < x1 and target_area_x2 > x2 and target_area_y1 < y1 and target_area_y2 > y2):                                    
-                    locked_or_not = True
+                x = x2 - x1
+                y = y2 - y1
+                bound_area = x*y
+                box_area = 640*480
+                box_area_sart = box_area*0.05
 
-                return pwm_verileri, annotated_frame, locked_or_not
-                
-            return pwm_verileri, annotated_frame, locked_or_not
-            
-        return pwm_verileri, annotated_frame, locked_or_not
+                print("box_area : ", box_area)
+                print("bound_area : ", bound_area)
+
+                if bound_area >= box_area_sart:  
+                    if(target_area_x1 < x1 and target_area_x2 > x2 and target_area_y1 < y1 and target_area_y2 > y2):
+                        print("locked_or_not1 : ", locked_or_not)
+                        locked_or_not = True 
+                        print("locked_or_not2 : ", locked_or_not)                            
+
+        return pwm_verileri, annotated_frame, locked_or_not, kalmanPWM
+
     
     def kalman_filter(self, x_center, y_center):
+        print(Fore.RED + "Kalman algoritmasi devrede!")
         data = [x_center, y_center]
         self.datas.append(data)
-        if len(self.datas) >= 50:
-            self.datas = self.datas[-50:]
-        self.kalman.add_measurements(self.datas)
-
-        return data
+        if len(self.datas) >= 20:
+            self.datas = self.datas[-20:]
+        kalmanPWM = self.kalman.add_measurements(self.datas)
+        return kalmanPWM
 
     def coordinates_to_pwm(self, x_center, y_center, frame_id, width, height):
         screen_width = 640
@@ -91,9 +113,11 @@ class Detection:
 
             if ret:
                 frame = cv2.resize(frame, (640, 480))
-                pwm_verileri, annotated_frame, locked_or_not = self.model_predict(frame)
+                pwm_verileri, annotated_frame, locked_or_not, kalmanPWM = self.model_predict(frame)
                 cv2.imshow("YOLOv8 Tracking", annotated_frame)
+                print(Fore.RED + f"Kalman PWM Verileri : {kalmanPWM}")
                 print("PWM Verileri: ", pwm_verileri)
+
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 

@@ -1,13 +1,3 @@
-"""Tahmin algoritmasi için yapilmasi gerekenler(Önem sirasina göre)"""
-# Yapıldı: prediction_algorithm, yolov8_depoloy koduna entegre edilecek. Oradan gelen verilerle kalman filtresi çalıaşacak. 
-#! Amaç: Matematiksel işlemlerin arttırılması ve yeni işlemlerin çoğaltılması ile tahminler, gerçek değerlere yakınlaştırılacak.
-#! Yapılacak: Hız verilerini doğru ölçmediği farkedeldi düzeltilmesi gerekiyor! Hızı doğru ölçebildiğimizden emin olmamız lazım. Çünkü konum hız ile bulunuyor.
-# Yapıldı: İvme verileri oluşturulacak.
-#! Yapılacak: Üç boyutlu takip eklenecek. Bu yolov8_deploy kısmında da yapılabilir.
-#! Yapılacak: Önceden bilinen verilerle kalman filtresinin çalışmasına bakılacak.
-#! Hızlanma(Acceleration) Modeline bakılacak. 
-#! Denenebilir: Eğer her şey düzenli çalışırsa çoklu kalman yaklaşımı uygulanabilir.
-
 import cv2
 import numpy as np
 import math
@@ -27,7 +17,6 @@ class KalmanFilter:
                                              [0, 0, 0, 1, 0, 1],
                                              [0, 0, 0, 0, 1, 0],
                                              [0, 0, 0, 0, 0, 1]], dtype=np.float32)
-        # 0.5: 1/2at^2 den geliyor
         
         self.kf.measurementMatrix = np.array([[1, 0, 0, 0, 0, 0],
                                               [0, 1, 0, 0, 0, 0]], dtype=np.float32)
@@ -48,60 +37,27 @@ class KalmanFilter:
                                         [0, 0, 0, 1, 0, 0],
                                         [0, 0, 0, 0, 1, 0],
                                         [0, 0, 0, 0, 0, 1]], dtype=np.float32)
-                
-        self.kf.errorCovPost = np.array([[1, 0, 0, 0, 0, 0],
-                                        [0, 1, 0, 0, 0, 0],
-                                        [0, 0, 1, 0, 0, 0],
-                                        [0, 0, 0, 1, 0, 0],
-                                        [0, 0, 0, 0, 1, 0],
-                                        [0, 0, 0, 0, 0, 1]], dtype=np.float32)
         
-        self.kf.gain = np.array([[1, 0, 0, 0, 0, 0],
-                                [0, 1, 0, 0, 0, 0],
-                                [0, 0, 1, 0, 0, 0],
-                                [0, 0, 0, 1, 0, 0],
-                                [0, 0, 0, 0, 1, 0],
-                                [0, 0, 0, 0, 0, 1]], dtype=np.float32)
-        """
-        #* bakilacak
-        self.kf.controlMatrix = np.array([[0, 0],
-                                 [0, 0],
-                                 [1, 0],
-                                 [0, 1],
-                                 [0, 0],
-                                 [0, 0]], dtype=np.float32)
-        """
-
     def predict(self):
+        self.kf.errorCovPre = np.linalg.multi_dot([self.kf.transitionMatrix, self.kf.errorCovPost, self.kf.transitionMatrix.T]) + self.kf.processNoiseCov
         statePre = self.kf.predict()
         return statePre
-    
-    def predict(self):
-        """
-        #* bakilacak
-        acceleration = 0.5
-        braking = 0.1
-        control_input = np.array([[acceleration], [braking]], dtype=np.float32)
-        statePre = self.kf.predict()
-        self.kf.statePre += self.kf.controlMatrix @ control_input
-        """
-        statePre = self.kf.predict()
-        self.kf.errorCovPre = self.kf.transitionMatrix @ self.kf.errorCovPost @ self.kf.transitionMatrix.T + self.kf.processNoiseCov
-        return statePre
-
 
     def correct(self, measurement):
         start_time = time.perf_counter()
 
-        S = self.kf.measurementMatrix @ self.kf.errorCovPre @ self.kf.measurementMatrix.T + self.kf.measurementNoiseCov
-        K = self.kf.errorCovPre @ self.kf.measurementMatrix.T @ np.linalg.inv(S)
+        S = np.linalg.multi_dot([self.kf.measurementMatrix, self.kf.errorCovPre, self.kf.measurementMatrix.T]) + self.kf.measurementNoiseCov
+        K = np.linalg.multi_dot([self.kf.errorCovPre, self.kf.measurementMatrix.T, np.linalg.inv(S)])
 
-        y = measurement - (self.kf.measurementMatrix @ self.kf.statePre)
+        y = measurement - np.dot(self.kf.measurementMatrix, self.kf.statePre)
 
-        self.kf.statePost = self.kf.statePre + K @ y
+        self.kf.statePost = self.kf.statePre + np.dot(K, y)
 
         I = np.eye(self.kf.transitionMatrix.shape[0], dtype=np.float32)
-        self.kf.errorCovPost = (I - K @ self.kf.measurementMatrix) @ self.kf.errorCovPre
+        
+        self.kf.errorCovPost = np.dot((I - np.dot(K, self.kf.measurementMatrix)), self.kf.errorCovPre)
+
+        self.kf.errorCovPre = self.kf.errorCovPost
 
         elapsed_time = time.perf_counter() - start_time
         print(f"Correct işlemi Süresi: {elapsed_time:.9f} saniye")
@@ -154,9 +110,10 @@ class KalmanFilter:
             coordinat_pwm = self.coordinat_pwm(x, y)
 
             np.set_printoptions(suppress=True)
-            print(Fore.BLUE + f"Tahmin PWM : {coordinat_pwm}") 
-            print(f"Son ölçüm: {self.measurements[-1]}")
+            print(Fore.BLUE + f"Son ölçüm: {self.measurements[-1]}")
             print(Fore.GREEN + f"Tahmin edilen durum: {predicted_state.T}")
-            print(f"Güncellenmiş durum: {state_post.T}")
+            print(f"Tahmin PWM : {coordinat_pwm}") 
             print(f"Hiz: {speed}")
+            print(f"Güncellenmiş durum: {state_post.T}")
             print("------")
+        return coordinat_pwm
