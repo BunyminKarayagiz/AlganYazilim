@@ -1,88 +1,86 @@
 from Modules.Arayuz import App
-from Modules import Client_Tcp ,Server_Tcp
+from Modules import Client_Tcp ,Server_Tcp,Trajectory_estimation
+from Modules.Cprint import cp
+from Modules.Trajectory_estimation import simple_estimation
 import threading,time
 from Modules import ana_sunucu_islemleri
 import json
 from Modules import path_drone as path
 import argparse
 from typing import Dict,Any
-import rgbprint as Cprint
 from random import randint
 import math
 
 #!CLASS OBJ
 class Plane:
-    def __init__(self, takim_numarasi: int, UI ,limit = 5):
+    def __init__(self, takim_numarasi: int, UI ,data_limit=5,marker_limit = 5,shadow=3):
 
         self.takim_numarasi = takim_numarasi
+        self.data_limit= data_limit
         self.data = []
-        self.lock = threading.Lock()
-        self.color = (randint(0,255),randint(0,255),randint(0,255))
+        self.r , self.g , self.b = (randint(50,255),randint(50,255),randint(50,255))
+        self.color = (self.r,self.g,self.b)
         self.UI = UI
-        self.limit = limit
+
+        self.marker_limit = marker_limit
         self.marker_list = []
+
+        self.path_limit = marker_limit + shadow
+        self.path_list = []
+
+        self.path_obj= None
+        self.first_two_coord=False
+        self.first_lat=0
+        self.first_lon=0
 
         #Tahminleme için kullanılan parametreler
         self.Prediction = []
-        self.precision_Val = 111320 # 1 metre için lat lon çözünürlüğü
-        self.fallback_ratio = 20 # %1
-        self.fallback_ratio_final = (100-self.fallback_ratio) / 100
-
-        #self.start_looping()
 
     def append_data(self, new_data: Dict[str, Any]):
-        with self.lock:
-            if len(self.data) > self.limit:
+        if len(self.data) > self.data_limit:
                 self.data.pop(0)
-            #Cprint.rgbprint(f"Plane {self.takim_numarasi} Present Data: {self.data}",color=self.color)
-            if len(self.marker_list) >= self.limit:
+        if len(self.marker_list) > self.marker_limit:
+                #self.path_obj.remove_position(self.marker_list[0])
                 (self.marker_list.pop(0)).delete()
-            self.marker_list.append(self.UI.set_plane(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],rotation=new_data['iha_yonelme'],plane_id=self.takim_numarasi))
-            longitude,latitude=self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],rotation=new_data['iha_yonelme'])
-            self.data.append(new_data)
+        if len(self.path_list) > self.path_limit: 
+                self.path_obj.remove_position(*self.path_list[0])
+                self.path_list.pop(0)
+        
+        self.marker_list.append(self.UI.set_plane(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],
+                                                      rotation=new_data['iha_yonelme'],color_palette=self.color,
+                                                      plane_id=self.takim_numarasi))
+        
+        if self.path_obj == None:
+                if self.first_two_coord == True:
+                    self.path_obj = self.UI.init_plane_path([(self.first_lat,self.first_lon),(new_data['iha_enlem'],new_data['iha_boylam'])],color_palette=(self.r-50,self.g-50,self.b-50))
+                    self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
+                else:
+                    self.first_lat = new_data['iha_enlem']
+                    self.first_lon = new_data['iha_boylam']
+                    self.first_two_coord = True
+                    self.path_list.append((self.first_lat,self.first_lon))
+        else:
+                self.path_obj.add_position(new_data['iha_enlem'],new_data['iha_boylam'])
+                self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
 
-            return longitude,latitude
+        longitude,latitude=self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],
+                                                          speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],
+                                                          rotation=new_data['iha_yonelme'])
+        
+        self.data.append(new_data)
+        
+        return longitude,latitude
 
-#! ROUTE PREDICTION
-    def predict_next_position(self,x, y, speed, roll_degree,rotation):
+    def predict_next_position(self,x, y, speed, roll_degree,pitch_degree,rotation_yaw):
         if self.Prediction:
             (self.Prediction.pop(0)).delete()
-            (self.Prediction.pop(0)).delete()
-        print("\nrakip_yatis:",roll_degree)
-        print(f"rakip_boylam:{x}\nrakip_enlem:{y}\nrakip_hiz:{speed}")
-
         try:
-            abs_speed= speed / self.precision_Val
-
-            next_x = x + abs_speed * math.sin(rotation)
-            next_y = y + abs_speed * math.cos(rotation)
-
-            #Calculate with fallback ratio
-            next_x_w_ratio = x + abs_speed * math.sin(rotation) *self.fallback_ratio_final
-            next_y_w_ratio = y + abs_speed * math.cos(rotation) *self.fallback_ratio_final
-            
+            next_x,next_y=simple_estimation(x,y,speed,roll_degree,pitch_degree,rotation_yaw)
         except Exception as e:
-            print("Calculation Error ->",e)
+            cp.err(f"Calculation Error ->{e}")
 
-        print(f"Next_x ={next_x}\nNext_y ={next_y}")
-
-            # direction_radians = math.radians(roll_degree)
-        
-            # Calculate displacement
-            #     delta_x = speed * math.cos(direction_radians)
-            #     delta_y = speed * math.sin(direction_radians)
-        
-            # Predicted next position
-            #     next_x = x + delta_x
-            #     next_y = y + delta_y
-        self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation,plane_id=f"Predict")) #plane_id=f"{self.takim_numarasi}-Predict")
-        self.Prediction.append(self.UI.set_plane(lat=next_y_w_ratio,lon=next_x_w_ratio,rotation=rotation,plane_id=f"Fallback_Predict"))
-            #    Cprint.rgbprint(f"Plane {self.takim_numarasi} processing data: {self.data}",color=self.color)
-            #time.sleep(1)
+        self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation_yaw,color_palette=self.color,plane_id=f"Predict"))
         return next_x,next_y
-
-    def start_looping(self):
-        pass
 
 #!CLASS MAIN
 class FlightTracker:
@@ -117,7 +115,6 @@ class FlightTracker:
                 try:
                     "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
                     ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(str(self.kullanici_adi),str(self.sifre))
-                    print(durum_kodu)
                     if int(durum_kodu) == 200:
                         print(f"\x1b[{31}m{'Ana Sunucuya Bağlanıldı: ' + durum_kodu}\x1b[0m")  # Ana sunucuya girerkenki durum kodu.
                         self.ana_sunucu_status = True
@@ -166,19 +163,21 @@ class FlightTracker:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
 
     def process_data_stream(self, data_stream: str):
-        parsed_data = json.loads(data_stream)["konumBilgileri"]
+        try:
+            parsed_data = json.loads(data_stream)["konumBilgileri"]
 
-        for entry in parsed_data:
-            takim_numarasi = entry["takim_numarasi"]
-            if takim_numarasi not in self.planes:
-                print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
-                self.add_plane(takim_numarasi)
-
-            lon_track,lat_track = self.planes[takim_numarasi].append_data(entry)
+            for entry in parsed_data:
+                takim_numarasi = entry["takim_numarasi"]
+                if takim_numarasi not in self.planes:
+                    print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
+                    self.add_plane(takim_numarasi)
+                lon_track,lat_track = self.planes[takim_numarasi].append_data(entry)
             return (lon_track,lat_track)
+        except Exception as e:
+            cp.fatal(e)
 
     def add_plane(self, takim_numarasi: int):
-        new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,limit=7)
+        new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,data_limit=5,marker_limit=5,shadow=5)
         self.planes[takim_numarasi] = new_plane
         # thread = threading.Thread(target=new_plane.process_data)
         # thread.start()
@@ -223,21 +222,50 @@ class FlightTracker:
                 durum_kodu,telemetri_cevabı = self.ana_sunucu.sunucuya_postala(self.bizim_veri)
                 self.process_data_stream(telemetri_cevabı)
                 time.sleep(self.TK_INTERVAL_TIME_SEC)
+        
+        if mode == "UI_TEST":
+            time.sleep(2)
+            self.add_plane_for_testing(start_lat=52.5164,start_lon=13.3734,limit=20,rotation=10,plane_id="TEST")
+
 
 #!Testing
     def add_plane_for_testing(self,start_lat,start_lon,limit,rotation,plane_id):
-        time.sleep(4)
+        time.sleep(2)
+        r,g,b = (randint(50,255),randint(50,255),randint(50,255))
+        path_obj = None
+        first_two_coord=False
+        curve_multiplier=1
+        
         while limit > 0:
-            self.UI.set_marker(lat=start_lat,lon=start_lon,rotation=rotation,plane_id=rotation)
+            self.UI.set_plane(lat=start_lat,lon=start_lon,rotation=rotation,plane_id=plane_id,color_palette=(r,g,b))
+            if path_obj == None:
+                if first_two_coord == True:
+                    path_obj = self.UI.init_plane_path([(first_lat,first_lon),(start_lat,start_lon)],color_palette=(r-50,g-50,b-50))
+                else:
+                    first_lat = start_lat
+                    first_lon = start_lon
+                    first_two_coord = True
+            else:
+                path_obj.add_position(start_lat,start_lon)
             limit -= 1
-            start_lon +=0.010
-            rotation += 15
-            time.sleep(0.1)
-            print("TEST-MARKERS ADDED..")
 
-    def connect_mission(self,port=5762):
+            
+            lat_increase = 0.005*curve_multiplier
+            start_lat += lat_increase
+
+            lon_increase = lat_increase*curve_multiplier
+            start_lon += lon_increase
+
+            curve_multiplier +=0.8
+
+            rotation += 10
+            #time.sleep(0.1)
+            print("TEST-MARKERS ADDED..")
+            
+
+    def connect_mission(self,port=5763):
         parser = argparse.ArgumentParser()
-        parser.add_argument('--connect', default=f'tcp:127.0.0.1:{port}')
+        parser.add_argument('--connect', default=f'tcp:127.0.0.1:5762')
         args = parser.parse_args()
         connection_string = args.connect
         self.iha=path.Plane(connection_string)
@@ -255,7 +283,7 @@ class FlightTracker:
                     "zaman_farki": 500}
 
 if __name__ == "__main__":
-    Mode = "IHA" #Monitor/IHA
+    Mode = "Monitor" #Monitor / IHA / UI_TEST
     
     tracker=FlightTracker("10.0.0.236") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))

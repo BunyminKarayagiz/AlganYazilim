@@ -1,7 +1,7 @@
 import customtkinter
 import tkinter
 from tkintermapview import TkinterMapView
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk,ImageOps
 import PIL
 import os
 
@@ -26,7 +26,7 @@ class App(customtkinter.CTk):
         self.bind("<Command-q>", self.on_closing)
         self.bind("<Command-w>", self.on_closing)
         self.createcommand('tk::mac::Quit', self.on_closing)
-        #self.wm_attributes('-fullscreen', True)
+        self.wm_attributes('-fullscreen', True)
 
         # current_path = os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\Resources"
         # self.plane_image = ImageTk.PhotoImage(Image.open(os.path.join(current_path,"plane.png")).resize((40, 40)))
@@ -84,8 +84,10 @@ class App(customtkinter.CTk):
         self.map_label = customtkinter.CTkLabel(self.frame_left, text="Tile Server:", anchor="w")
         self.map_label.grid(row=9, column=0, padx=(20, 20), pady=(20, 0))
 
-        self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal", "Google satellite"],command=self.change_map)
+        self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["Google satellite","OpenStreetMap","Google normal"],command=self.change_map)
         self.map_option_menu.grid(row=10, column=0, padx=(20, 20), pady=(10, 0))
+
+        self.map_option_menu.set("Google satellite")
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.frame_left, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=11, column=0, padx=(20, 20), pady=(20, 0))
@@ -100,7 +102,7 @@ class App(customtkinter.CTk):
         self.frame_mid.grid_columnconfigure(1, weight=0)
         self.frame_mid.grid_columnconfigure(2, weight=1)
 
-        database_path = "D:\\Visual Code File Workspace\\ALGAN\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Resources\\PoligonDenizli_tiles.db"
+        database_path = "D:\\Visual Code File Workspace\\ALGAN\AlganYazilim\\Savasan-iha\\Resources\\PoligonDenizli_tiles.db"
         script_directory = os.path.dirname(os.path.abspath(__file__))
         database_path = os.path.join(script_directory, "PoligonDenizli_tiles.db")
 
@@ -130,7 +132,7 @@ class App(customtkinter.CTk):
 
         # Set default values
         #self.map_widget.set_address("Antalya")
-        # self.map_option_menu.set("OpenStreetMap")
+        self.map_option_menu.set("Google satellite")
         # self.appearance_mode_optionemenu.set("Dark")
 
     def search_event(self, event=None):
@@ -144,10 +146,21 @@ class App(customtkinter.CTk):
         for marker in self.marker_list:
             marker.delete()
 
-    def set_plane(self,lat,lon,rotation,plane_id="[id?]"):
-        rotated_icon = ImageTk.PhotoImage(self.plane_image.rotate(360-rotation,PIL.Image.NEAREST,expand=1))
-        return self.map_widget.set_marker(lat,lon,text=f'ID:{plane_id}',icon=rotated_icon)
+    def set_plane(self,lat,lon,rotation,color_palette,plane_id="[id?]"):
+        #rotated_colored_icon = ImageTk.PhotoImage(self.plane_image.rotate(360 - rotation, PIL.Image.NEAREST, expand=1))
+        rotated_image = self.plane_image.rotate(360 - rotation, PIL.Image.NEAREST, expand=1).convert("RGBA")        
+        colored_image = Image.new("RGBA", rotated_image.size, color_palette)
+        colored_image.putalpha(rotated_image.split()[-1])
+        rotated_colored_icon = ImageTk.PhotoImage(colored_image)
+        return self.map_widget.set_marker(lat,lon,text=f'ID:{plane_id}',icon=rotated_colored_icon)
 
+    def init_plane_path(self,position_list,color_palette):
+        return self.map_widget.set_path(position_list=position_list,
+                                        color=('#%02x%02x%02x' % color_palette),
+                                        #command=self.delete_plane,
+                                        width=2
+                                        )
+    
     def delete_plane(self):
         pass
 
@@ -155,12 +168,13 @@ class App(customtkinter.CTk):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
     def change_map(self, new_map: str):
-        if new_map == "OpenStreetMap":
+        if new_map == "Google satellite":
+            self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=19)
+        elif new_map == "OpenStreetMap":
             self.map_widget.set_tile_server("https://a.tile.openstreetmap.org/{z}/{x}/{y}.png")
         elif new_map == "Google normal":
             self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=19)
-        elif new_map == "Google satellite":
-            self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=19)
+
 
     def on_closing(self, event=0):
         self.destroy()
@@ -170,4 +184,7 @@ class App(customtkinter.CTk):
 
 if __name__ == "__main__":
     app = App()
+    app.set_plane(lat=52,lon=13,rotation=75,color_palette=(0,255,0),plane_id=1)
+    path_obj=app.init_plane_path([(0,0),(10,10)],color_palette=(0,0,255))
+    path_obj.add_position(15,30)
     app.start()

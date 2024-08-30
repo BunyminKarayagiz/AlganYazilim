@@ -1,30 +1,17 @@
 # import numpy as np
 # from pyzbar import pyzbar
-
-import av
-from Modules import Server_Udp
-from Modules import Server_Tcp
 # from path import Plane
-from Modules import ana_sunucu_islemleri
-import threading
-import cv2
-import pyvirtualcam
-import YOLOv8_deploy
-import json
-import time, datetime
 #from Modules import mavproxy2
-from Modules import hesaplamalar
+
+from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy
 from Modules.qr_detection import QR_Detection
+from Modules.Cprint import cp
+from Server_manager import server_manager
+
 import multiprocessing as mp
 import numpy as np
-import os
-from Modules.custom_decorators import perf_counter,debug,memoize
-from logging_setup import setup_logging, start_log_listener
-from termcolor import cprint
-import pickle
-from Modules import SimplifiedTelemetry
-import numba
 import tkinter as tk
+import threading,cv2,pyvirtualcam,os,json,time,datetime
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik
@@ -42,266 +29,12 @@ import tkinter as tk
 #?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
-class server_manager:
-    def __init__(self,mavlink_ip) -> None:
-        
-        self.kullanici_adi = "algan"
-        self.sifre = "53SnwjQ2sQ"
-        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
-        self.mavlink_ip = mavlink_ip
-        
-        #* Servers
-        self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
-        self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
-        self.Server_mod = Server_Tcp.Server(PORT=9003,name="MOD")
-        self.Server_kamikaze = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
-        self.Server_UI_telem = Server_Tcp.Server(PORT=9005,name="UI_TELEM")
-        self.Server_YKI_ONAY = Server_Tcp.Server(PORT=9006,name="YKI_ONAY")
-        self.Server_ID=Server_Tcp.Server(PORT=9010,name="ID")
-        self.Server_UIframe = Server_Udp.Server(port=11000,name="UI-Frame")
-        self.Server_udp = Server_Udp.Server(port=5555,name="IHA-FRAME")
-        
-        #* Server States
-        self.ana_sunucu_status = False
-        self.Yönelim_sunucusu=False
-        self.Mod_sunucusu=False
-        self.kamikaze_sunucusu=False
-        self.UI_telem_sunucusu = False
-        self.YKI_ONAY_sunucusu = False
-        self.MAV_PROXY_sunucusu=False
-        self.görüntü_sunucusu=False
-        self.UIframe_sunucusu=False
-        self.PWM_sunucusu=False
-        self.ID_sunucusu=False
-
-    def senkron_local_saat(self):
-        status_code, sunuc_saati = self.ana_sunucu.sunucu_saati_al()
-        local_saat = datetime.datetime.today()
-        sunuc_saati = json.loads(sunuc_saati)
-        sunucu_saat, sunucu_dakika, sunucu_saniye, sunucu_milisaniye = sunuc_saati["saat"], sunuc_saati["dakika"],sunuc_saati["saniye"], sunuc_saati["milisaniye"]
-        sunucu_saati = datetime.datetime(year=local_saat.year,
-                                         month=local_saat.month,
-                                         day=local_saat.day,
-                                         hour=sunucu_saat,
-                                         minute=sunucu_dakika,
-                                         second=sunucu_saniye,
-                                         microsecond=sunucu_milisaniye)
-        self.fark = abs(local_saat - sunucu_saati)
-        print("Sunucu Saat Farki: ", self.fark)
-        return self.fark
-
-    def anasunucuya_baglan(self):
-        connection_status = False
-        while not connection_status:
-            try:
-                "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
-                ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(str(self.kullanici_adi),str(self.sifre))
-                if int(durum_kodu) == 200:
-                    print(f"\x1b[{31}m{'Ana Sunucuya Bağlanıldı: ' + durum_kodu}\x1b[0m")  # Ana sunucuya girerkenki durum kodu.
-                    self.ana_sunucu_status = True
-                    connection_status = self.ana_sunucu_status
-                else:
-                    raise Exception("DURUM KODU '200' DEGIL")
-            except Exception as e:
-                print("ANA SUNUCU : BAGLANTI HATASI -> ",e)
-
-    def Yönelim_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                connection_status = self.Server_yönelim.creat_server()
-                print("YONELİM : SERVER OLUŞTURULDU")
-            except (ConnectionError, Exception) as e:
-                print("YÖNELİM SERVER: oluştururken hata : ", e , " \n")
-                print("YÖNELİM SERVER: yeniden bağlanılıyor...\n")
-                connection_status=self.Server_yönelim.reconnect()
-                print("YONELİM : SERVER OLUŞTURULDU.")
-
-        self.Yönelim_sunucusu=connection_status
-        return connection_status
-
-    def Mod_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_mod.creat_server()
-                connection_status=True
-                print("MOD : SERVER OLUŞTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                print("MOD SERVER: oluştururken hata : ", e , " \n")
-                print("MOD SERVER: yeniden bağlanılıyor...\n")
-                connection_status=self.Server_pwm.reconnect()
-                print("MOD : SERVER OLUŞTURULDU\n")
-
-        self.Mod_sunucusu_sunucusu = connection_status
-        return connection_status
-
-    def MAV_PROXY_sunucusu_oluştur(self):
-        mavlink_obj = SimplifiedTelemetry.Telemetry(self.mavlink_ip) 
-        connection_status = False
-        while not connection_status:
-            try:
-                mavlink_obj.connect()
-                connection_status = True
-                print("MAVLINK : SERVER OLUŞTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                print("MAVLINK SERVER: oluştururken hata : ", e , " \n")
-                print("MAVLINK SERVER: yeniden bağlanılıyor...\n")
-                connection_status=mavlink_obj.connect()
-        self.MAV_PROXY_sunucusu=connection_status
-        return connection_status,mavlink_obj
-
-    def kamikaze_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_kamikaze.creat_server()
-                connection_status=True
-                print("KAMIKAZE : SERVER OLUŞTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                print("KAMIKAZE SERVER: oluştururken hata : ", e , " \n")
-                print("KAMIKAZE SERVER: yeniden bağlanılıyor...\n")
-                self.Server_kamikaze.reconnect()
-                print("KAMIKAZE : SERVER OLUŞTURULDU\n")
-        self.kamikaze_sunucusu = connection_status
-        return connection_status
-
-    def UI_telem_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_UI_telem.creat_server()
-                connection_status=True
-                print("UI_TELEM : SERVER OLUSTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                print("UI_TELEM : SERVER OLUSTURURKEN HATA : ", e , " \n")
-                print("UI_TELEM : SERVER YENIDEN BAGLANIYOR...\n")
-                self.Server_UI_telem.reconnect()
-                print("UI_TELEM : SERVER OLUSTURULDU\n")
-        self.UI_telem_sunucusu = connection_status
-        return connection_status  
-
-    def YKI_ONAY_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_YKI_ONAY.creat_server()
-                connection_status=True
-                print("YKI_ONAY : SERVER OLUSTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                print("YKI_ONAY : SERVER OLUSTURURKEN HATA : ", e , " \n")
-                print("YKI_ONAY : SERVER YENIDEN BAGLANIYOR...\n")
-                self.Server_YKI_ONAY.reconnect()
-                print("YKI_ONAY : SERVER OLUSTURULDU\n")
-        self.YKI_ONAY_sunucusu = connection_status
-        return connection_status
-
-    def Görüntü_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_udp.create_server()
-                connection_status=True
-                print("UDP : SERVER OLUŞTURULDU")
-            except (ConnectionError , Exception) as e:
-                print("UDP SERVER: oluştururken hata : ", e)
-            #    print("UDP SERVER'A 3 saniye içinden yeniden bağlanılıyor...\n")
-            #   self.Server_udp.close_socket()
-            #   self.Server_udp = Server_Udp.Server()
-            #   self.Server_udp.create_server() #TODO DÜZENLEME GELEBİLİR
-        self.görüntü_sunucusu = connection_status
-        return connection_status
-
-    def PWM_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_pwm.creat_server()
-                connection_status=True
-                print("PWM : SERVER OLUŞTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                print("PWM SERVER: oluştururken hata : ", e , " \n")
-                print("PWM SERVER: yeniden bağlanılıyor...\n")
-                self.Server_pwm.reconnect()
-                print("PWM : SERVER OLUŞTURULDU\n")
-        self.PWM_sunucusu=connection_status
-        return connection_status
-
-    def ArayuzFrame_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_UIframe.create_server()
-                connection_status=True
-                print("UI SERVER : SERVER OLUŞTURULDU")
-            except (ConnectionError , Exception) as e:
-                print("UI SERVER: oluştururken hata : ", e)
-        self.UIframe_sunucusu = connection_status
-        return connection_status
-
-    def pwm_gonder(self,pwm_tuple):
-        try:
-            self.Server_pwm.send_data_to_client(pickle.dumps(pwm_tuple))
-        except Exception as e:
-            print("PWM SUNUCU HATASI : ",e)
-            print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
-            self.Server_pwm.reconnect()
-
-    def ArayuzFrame_gonder(self,frame): #!Denenmedi... 
-        try:
-            self.Server_UIframe.send_frame_to_client(frame)
-        except Exception as e:
-            print("PWM SUNUCU HATASI : ",e)
-            print("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
-            self.Server_pwm.reconnect()
-
-    def ID_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_ID.creat_server()
-                connection_status=True
-                print("ID : SERVER OLUŞTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                print("ID : SERVER oluştururken hata : ", e , " \n")
-                print("ID : SERVER yeniden bağlanılıyor...\n")
-                self.Server_ID.reconnect()
-                print("ID : SERVER OLUŞTURULDU\n")
-        self.ID_sunucusu = connection_status
-        return connection_status
-
-    def sunuculari_oluştur(self):
-        self.anasunucuya_baglan()
-        self.senkron_local_saat()
-
-        print("Sunucular bekleniyor...")
-        t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)
-        t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
-        t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)
-        t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur) #Multiprocess ile uyumlu değil. "yonelim" içine alındı.
-        t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
-        t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
-        t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur)
-        t8 = threading.Thread(target=self.YKI_ONAY_sunucusu_oluştur)
-        t9 = threading.Thread(target=self.ID_sunucusu_oluştur)
-
-        t1.start()
-        t2.start()
-        t3.start()
-        t4.start()
-        t5.start()
-        t6.start()
-        t7.start()
-        t8.start()
-        t9.start()
-        
-        return t1,t2,t3,t4,t5,t6,t7,t8,t9
 
 class Yerİstasyonu():
 
     def __init__(self,event_map,SHUTDOWN_KEY,server_manager,queue_size=1,frame_debug_mode="IHA"): #TODO
 
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Models\\V5_best.pt")
         self._sv = server_manager
 
         self.frame_debug_mode = frame_debug_mode
@@ -360,7 +93,7 @@ class Yerİstasyonu():
 
     def capture_frames(self):
         process_name = mp.current_process().name
-        cprint(f"Starting Capture-process: {process_name}","green")
+        cp.info(f"Starting Capture-process: {process_name}")
 
         while True:
             if self._sv.görüntü_sunucusu:
@@ -413,7 +146,7 @@ class Yerİstasyonu():
 
     def process_frames(self, num):
         process_name = mp.current_process().name
-        cprint(f"Starting Frame_Processing process: {process_name}","green")
+        cp.info(f"Starting Frame_Processing process: {process_name}")
         event_queue, event_trigger = self.event_map[num]
 
         # yonelim_queue,yonelim_trigger = self.event_map[4]
@@ -432,7 +165,7 @@ class Yerİstasyonu():
             if event_trigger.is_set():
                 time.sleep(0.01)
                 event_message = event_queue.get()
-                cprint(f"{process_name} received event: {event_message}","red")
+                cp.warn(f"{process_name} received event: {event_message}","red")
                 event_trigger.clear()
 
             if not self.capture_queue.empty():
@@ -546,7 +279,7 @@ class Yerİstasyonu():
 
     def display_frames(self):
         process_name = mp.current_process().name
-        cprint(f"Starting Display process: {process_name}","green")
+        cp.info(f"Starting Display process: {process_name}")
         event_message=""
         display_process_queue,display_process_event = self.event_map[10]
         arayuz_frame_queue , arayuz_telem_queue=self.event_map[9]
@@ -586,7 +319,7 @@ class Yerİstasyonu():
                 if display_process_event.is_set():
                     time.sleep(0.01)
                     event_message = display_process_queue.get()
-                    cprint(f"{process_name} received event: {event_message}","red")
+                    cp.err(f"{process_name} received event: {event_message}",interrupt=False)
                     display_process_event.clear()
 
                 if event_message=="stop_capture":
@@ -597,7 +330,6 @@ class Yerİstasyonu():
         cv2.destroyAllWindows()
 
     def kalman_predict(self,kalman_buffer,buffer_size=5):
-    
         #! Kalman burada uygulanacak
 
         return kalman_buffer[0]
@@ -645,17 +377,17 @@ class Yerİstasyonu():
     #! ANA FONKSİYONLAR
     def yki_onay_ver(self):
         if self.YKI_ONAY_sunucusu:
-            cprint(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
+            cp(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
             if self.Yki_onayi_verildi == False:
                 self.Server_YKI_ONAY.send_data_to_client("ALGAN".encode())
                 self.Yki_onayi_verildi = True
-                cprint(f"ONAY VERILDI ---> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
+                cp(f"ONAY VERILDI ---> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
             else:
                 self.Server_YKI_ONAY.send_data_to_client("RED".encode())
                 self.Yki_onayi_verildi = False
-                cprint(f"ONAY REDDEDILDI ---> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
+                cp(f"ONAY REDDEDILDI ---> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
         else:
-            cprint(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
+            cp(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
             return False
 
     def yonelim(self,num=4):
@@ -761,7 +493,6 @@ class Yerİstasyonu():
 
         qr_sent_once = False
         lock_sent_once = False
-        
 
         qr_timer = time.perf_counter()
         lock_timer = time.perf_counter()
@@ -776,12 +507,12 @@ class Yerİstasyonu():
                 gorev_bilgisi,Type = event_queue.get()
                 print(Type)
                 if Type == "qr":
-                    cprint(f"QR:{gorev_bilgisi}","blue")
+                    cp(f"QR:{gorev_bilgisi}","blue")
                     if not qr_sent_once:
                         self.ana_sunucu.sunucuya_postala(gorev_bilgisi)
                         qr_sent_once = True
                 if Type == "kilitlenme":
-                    cprint(f"LOCK:{gorev_bilgisi}","blue")
+                    cp(f"LOCK:{gorev_bilgisi}","blue")
                     if not lock_sent_once:
                         self.ana_sunucu.sunucuya_postala(gorev_bilgisi)
                         lock_sent_once = True
@@ -832,31 +563,31 @@ class Yerİstasyonu():
 
     def terminate_all(self,p1,p2,p3,p4,p5):
             p1.terminate()
-            cprint("Capture process terminated...","red","on_white", attrs=["bold"])
+            cp("Capture process terminated...","red","on_white", attrs=["bold"])
             p2.terminate()
-            cprint("Frame-1 process terminated..","red","on_white", attrs=["bold"])
+            cp("Frame-1 process terminated..","red","on_white", attrs=["bold"])
             p3.terminate()
-            cprint("Frame-2 process terminated.","red","on_white", attrs=["bold"])
+            cp("Frame-2 process terminated.","red","on_white", attrs=["bold"])
             #p4.terminate()
-            #cprint("Frame-3 process terminated.","red","on_white", attrs=["bold"])
+            #cp("Frame-3 process terminated.","red","on_white", attrs=["bold"])
             p5.terminate()
-            cprint("Display process terminated..\n","red","on_white", attrs=["bold"])
+            cp("Display process terminated..\n","red","on_white", attrs=["bold"])
 
             p1.join()
-            cprint("Capture process joined..","red","on_white", attrs=["bold"])
+            cp("Capture process joined..","red","on_white", attrs=["bold"])
             p2.join()
-            cprint("Frame-1 process joined..","red","on_white", attrs=["bold"])
+            cp("Frame-1 process joined..","red","on_white", attrs=["bold"])
             p3.join()
-            cprint("Frame-2 process joined..","red","on_white", attrs=["bold"])
+            cp("Frame-2 process joined..","red","on_white", attrs=["bold"])
             #p4.join()
-            #cprint("Frame-3 process joined..","red","on_white", attrs=["bold"])
+            #cp("Frame-3 process joined..","red","on_white", attrs=["bold"])
             p5.join()
-            cprint("Display process joined..\n","red","on_white", attrs=["bold"])
+            cp("Display process joined..\n","red","on_white", attrs=["bold"])
 
             # listener_process.terminate()
-            # cprint("Listener process terminated..","red","on_white", attrs=["bold"])
+            # cp("Listener process terminated..","red","on_white", attrs=["bold"])
             # listener_process.join()
-            # cprint("Listener process joined..\n","red","on_white", attrs=["bold"])
+            # cp("Listener process joined..\n","red","on_white", attrs=["bold"])
 
     def ANA_GOREV_KONTROL(self):
         th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5 = self.process_flow_manager()
@@ -867,11 +598,11 @@ class Yerİstasyonu():
             try:
                 self.secilen_görev_modu = self._sv.Server_mod.recv_tcp_message()
             except Exception as e:
-                cprint(f"MOD : Secilen modu alirken hata -> {e}","red",attrs=["bold"]) #TODO EKLENECEK...
+                cp(f"MOD : Secilen modu alirken hata -> {e}","red",attrs=["bold"]) #TODO EKLENECEK...
 
             try:
                 if self.SHUTDOWN_KEY == "ALGAN":
-                    cprint("Final Shutdown..","red","on_white", attrs=["bold"])
+                    cp("Final Shutdown..","red","on_white", attrs=["bold"])
                     self.terminate_all(p1=p1,p2=p2,p3=p3,p4=p4,p5=p5)
                     break
 
@@ -880,38 +611,38 @@ class Yerİstasyonu():
                     self.trigger_event(2,"kilitlenme")
                     self.trigger_event(4,"yonelim")
                     self.önceki_mod = "kilitlenme"
-                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
                 elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
                     self.trigger_event(1,"kamikaze")
                     self.trigger_event(2,"kamikaze")
                     self.trigger_event(4,"qr")
                     self.önceki_mod = "kamikaze"
-                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
                 elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
                     self.trigger_event(1,"AUTO")
                     self.trigger_event(2,"AUTO")
                     self.trigger_event(4,"yonelim")
                     self.önceki_mod = "AUTO"
-                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
                 elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
                     self.trigger_event(1,"FBWA")
                     self.trigger_event(2,"FBWA")
                     self.trigger_event(4,"yonelim")
                     self.önceki_mod = "FBWA"
-                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
                 elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
                     self.trigger_event(1,"RTL")
                     self.trigger_event(2,"RTL")
                     self.trigger_event(4,"yonelim")
                     self.önceki_mod = "RTL"
-                    cprint(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
 
                 else:
-                    cprint(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
+                    cp(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
 
             except Exception as e:
                 print("ANA_GOREV_KONTROL HATA: ",e)
@@ -1060,7 +791,7 @@ if __name__ == '__main__':
 
 #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
 
-    server_manager_obj = server_manager(mavlink_ip="10.80.1.60")
+    server_manager_obj = server_manager(mavlink_ip="10.80.1.60",mavlink_port=5760,takimNo=1)
     yer_istasyonu_obj = Yerİstasyonu(frame_debug_mode="IHA",
                                      server_manager=server_manager_obj,
                                      event_map=event_map,
@@ -1068,7 +799,7 @@ if __name__ == '__main__':
                                      queue_size=2
                                      )
 
-    Gui_obj = gui(Yer_istasyonu_obj=yer_istasyonu_obj)
+    Gui_obj = gui(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
 
     görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
 
@@ -1076,4 +807,4 @@ if __name__ == '__main__':
 
     Gui_obj.run()
 
-    cprint("FINAL","red",attrs=["bold"])
+    cp("FINAL","red",attrs=["bold"])

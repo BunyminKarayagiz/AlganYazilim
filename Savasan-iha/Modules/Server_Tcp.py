@@ -1,4 +1,5 @@
 import socket
+from Modules.Cprint import cp
 
 class Server():
 
@@ -8,7 +9,7 @@ class Server():
         self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.PORT = PORT
         self.name=name
-        print(f"SERVER INIT -> {self.name}")
+        cp.ok(f"SERVER INIT -> {self.name}")
 
     def creat_server(self):
         self.tcp_socket.bind((self.server_ip, self.PORT))
