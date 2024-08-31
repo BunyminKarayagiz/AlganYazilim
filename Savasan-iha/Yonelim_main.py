@@ -1,7 +1,7 @@
 from Modules.Arayuz import App
 from Modules import Client_Tcp ,Server_Tcp,Trajectory_estimation
 from Modules.Cprint import cp
-from Modules.Trajectory_estimation import simple_estimation
+from Modules import Trajectory_estimation #simple_estimation,advanced_estimation,high_resolution_estimation
 import threading,time
 from Modules import ana_sunucu_islemleri
 import json
@@ -65,7 +65,7 @@ class Plane:
 
         longitude,latitude=self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],
                                                           speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],
-                                                          rotation=new_data['iha_yonelme'])
+                                                          pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
         
         self.data.append(new_data)
         
@@ -74,13 +74,28 @@ class Plane:
     def predict_next_position(self,x, y, speed, roll_degree,pitch_degree,rotation_yaw):
         if self.Prediction:
             (self.Prediction.pop(0)).delete()
-        try:
-            next_x,next_y=simple_estimation(x,y,speed,roll_degree,pitch_degree,rotation_yaw)
-        except Exception as e:
-            cp.err(f"Calculation Error ->{e}")
+            (self.Prediction.pop(0)).delete()
+            (self.Prediction.pop(0)).delete()
 
-        self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation_yaw,color_palette=self.color,plane_id=f"Predict"))
-        return next_x,next_y
+        try:
+            next_x,next_y=Trajectory_estimation.simple_estimation(lat=x, lon=y, speed=speed, roll_degree=roll_degree,pitch_degree=pitch_degree,rotation_yaw=rotation_yaw)
+            self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation_yaw,color_palette=self.color,plane_id=f"SIM"))
+        except Exception as e:
+            cp.err(f"SIM-Calculation Error ->{e}")
+
+        try:
+            next_x,next_y=Trajectory_estimation.advanced_estimation(lat=x, lon=y, speed=speed, roll_degree=roll_degree,pitch_degree=pitch_degree,rotation_yaw=rotation_yaw)
+            self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation_yaw,color_palette=self.color,plane_id=f"ADV"))
+        except Exception as e:
+            cp.err(f"ADV-Calculation Error ->{e}")
+
+        try:
+            next_x,next_y,new_yaw=Trajectory_estimation.high_resolution_estimation(lat=x,lon=y,speed=speed,roll_degree=roll_degree,pitch_degree=pitch_degree,rotation_yaw=rotation_yaw)
+            self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ"))
+        except Exception as e:
+            cp.err(f"HQ-Calculation Error ->{e}")
+
+        return 0,0 #next_x,next_y
 
 #!CLASS MAIN
 class FlightTracker:
