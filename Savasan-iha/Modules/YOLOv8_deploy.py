@@ -91,7 +91,6 @@ class Detection:
 
         return pwm_verileri
 
-
 """    def __call__(self):
 
         cap = cv2.VideoCapture(0)  # webcam

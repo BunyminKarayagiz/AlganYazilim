@@ -16,7 +16,7 @@ from colorama import Fore, init
 
 class KalmanFilter:
     def __init__(self, xCenter=None, yCenter=None):
-        print(Fore.RED + "Kalman algoritmasi devrede!")
+        # print(Fore.RED + "Kalman algoritmasi devrede!")
         init(autoreset=True)
         self.measurements = []
         self.kf = cv2.KalmanFilter(6, 2)
@@ -62,36 +62,14 @@ class KalmanFilter:
                                 [0, 0, 0, 1, 0, 0],
                                 [0, 0, 0, 0, 1, 0],
                                 [0, 0, 0, 0, 0, 1]], dtype=np.float32)
-        """
-        #* bakilacak
-        self.kf.controlMatrix = np.array([[0, 0],
-                                 [0, 0],
-                                 [1, 0],
-                                 [0, 1],
-                                 [0, 0],
-                                 [0, 0]], dtype=np.float32)
-        """
-
-    def predict(self):
-        statePre = self.kf.predict()
-        return statePre
     
     def predict(self):
-        """
-        #* bakilacak
-        acceleration = 0.5
-        braking = 0.1
-        control_input = np.array([[acceleration], [braking]], dtype=np.float32)
-        statePre = self.kf.predict()
-        self.kf.statePre += self.kf.controlMatrix @ control_input
-        """
         statePre = self.kf.predict()
         self.kf.errorCovPre = self.kf.transitionMatrix @ self.kf.errorCovPost @ self.kf.transitionMatrix.T + self.kf.processNoiseCov
         return statePre
 
-
     def correct(self, measurement):
-        start_time = time.perf_counter()
+        # start_time = time.perf_counter()
 
         S = self.kf.measurementMatrix @ self.kf.errorCovPre @ self.kf.measurementMatrix.T + self.kf.measurementNoiseCov
         K = self.kf.errorCovPre @ self.kf.measurementMatrix.T @ np.linalg.inv(S)
@@ -103,8 +81,8 @@ class KalmanFilter:
         I = np.eye(self.kf.transitionMatrix.shape[0], dtype=np.float32)
         self.kf.errorCovPost = (I - K @ self.kf.measurementMatrix) @ self.kf.errorCovPre
 
-        elapsed_time = time.perf_counter() - start_time
-        print(f"Correct işlemi Süresi: {elapsed_time:.9f} saniye")
+        """elapsed_time = time.perf_counter() - start_time
+        print(f"Correct işlemi Süresi: {elapsed_time:.9f} saniye")"""
 
         return self.kf.statePost
 
@@ -151,8 +129,23 @@ class KalmanFilter:
             speed_y = predicted_state[3].item()
             speed = math.sqrt((speed_x**2) + (speed_y**2))
 
-            coordinat_pwm = self.coordinat_pwm(x, y)
+            kx, ky = predicted_state.T[0][0], predicted_state.T[0][1]
 
+            kalmanPWM = self.coordinat_pwm(kx, ky)
+
+            gercek_konum = [x, y]
+            # kalmanPWM = [kx, ky]
+
+            # YOLOv8 deploy kodu açmadan tahmin yapılacağı zaman bu yorum satırı açılmalıdır
+            
+            np.set_printoptions(suppress=True)
+            """print(Fore.GREEN + f"Gercek konum : {gercek_konum}")
+            print(Fore.RED + f"Tahmin konum : {kalmanPWM}")
+            print("Tahmin PWM : ", tahmin_pwm)
+            print(f"Hiz : {speed}")
+            print("------------------------------")"""
+
+            """
             np.set_printoptions(suppress=True)
             print(Fore.BLUE + f"Tahmin PWM : {coordinat_pwm}") 
             print(f"Son ölçüm: {self.measurements[-1]}")
@@ -160,3 +153,6 @@ class KalmanFilter:
             print(f"Güncellenmiş durum: {state_post.T}")
             print(f"Hiz: {speed}")
             print("------")
+            """
+
+        return kalmanPWM

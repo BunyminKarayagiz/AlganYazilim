@@ -15,7 +15,7 @@ class Detection:
         self.kalman = KalmanFilter()
 
     def model_predict(self, frame, frame_id=0):
-        results = self.model.track(source=frame, conf=0.7, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
+        results = self.model.track(source=frame, conf=0.5, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
         
         pwm_verileri:tuple = (1500,1500,frame_id,0,0,0,0,0)
         
@@ -39,25 +39,23 @@ class Detection:
                 height = y2 - y1
                 pwm_verileri = self.coordinates_to_pwm(x_center, y_center, frame_id, width, height)
 
-                data = self.kalman_filter(x_center, y_center)
+                tahmin_pwm = self.kalman_filter(x_center, y_center)
  
                 if(target_area_x1 < x1 and target_area_x2 > x2 and target_area_y1 < y1 and target_area_y2 > y2):                                    
                     locked_or_not = True
 
-                return pwm_verileri, annotated_frame, locked_or_not
+                return pwm_verileri, annotated_frame, locked_or_not, tahmin_pwm
                 
             return pwm_verileri, annotated_frame, locked_or_not
             
-        return pwm_verileri, annotated_frame, locked_or_not
+        return pwm_verileri, annotated_frame, locked_or_not, 
     
     def kalman_filter(self, x_center, y_center):
         data = [x_center, y_center]
         self.datas.append(data)
         if len(self.datas) >= 50:
             self.datas = self.datas[-50:]
-        self.kalman.add_measurements(self.datas)
-
-        return data
+        return self.kalman.add_measurements(self.datas)
 
     def coordinates_to_pwm(self, x_center, y_center, frame_id, width, height):
         screen_width = 640
