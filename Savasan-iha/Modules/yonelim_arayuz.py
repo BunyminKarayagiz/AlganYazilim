@@ -1,5 +1,4 @@
 import customtkinter
-import tkinter
 from tkintermapview import TkinterMapView
 from PIL import Image, ImageTk,ImageOps
 import PIL

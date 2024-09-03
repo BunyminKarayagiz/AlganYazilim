@@ -6,11 +6,12 @@
 from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy
 from Modules.qr_detection import QR_Detection
 from Modules.Cprint import cp
+from Modules.yki_arayuz import main_gui
 from Server_manager import server_manager
 
 import multiprocessing as mp
 import numpy as np
-import tkinter as tk
+
 import threading,cv2,pyvirtualcam,os,json,time,datetime
 
 #!      SORUNLAR
@@ -649,96 +650,6 @@ class Yerİstasyonu():
 
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
-class gui:
-    def __init__(self,Yer_istasyonu_obj,server_manager) -> None:
-        #GUI INIT
-        self.root = tk.Tk()
-        self.root.title("Ground Control Station")
-        lock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
-        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
-        self.lock_img = lock_img.subsample(6, 6)
-        self.unlock_img = unlock_img.subsample(6, 6)
-        
-        self.indicator_anasunucu = tk.Label(self.root, text="AnaSunucu", width=20, height=2, bg='red', font=('Helvetica', 12))
-        self.indicator_yonelim = tk.Label(self.root, text="Yonelim", width=20, height=2, bg='red', font=('Helvetica', 12))
-        self.indicator_mod = tk.Label(self.root, text="Mod", width=20, height=2, bg='red', font=('Helvetica', 12))
-        self.indicator_kamikaze = tk.Label(self.root, text="Kamikaze", width=20, height=2, bg='red', font=('Helvetica', 12))
-        self.indicator_UI_telem = tk.Label(self.root, text="UI_Telem", width=20, height=2, bg='red', font=('Helvetica', 12))
-        self.indicator_YKI_ONAY = tk.Label(self.root, text="YKI_Onay", width=20, height=2, bg='red', font=('Helvetica', 12))
-        self.indicator1_MAV_PROXY = tk.Label(self.root, text="MavProxy", width=20, height=2, bg='red', font=('Helvetica', 12))
-        self.send_button = tk.Button(self.root, text="ONAY VER/REDDET", image = self.lock_img, command=Yer_istasyonu_obj.yki_onay_ver, font=('Helvetica', 14))
-        self.exit_button = tk.Button(self.root, text="EXIT YKI", command=self.close_all, font=('Helvetica', 14))
-        self.exit_button.pack(pady=20)
-        self.indicator_anasunucu.pack(pady=10)
-        self.indicator_yonelim.pack(pady=10)
-        self.indicator_mod.pack(pady=10)
-        self.indicator_kamikaze.pack(pady=10)
-        self.indicator_UI_telem.pack(pady=10)
-        self.indicator_YKI_ONAY.pack(pady=10)
-        self.indicator1_MAV_PROXY.pack(pady=10)
-        self.send_button.pack(pady=20)
-        
-        self._sv = server_manager
-        self.Yer_istasyonu_obj = Yer_istasyonu_obj
-
-    def server_status_check(self):
-        if self.Yer_istasyonu_obj.Yki_onayi_verildi:
-            self.send_button.config(image=self.unlock_img)
-        else:
-            self.send_button.config(image=self.lock_img)
-
-        if self._sv.ana_sunucu_status:
-            self.indicator_anasunucu.config(bg='green')
-        else:
-            self.indicator_anasunucu.config(bg='red')
-        
-        if self._sv.Yönelim_sunucusu:
-            self.indicator_yonelim.config(bg='green')
-        else:
-            self.indicator_yonelim.config(bg='red')
-
-        if self._sv.kamikaze_sunucusu:
-            self.indicator_mod.config(bg='green')
-        else:
-            self.indicator_mod.config(bg='red')
-
-        if self._sv.kamikaze_sunucusu:
-            self.indicator_kamikaze.config(bg='green')
-        else:
-            self.indicator_kamikaze.config(bg='red')
-
-        if self._sv.UI_telem_sunucusu:
-            self.indicator_UI_telem.config(bg='green')
-        else:
-            self.indicator_UI_telem.config(bg='red')
-
-        if self._sv.YKI_ONAY_sunucusu:
-            self.indicator_YKI_ONAY.config(bg='green')
-        else:
-            self.indicator_YKI_ONAY.config(bg='red')
-
-        if self._sv.MAV_PROXY_sunucusu:
-            self.indicator1_MAV_PROXY.config(bg='green')
-        else:
-            self.indicator1_MAV_PROXY.config(bg='red')
-        
-        # Schedule the next update
-        self.root.after(1000, self.server_status_check)
-
-    def close_all(self):
-        print("GUI: ('close_all') CALLED")
-        yer_istasyonu_obj.trigger_event(event_number=10,message="stop_capture")
-        time.sleep(3)
-        yer_istasyonu_obj.SHUTDOWN_KEY = "ALGAN"
-        self.root.destroy()
-
-    def run(self):# Run the GUI event
-        try:
-            self.root.after(500, self.server_status_check)
-            self.root.mainloop()
-        except KeyboardInterrupt:
-            print("KEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\n")
-
 def create_event_map():
     #Process frames
     message_queue_1 = mp.Queue()
@@ -798,13 +709,12 @@ if __name__ == '__main__':
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      queue_size=2
                                      )
+    Gui_obj = main_gui(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
 
-    Gui_obj = gui(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
 
     görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
-
     görev_kontrol.start()
 
-    Gui_obj.run()
 
-    cp("FINAL","red",attrs=["bold"])
+    Gui_obj.run()
+    cp.fatal("FINAL")
