@@ -1,7 +1,7 @@
 import argparse
 import json
 import numpy as np
-from Modules import path
+from Modules import path_drone as path
 import pickle
     
 import time , datetime
@@ -22,11 +22,11 @@ class Iha():
 
         # TCP Configurations
         self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
-        self.TCP_kamikazeyonelim=Client_Tcp.Client(host_ip,9002)
+        self.TCP_Yonelim=Client_Tcp.Client(host_ip,9002)
         self.TCP_mod=Client_Tcp.Client(host_ip,9003)
         self.TCP_kamikaze=Client_Tcp.Client(host_ip,9004)
         self.TCP_YKI_ONAY=Client_Tcp.Client(host_ip,9006)
-        self.TCP_Yonelim=Client_Tcp.Client(host_ip,9011)
+        self.TCP_kamikazeyonelim=Client_Tcp.Client(host_ip,9011)
 
         self.yönelim_yapılacak_rakip=""
         self.mevcut_mod =""
@@ -41,7 +41,7 @@ class Iha():
         connection=False
         while not connection:
             try:
-                self.TCP_yonelim.connect_to_server()
+                self.TCP_kamikazeyonelim.connect_to_server()
                 connection=True
                 print("KamikazeYONELIM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
@@ -123,11 +123,12 @@ class Iha():
 
     def sunuculara_baglan(self):
         self.Mod_sunucusuna_baglan()
-        self.Yonelim_sunucusuna_baglan()
         self.PWM_sunucusuna_baglan()
         self.kamikaze_sunucusuna_baglan()
         self.YKI_ONAY_sunucusuna_baglan()
         self.KamikazeYonelim_sunucusuna_baglan()
+        self.Yonelim_sunucusuna_baglan()
+        
 
     def Yki_confirm(self):
         while True:
@@ -305,7 +306,7 @@ class Iha():
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.0.0.236") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.132") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     MissionPlanner_OR_PIXHAWK_Connection = False
     while not MissionPlanner_OR_PIXHAWK_Connection:

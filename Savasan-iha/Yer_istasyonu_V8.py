@@ -51,7 +51,7 @@ class Yerİstasyonu():
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         
-        self.yolo_model = YOLOv8_deploy.Detection("C:\\Users\\asus\\AlganYazilim\\Savasan-iha\\Mustafa Berkay\\Models\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\ALGAN2\\AlganYazilim\\Savasan-iha\\Models\\V5_best.pt")
    
         self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
         self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
@@ -918,8 +918,8 @@ class gui:
         #GUI INIT
         self.root = tk.Tk()
         self.root.title("Ground Control Station")
-        lock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\lock.png')
-        unlock_img = tk.PhotoImage(file=os.getcwd()+'\\Savasan-iha\\Mustafa Berkay\\Resources\\unlock.png')
+        lock_img = tk.PhotoImage(file='D:\\Visual Code File Workspace\\ALGAN\ALGAN2\\AlganYazilim\\Savasan-iha\\Resources\\lock.png')
+        unlock_img = tk.PhotoImage(file='D:\\Visual Code File Workspace\\ALGAN\ALGAN2\\AlganYazilim\\Savasan-iha\\Resources\\unlock.png')
         self.lock_img = lock_img.subsample(6, 6) 
         self.unlock_img = unlock_img.subsample(6, 6) 
         
@@ -961,7 +961,7 @@ class gui:
         else:
             self.indicator_yonelim.config(bg='red')
 
-        if self.Yer_istasyonu_obj.kamikaze_sunucusu:
+        if self.Yer_istasyonu_obj.Mod_sunucusu:
             self.indicator_mod.config(bg='green')
         else:
             self.indicator_mod.config(bg='red')
@@ -1056,10 +1056,10 @@ if __name__ == '__main__':
     setup_logging(log_queue)
 
 #! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
-    yer_istasyonu_obj = Yerİstasyonu("10.80.1.60",
+    yer_istasyonu_obj = Yerİstasyonu("10.80.1.132",
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
-                                     frame_debug_mode="IHA",
+                                     frame_debug_mode="LOCAL",
                                      queue_size=2
                                      )
 
