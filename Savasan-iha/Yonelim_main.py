@@ -27,6 +27,9 @@ class Plane:
 
         self.path_limit = marker_limit + shadow
         self.path_list = []
+        
+        self.polygon_est = None
+        self.polygon_est_path = []
 
         self.path_obj= None
         self.first_two_coord=False
@@ -64,15 +67,14 @@ class Plane:
                 self.path_obj.add_position(new_data['iha_enlem'],new_data['iha_boylam'])
                 self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
 
-        a,b,c,d=self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],z=new_data['iha_irtifa'],
+        a,b,c,d=self.predict_next_position(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],height=new_data['iha_irtifa'],
                                                           speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],
                                                           pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
         
         self.data.append(new_data)
-        
         return a,b,c,d
 
-    def predict_next_position(self,x, y, z, speed, roll_degree,pitch_degree,rotation_yaw):
+    def predict_next_position(self,lat, lon, height, speed, roll_degree,pitch_degree,rotation_yaw):
         if self.Prediction:
             (self.Prediction.pop(0)).delete()
             (self.Prediction.pop(0)).delete()
@@ -80,7 +82,7 @@ class Plane:
             (self.Prediction.pop(0)).delete()
 
         try:
-            a,b,c,d =Trajectory_estimation.final_estimation(lat=x,lon=y,height=z,speed=speed,roll_degree=roll_degree,pitch_degree=pitch_degree,rotation_yaw=rotation_yaw)
+            a,b,c,d =Trajectory_estimation.final_estimation(lat=lat,lon=lon,height=height,speed=speed,roll_degree=roll_degree,pitch_degree=pitch_degree,rotation_yaw=rotation_yaw)
             self.Prediction.append(self.UI.set_plane(lat=a[0],lon=a[1],rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ-a"))
             self.Prediction.append(self.UI.set_plane(lat=b[0],lon=b[1],rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ-b"))
             self.Prediction.append(self.UI.set_plane(lat=c[0],lon=c[1],rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ-c"))
@@ -177,8 +179,8 @@ class FlightTracker:
             for entry in parsed_data:
                 takim_numarasi = entry["takim_numarasi"]
                 if takim_numarasi not in self.planes:
-                    print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                     self.add_plane(takim_numarasi)
+                    print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                 a,b,c,d = self.planes[takim_numarasi].append_data(entry)
             return (a,b,c,d)
         except Exception as e:
