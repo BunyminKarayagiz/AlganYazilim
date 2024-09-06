@@ -5,7 +5,7 @@ class cp:
         pass
 
     @staticmethod
-    def norm(message):
+    def cp(message):
         cprint(message,attrs=("bold",))
 
     @staticmethod
@@ -29,7 +29,8 @@ class cp:
         cprint(message,"light_red",attrs=("reverse","bold"))
 
 if __name__ == "__main__":
-    cp.norm("norm")
+    print("default")
+    cp.cp("cp-default")
     cp.ok("ok")
     cp.info("info")
     cp.warn("warn")

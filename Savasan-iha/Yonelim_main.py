@@ -1,7 +1,7 @@
-from Modules.Arayuz import App
+from Modules.yonelim_arayuz import App
 from Modules import Client_Tcp ,Server_Tcp,Trajectory_estimation
 from Modules.Cprint import cp
-from Modules.Trajectory_estimation import simple_estimation
+from Modules import Trajectory_estimation #simple_estimation,advanced_estimation,high_resolution_estimation
 import threading,time
 from Modules import ana_sunucu_islemleri
 import json
@@ -27,6 +27,9 @@ class Plane:
 
         self.path_limit = marker_limit + shadow
         self.path_list = []
+        
+        self.polygon_est = None
+        self.polygon_est_path = []
 
         self.path_obj= None
         self.first_two_coord=False
@@ -35,6 +38,7 @@ class Plane:
 
         #Tahminleme için kullanılan parametreler
         self.Prediction = []
+        self.tahmin=((0,0),(0,0),(0,0),(0,0),(0,0))
 
     def append_data(self, new_data: Dict[str, Any]):
         if len(self.data) > self.data_limit:
@@ -63,24 +67,30 @@ class Plane:
                 self.path_obj.add_position(new_data['iha_enlem'],new_data['iha_boylam'])
                 self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
 
-        longitude,latitude=self.predict_next_position(x=new_data['iha_boylam'],y=new_data['iha_enlem'],
+        a,b,c,d=self.predict_next_position(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],height=new_data['iha_irtifa'],
                                                           speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],
-                                                          rotation=new_data['iha_yonelme'])
+                                                          pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
         
         self.data.append(new_data)
-        
-        return longitude,latitude
+        return a,b,c,d
 
-    def predict_next_position(self,x, y, speed, roll_degree,pitch_degree,rotation_yaw):
+    def predict_next_position(self,lat, lon, height, speed, roll_degree,pitch_degree,rotation_yaw):
         if self.Prediction:
             (self.Prediction.pop(0)).delete()
-        try:
-            next_x,next_y=simple_estimation(x,y,speed,roll_degree,pitch_degree,rotation_yaw)
-        except Exception as e:
-            cp.err(f"Calculation Error ->{e}")
+            (self.Prediction.pop(0)).delete()
+            (self.Prediction.pop(0)).delete()
+            (self.Prediction.pop(0)).delete()
 
-        self.Prediction.append(self.UI.set_plane(lat=next_y,lon=next_x,rotation=rotation_yaw,color_palette=self.color,plane_id=f"Predict"))
-        return next_x,next_y
+        try:
+            a,b,c,d =Trajectory_estimation.final_estimation(lat=lat,lon=lon,height=height,speed=speed,roll_degree=roll_degree,pitch_degree=pitch_degree,rotation_yaw=rotation_yaw)
+            self.Prediction.append(self.UI.set_plane(lat=a[0],lon=a[1],rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ-a"))
+            self.Prediction.append(self.UI.set_plane(lat=b[0],lon=b[1],rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ-b"))
+            self.Prediction.append(self.UI.set_plane(lat=c[0],lon=c[1],rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ-c"))
+            self.Prediction.append(self.UI.set_plane(lat=d[0],lon=d[1],rotation=rotation_yaw,color_palette=self.color,plane_id=f"HQ-d"))
+        except Exception as e:
+            cp.err(f"HQ-Calculation Error ->{e}")
+
+        return a,b,c,d
 
 #!CLASS MAIN
 class FlightTracker:
@@ -169,10 +179,10 @@ class FlightTracker:
             for entry in parsed_data:
                 takim_numarasi = entry["takim_numarasi"]
                 if takim_numarasi not in self.planes:
-                    print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                     self.add_plane(takim_numarasi)
-                lon_track,lat_track = self.planes[takim_numarasi].append_data(entry)
-            return (lon_track,lat_track)
+                    print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
+                a,b,c,d = self.planes[takim_numarasi].append_data(entry)
+            return (a,b,c,d)
         except Exception as e:
             cp.fatal(e)
 
@@ -222,7 +232,7 @@ class FlightTracker:
                 durum_kodu,telemetri_cevabı = self.ana_sunucu.sunucuya_postala(self.bizim_veri)
                 self.process_data_stream(telemetri_cevabı)
                 time.sleep(self.TK_INTERVAL_TIME_SEC)
-        
+
         if mode == "UI_TEST":
             time.sleep(2)
             self.add_plane_for_testing(start_lat=52.5164,start_lon=13.3734,limit=20,rotation=10,plane_id="TEST")
@@ -261,11 +271,11 @@ class FlightTracker:
             rotation += 10
             #time.sleep(0.1)
             print("TEST-MARKERS ADDED..")
-            
+
 
     def connect_mission(self,port=5763):
         parser = argparse.ArgumentParser()
-        parser.add_argument('--connect', default=f'tcp:127.0.0.1:5762')
+        parser.add_argument('--connect', default=f'tcp:127.0.0.1:{port}')
         args = parser.parse_args()
         connection_string = args.connect
         self.iha=path.Plane(connection_string)
@@ -283,8 +293,9 @@ class FlightTracker:
                     "zaman_farki": 500}
 
 if __name__ == "__main__":
+
     Mode = "Monitor" #Monitor / IHA / UI_TEST
-    
+
     tracker=FlightTracker("10.0.0.236") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
