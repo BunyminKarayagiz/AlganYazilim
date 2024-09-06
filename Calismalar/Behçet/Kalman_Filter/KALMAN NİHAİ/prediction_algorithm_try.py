@@ -1,13 +1,3 @@
-"""Tahmin algoritmasi için yapilmasi gerekenler(Önem sirasina göre)"""
-# Yapıldı: prediction_algorithm, yolov8_depoloy koduna entegre edilecek. Oradan gelen verilerle kalman filtresi çalıaşacak. 
-#! Amaç: Matematiksel işlemlerin arttırılması ve yeni işlemlerin çoğaltılması ile tahminler, gerçek değerlere yakınlaştırılacak.
-#! Yapılacak: Hız verilerini doğru ölçmediği farkedeldi düzeltilmesi gerekiyor! Hızı doğru ölçebildiğimizden emin olmamız lazım. Çünkü konum hız ile bulunuyor.
-# Yapıldı: İvme verileri oluşturulacak.
-#! Yapılacak: Üç boyutlu takip eklenecek. Bu yolov8_deploy kısmında da yapılabilir.
-#! Yapılacak: Önceden bilinen verilerle kalman filtresinin çalışmasına bakılacak.
-#! Hızlanma(Acceleration) Modeline bakılacak. 
-#! Denenebilir: Eğer her şey düzenli çalışırsa çoklu kalman yaklaşımı uygulanabilir.
-
 import cv2
 import numpy as np
 import math
