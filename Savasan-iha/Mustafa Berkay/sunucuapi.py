@@ -83,7 +83,7 @@ girisveri = {"kadi": "algan", "sifre": "53SnwjQ2sQ"}
 def giris():
     # gelen değişkeni kullanıcı adını ve sifreyi döndürüyor.
     gelen = json.loads(request.data)
-    if girisveri == gelen:
+    if gelen in girisveri:
         print(gelen["kadi"].upper() + " Giris Yapti")
         return "200"
     else:
@@ -178,4 +178,4 @@ def cikis():
     return "200"
 
 
-app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+app.run(host='10.80.1.79', port=5000, debug=True, threaded=True)
