@@ -1,7 +1,7 @@
 import argparse
 import json
 import numpy as np
-from Modules import path
+from Modules import path_drone as path
 import pickle
     
 import time , datetime
@@ -304,13 +304,13 @@ class Iha():
             print("ERROR KAMIKAZE ->" + str(e))
 
 
-
-
 class client_manager:
-    pass
+    def __init__(self) -> None:
+        pass    
 
 class autopilot:
-    pass
+    def __init__(self) -> None:
+        pass
 
 if __name__ == '__main__':
 

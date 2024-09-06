@@ -6,7 +6,12 @@ import multiprocessing as mp
 
 class QR_Detection:
     def __init__(self):
-        self.license_key = "DLC2TdMdmL9ZvN620g//F4iSiRzjtjjLkjT3d0OCuvqDeA3i4W4Ng5HA1sMKbB3Nwe3xlSDeD22uWy6Oj1C9wvdCV3aT9WS0VGcfu41ibk96+cYwsDp26UaZfjGzMa7yPmt5VweXkmHkLVR3v3bpS3sh5SFHJCUKKkjP+ffkX1QdTpuMov9hEMNXk21h/yOLtoEB4Goz4D/dGG6goUb7NfS7OSYhSReEnB/O1keBRjaothIADoIPwEU9QRVoCbubGJwTJ6nsQC8Hst5vIkuTjxExPSieX8ld0lLCyHUe4tCtpD2H6xSUPHl2XHWWp7GBn9/T3y6zr2h8dAuX6tGjw95rXNxe62Y7sAeZeMUVrDVp2PEVQzj4AB1Q1pUNjmAcd9p55KYn5fK1B8IEDTcEHR3IRbHBRNlGKUHld/jN5EtYTY6Y8cO5Y8lYWPBcuqSVnnLQ+LUewnupLecxkYHjoNzFYGGAfAUsZYS8F3DWsbMCy/+euUOa"
+        #Eski key
+        #self.license_key = "DLC2TdMdmL9ZvN620g//F4iSiRzjtjjLkjT3d0OCuvqDeA3i4W4Ng5HA1sMKbB3Nwe3xlSDeD22uWy6Oj1C9wvdCV3aT9WS0VGcfu41ibk96+cYwsDp26UaZfjGzMa7yPmt5VweXkmHkLVR3v3bpS3sh5SFHJCUKKkjP+ffkX1QdTpuMov9hEMNXk21h/yOLtoEB4Goz4D/dGG6goUb7NfS7OSYhSReEnB/O1keBRjaothIADoIPwEU9QRVoCbubGJwTJ6nsQC8Hst5vIkuTjxExPSieX8ld0lLCyHUe4tCtpD2H6xSUPHl2XHWWp7GBn9/T3y6zr2h8dAuX6tGjw95rXNxe62Y7sAeZeMUVrDVp2PEVQzj4AB1Q1pUNjmAcd9p55KYn5fK1B8IEDTcEHR3IRbHBRNlGKUHld/jN5EtYTY6Y8cO5Y8lYWPBcuqSVnnLQ+LUewnupLecxkYHjoNzFYGGAfAUsZYS8F3DWsbMCy/+euUOa"
+        
+        #Yeni key
+        self.license_key = "t0068lQAAAFWF98Si8vRizMjfFooxP2pjczQppvB8vFBzyK8Ulpm5GsOUsD0Gc0CajgRyZIYmshrCeO9dF8YYDTadnECfcus="
+        
         BarcodeReader.init_license(self.license_key)
         mp.current_process().name
         self.image_path = f"temp_frame_{mp.current_process().name}.jpg"
@@ -36,12 +41,12 @@ class QR_Detection:
 
         # Barkodları tespit etmek için decode_data_matrix fonksiyonunu çağırın
         qr_bilgisi = self.decode_data_matrix()
-
+        print(qr_bilgisi)
         # Geçici dosyayı silin
         os.remove(self.image_path)
         return qr_bilgisi
 
-"""if __name__ == "__main__":
+if __name__ == "__main__":
 
     qrd = QR_Detection()
     # Webcam'i başlatın
@@ -62,4 +67,3 @@ class QR_Detection:
     # Çıkış yaparken kamera bağlantısını serbest bırakın ve pencereleri kapatın
     cap.release()
     cv2.destroyAllWindows()
-"""
