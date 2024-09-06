@@ -17,11 +17,6 @@ class Detection:
         self.kalman = KalmanFilter()
         init(autoreset=True)
 
-    def distanceCM(self, gercek_genislik, odak_uzakligi, goruntu_genisligi):
-        uzaklik = (gercek_genislik * odak_uzakligi) / goruntu_genisligi
-        
-        return uzaklik
-
 
     def model_predict(self, frame, frame_id=0):
         results = self.model.track(source=frame, conf=0.2, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
