@@ -37,41 +37,41 @@ class Iha():
         self.YKI_CONFIRMATION_STATUS = False
 
     #! Sunucular ve bağlantı
-    def KamikazeYonelim_sunucusuna_baglan(self):
-        connection=False
-        while not connection:
-            try:
-                self.TCP_yonelim.connect_to_server()
-                connection=True
-                print("KamikazeYONELIM SERVER: BAĞLANDI.")
-            except (ConnectionError , Exception) as e:
-                print("KamikazeYONELIM SERVER: baglanırken hata: ", e)
-
-    def CONNECT_TRACK_CLIENT(self):
-        connection=False
-        while not connection:
-            try:
-                self.TCP_Yonelim.connect_to_server()
-                connection=True
-                print("YONELIM SERVER: BAĞLANDI.")
-            except (ConnectionError , Exception) as e:
-                print("YONELIM SERVER: baglanırken hata: ", e)
-
     def CONNECT_PWM_CLIENT(self):
         connection=False
         while not connection:
             try:
-                self.TCP_pwm.connect_to_server()
+                self.TCP_PWM.connect_to_server()
                 connection=True
                 print("PWM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("PWM SERVER: baglanırken hata: ", e)
 
+    def CONNECT_TRACK_CLIENT(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_TRACK.connect_to_server()
+                connection=True
+                print("YONELIM SERVER: BAĞLANDI.")
+            except (ConnectionError , Exception) as e:
+                print("YONELIM SERVER: baglanırken hata: ", e)
+
     def CONNECT_MODE_CLIENT(self):
         connection=False
         while not connection:
             try:
-                self.TCP_mod.connect_to_server()
+                self.TCP_MOD.connect_to_server()
+                connection=True
+                print("MOD SERVER: BAĞLANDI.")
+            except (ConnectionError , Exception) as e:
+                print("MOD SERVER: baglanırken hata: ", e)
+
+    def CONNECT_KAMIKAZE_CLIENT(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_KAMIKAZE.connect_to_server()
                 connection=True
                 print("MOD SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
@@ -81,22 +81,12 @@ class Iha():
         connection=False
         while not connection:
             try:
-                self.TCP_YKI_ONAY.connect_to_server()
+                self.TCP_CONFIRMATION.connect_to_server()
                 connection=True
                 print("YKI_ONAY SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("YKI_ONAY SERVER: baglanırken hata: ", e)
-                
-    def CONNECT_KAMIKAZE_CLIENT(self):
-        connection=False
-        while not connection:
-            try:
-                self.TCP_kamikaze.connect_to_server()
-                connection=True
-                print("MOD SERVER: BAĞLANDI.")
-            except (ConnectionError , Exception) as e:
-                print("MOD SERVER: baglanırken hata: ", e)
-
+            
     def IHA_MissionPlanner_Connect(self, tcp_port):
         parser = argparse.ArgumentParser()
         parser.add_argument('--connect', default=f'tcp:127.0.0.1:{str(tcp_port)}')
@@ -113,11 +103,10 @@ class Iha():
 
     def sunuculara_baglan(self):
         self.CONNECT_MODE_CLIENT()
-        self.Yonelim_sunucusuna_baglan()
-        self.PWM_sunucusuna_baglan()
-        self.kamikaze_sunucusuna_baglan()
-        self.YKI_ONAY_sunucusuna_baglan()
-        self.KamikazeYonelim_sunucusuna_baglan()
+        self.CONNECT_PWM_CLIENT()
+        self.CONNECT_TRACK_CLIENT()
+        self.CONNECT_KAMIKAZE_CLIENT()
+        self.CONNECT_CONFIRMATION_CLIENT()
 
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
@@ -132,13 +121,13 @@ class Iha():
     def Yki_confirm(self):
         while True:
             try:
-                ONAY=self.TCP_YKI_ONAY.client_recv_message().decode();
+                ONAY=self.TCP_CONFIRMATION.client_recv_message().decode();
                 print("YKI ONAY -> ",ONAY)
                 if ONAY == "ALGAN":
                     self.YKI_CONFIRMATION_STATUS = True
                     print("YKI ONAYI ALINDI..")
                 else:
-                    self.YKI_ONAYI_VERILDI = False
+                    self.YKI_CONFIRMATION_STATUS = False
                     print("YKI ONAYI REDDEDILDI..")
             except Exception as e:
                 print("YKI ONAYI BEKLERKEN HATA : ",e)
@@ -149,7 +138,7 @@ class Iha():
         pwm_array = np.zeros((1,3),dtype=np.uint32)
         while True:
             try:
-                pwm_array=pickle.loads(self.TCP_pwm.client_recv_message())
+                pwm_array=pickle.loads(self.TCP_PWM.client_recv_message())
                 print(pwm_array)
                 try:
                     if self.YKI_CONFIRMATION_STATUS == True:
@@ -182,7 +171,7 @@ class Iha():
                     self.yönelim_release_event.clear()
                 try:
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
-                    self.yönelim_yapılacak_rakip = self.TCP_Yonelim.client_recv_message()
+                    self.yönelim_yapılacak_rakip = self.TCP_TRACK.client_recv_message()
                     rakip_enlem,rakip_boylam = self.yönelim_yapılacak_rakip
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
 
@@ -347,7 +336,7 @@ if __name__ == '__main__':
 
         if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # High High
             iha_obj.mod = "AUTO" 
-            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+            iha_obj.TCP_MOD.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "AUTO"
             if iha_path.get_ap_mode()!="AUTO":
                 iha_path.set_ap_mode("AUTO")
@@ -356,7 +345,7 @@ if __name__ == '__main__':
 
         if ((selected_servo_ch_6 >= 1400 and selected_servo_ch_6 <= 1600) and selected_servo_ch_8 > 1600):  # Mid High
             iha_obj.mod = "FBWA" 
-            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+            iha_obj.TCP_MOD.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "FBWA"
             if iha_path.get_ap_mode()!="FBWA":
                 iha_path.set_ap_mode("FBWA")
@@ -365,7 +354,7 @@ if __name__ == '__main__':
 
         if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 > 1600):  # LOW High
             iha_obj.mod = "RTL" 
-            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+            iha_obj.TCP_MOD.send_message_to_server(iha_obj.mod)
             iha_obj.onceki_mod = "RTL"
             if iha_path.get_ap_mode()!="RTL":
                 iha_path.set_ap_mode("RTL")
@@ -374,7 +363,7 @@ if __name__ == '__main__':
 
         if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 < 1400):  # ch6: High, ch8: LOW
             iha_obj.mod = "kamikaze"
-            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+            iha_obj.TCP_MOD.send_message_to_server(iha_obj.mod)
             iha_obj.kamikaze_release_event.set()
             iha_obj.onceki_mod = "kamikaze"
             print("SELECTED MOD : KAMIKAZE")
@@ -382,7 +371,7 @@ if __name__ == '__main__':
 
         if (selected_servo_ch_6 >= 1600 and (selected_servo_ch_8 > 1400 and selected_servo_ch_8 < 1600)):  # ch6: High, ch8: Mid
             iha_obj.mod = "kilitlenme"
-            iha_obj.TCP_mod.send_message_to_server(iha_obj.mod)
+            iha_obj.TCP_MOD.send_message_to_server(iha_obj.mod)
             iha_obj.yönelim_release_event.set()
             iha_obj.onceki_mod = "kilitlenme"
             if iha_path.get_ap_mode()!="FBWA":

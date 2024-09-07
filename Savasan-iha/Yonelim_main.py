@@ -109,7 +109,7 @@ class FlightTracker:
         self.ana_sunucu_status = False
 
         self.ID_Client=Client_Tcp.Client(Yazılım_ip,9010) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
-        self.TCP_Iha_yonelim = Server_Tcp.Server(PORT=9011,name="IHA_yonelim") #Iha'ya yonelim verisini gönderecek Server
+        self.TCP_UI_TELEM = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
         
         self.iha:any
         
@@ -149,13 +149,13 @@ class FlightTracker:
         connection_status=False
         while not connection_status:
             try:
-                self.TCP_Iha_yonelim.creat_server()
+                self.TCP_UI_TELEM.creat_server()
                 connection_status=True
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
                 print("IHA_YONELIM SERVER: oluştururken hata : ", e , " \n")
                 print("IHA_YONELIM SERVER: yeniden bağlanılıyor...\n")
-                self.TCP_Iha_yonelim.reconnect()
+                self.TCP_UI_TELEM.reconnect()
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
         self.kamikaze_sunucusu = connection_status
         return connection_status
@@ -168,7 +168,7 @@ class FlightTracker:
 
     def send_coord_to_uav(self,coord_data):
         try:
-            self.TCP_Iha_yonelim.send_data_to_client(coord_data)        
+            self.TCP_UI_TELEM.send_data_to_client(coord_data)        
         except Exception as e:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
 
