@@ -75,7 +75,7 @@ qr_koordinati = {
     "qrBoylam": 149.1613770
 }
 
-girisveri = [{"kadi": "algan", "sifre": "53SnwjQ2sQ"},{"kadi": "algan2", "sifre": "1234"}]
+girisveri = [{"kadi": "algan", "sifre": "53SnwjQ2sQ"},{"kadi": "rakip2", "sifre": "rakip2"},{"kadi": "rakip3", "sifre": "rakip3"}]
 veri1=[{
     "takim_numarasi": 1,
     "iha_enlem": 0.0,
@@ -89,6 +89,17 @@ veri1=[{
 }]
 veri2=[{
     "takim_numarasi": 2,
+    "iha_enlem": 0.0,
+    "iha_boylam": 0.0,
+    "iha_irtifa": 0,
+    "iha_dikilme": 0,
+    "iha_yonelme": 0,
+    "iha_yatis": 0,
+    "iha_hizi":0,
+    "zaman_farki": 0
+}]
+veri3=[{
+    "takim_numarasi": 3,
     "iha_enlem": 0.0,
     "iha_boylam": 0.0,
     "iha_irtifa": 0,
@@ -132,8 +143,10 @@ def tele():
     gelen = json.loads(request.data)
     if gelen["takim_numarasi"] == 1:
         veri1.append(gelen)
-    else:
+    elif gelen["takim_numarasi"] == 2:
         veri2.append(gelen)
+    elif gelen["takim_numarasi"] == 3:
+        veri3.append(gelen)
 
     gelenveri = {
         "sunucusaati": {
@@ -145,7 +158,8 @@ def tele():
         },
         "konumBilgileri": [
             veri1[-1],
-            veri2[-1]
+            veri2[-1],
+            veri3[-1]
         ]
     }  # Test verileri
     print(gelenveri)

@@ -13,19 +13,21 @@ import numpy as np
 
 import threading,cv2,pyvirtualcam,os,json,time,datetime,av
 
+#! YAZILIM BİLGİSAYARI
+
 #!      SORUNLAR
-#!SUNUCU-SAATİ + FARK :               Eksik(Mevcut Durum yeterli)
-#?Yonelim-PWM Değişimi :              Eksik(Çözüldü)
+#!SUNUCU-SAATİ + FARK :                Eksik(Mevcut Durum yeterli)
+#?Yonelim-PWM Değişimi :               Eksik(Çözüldü)
 #?Ana_sunucuya veri gönderimi :        Kusurlu(Çözüldü)
 #?Telemetri verilerinin alınması :     Kusurlu(Çözüldü)
-#TODOYonelim modunda rakip seçimi:        Eksik(GÖREVLERE EKLENDİ)
-#!Aşırı yönelim(pwm):                   Eksik(iptal)
-#TODO Hava savunma sistemi:                Eksik(GÖREVLERE EKLENDI.)
+#TODOYonelim modunda rakip seçimi:     Eksik(GÖREVLERE EKLENDİ)
+#!Aşırı yönelim(pwm):                  Eksik(iptal)
+#TODO Hava savunma sistemi:            Eksik(GÖREVLERE EKLENDI.)
 #!Pwm veri doğruluğu:                  Test edilecek
 #?Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
 #!Logger                                Kusurlu/Eksik(iptal)
 #!Qr için timeout                       Eksik(İptal edildi)
-#TODO Kalman ile rota tahmin                Eksik(görevlere eklendi.)
+#TODO Kalman ile rota tahmin            Eksik(görevlere eklendi.)
 #?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
@@ -77,7 +79,6 @@ class Yerİstasyonu():
         self.height=0
         self.rakip=0
 
-
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
@@ -85,17 +86,23 @@ class Yerİstasyonu():
         self.mavlink_port = mavlink_port
         self.takim_no = takimNo
 
-        #* Servers # IHA:<9000> YONELIM_PC:<11000>
-        self.Server_UDP = Server_Udp.Server(PORT=5555,name="IHA-VIDEO") #Görüntü aktarımı
-        self.Server_PWM = Server_Tcp.Server(PORT=9001,name="KALMAN-PWM")
-        self.Server_TRACK = Server_Tcp.Server(PORT=9002,name="TRACK")
-        self.Server_MOD = Server_Tcp.Server(PORT=9003,name="MODE")
-        self.Server_KAMIKAZE = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
-        self.Server_CONFIRMATION = Server_Tcp.Server(PORT=9005,name="CONFIRMATION")
+        #* Servers # 
+        #* < Yazılım_PC-IHA :8000 >  <Yazılım_PC-Yonelim_PC :9000 >   <Yonelim_PC-IHA :11000 >
 
-        self.Server_UI_VIDEO = Server_Udp.Server(PORT=11000,name="UI-VIDEO")
-        self.Server_UI_Telem = Server_Tcp.Server(PORT=11001,name="UI_TELEM")
-        self.Server_UI_Control = Server_Tcp.Server(PORT=11002,name="UI-CONTROL")
+        #* IHA -- YazılımPC
+        self.Server_PWM = Server_Tcp.Server(PORT=8001,name="KALMAN-PWM")
+        self.Server_MOD = Server_Tcp.Server(PORT=8002,name="MODE")
+        self.Server_KAMIKAZE = Server_Tcp.Server(PORT=8003,name="KAMIKAZE")
+        self.Server_CONFIRMATION = Server_Tcp.Server(PORT=8004,name="CONFIRMATION")
+        self.Server_UDP = Server_Udp.Server(PORT=5555,name="IHA-VIDEO")
+
+        #self.Server_TRACK = Server_Tcp.Server(PORT="UNDEFINED",name="TRACK") #İPTAL OLACAK - YONELIM BILGİSAYARINA TASINACAK.
+
+        #* YonelimPC -- YazılımPC
+        self.Server_UI_Telem = Server_Tcp.Server(PORT=11000,name="UI_TELEM")
+
+        self.Server_UI_Control = Server_Tcp.Server(PORT="UNDEFINED",name="UI-CONTROL")
+        self.Server_UI_VIDEO = Server_Udp.Server(PORT="UNDEFINED",name="UI-VIDEO")
 
         #* Server State
         self.ANA_SUNUCU_DURUMU=False
@@ -173,18 +180,18 @@ class Yerİstasyonu():
         self.PWM_sunucusu=connection_status
         return connection_status
 
-    def CREATE_TRACK_SERVER(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                connection_status = self.Server_TRACK.creat_server()
-                cp.ok("TRACK SERVER : OLUSTURULDU")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"TRACK SERVER : OLUSTURULAMADI : {e} \nTRACK SERVER : YENIDEN BAGLANIYOR...")
-                connection_status=self.Server_TRACK.reconnect()
-                cp.ok("TRACK SERVER: OLUSTURULDU")
-        self.TRACK_SERVER_STATUS=connection_status
-        return connection_status
+    # def CREATE_TRACK_SERVER(self):
+    #     connection_status=False
+    #     while not connection_status:
+    #         try:
+    #             connection_status = self.Server_TRACK.creat_server()
+    #             cp.ok("TRACK SERVER : OLUSTURULDU")
+    #         except (ConnectionError, Exception) as e:
+    #             cp.warn(f"TRACK SERVER : OLUSTURULAMADI : {e} \nTRACK SERVER : YENIDEN BAGLANIYOR...")
+    #             connection_status=self.Server_TRACK.reconnect()
+    #             cp.ok("TRACK SERVER: OLUSTURULDU")
+    #     self.TRACK_SERVER_STATUS=connection_status
+    #     return connection_status
 
     def CREATE_MOD_SERVER(self):
         connection_status=False
@@ -574,20 +581,20 @@ class Yerİstasyonu():
         return kalman_buffer[0]
 
     #! KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
-    def yonelim_gonder(self,hedef): #TODO Yeniden bağlanma durumları kontrol edilecek...
-        try:
-            self.Server_TRACK.send_data_to_client(json.dumps(hedef).encode())
-        except Exception as e:
-            cp.err(f"TRACK : SENDING ERROR -> {e}\nTRACK : YENIDEN BAGLANIYOR..")
-            self.Server_TRACK.reconnect()
+    # def yonelim_gonder(self,hedef): #TODO Yeniden bağlanma durumları kontrol edilecek...
+    #     try:
+    #         self.Server_TRACK.send_data_to_client(json.dumps(hedef).encode())
+    #     except Exception as e:
+    #         cp.err(f"TRACK : SENDING ERROR -> {e}\nTRACK : YENIDEN BAGLANIYOR..")
+    #         self.Server_TRACK.reconnect()
 
-    def rakip_sec(self,bizim_telemetri,rakip_telemetri): #? Ekleme yapılabilir...
-            try:
-                secilen_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri) 
-                secilen_rakip = 0
-                return secilen_rakip
-            except Exception as e:
-                print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
+    # def rakip_sec(self,bizim_telemetri,rakip_telemetri): #? Ekleme yapılabilir...
+    #         try:
+    #             secilen_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri) 
+    #             secilen_rakip = 0
+    #             return secilen_rakip
+    #         except Exception as e:
+    #             print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
 
     #! KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
     def get_qrCoord(self,timeout=1): #TODO Timeout özelliği eklenecek...

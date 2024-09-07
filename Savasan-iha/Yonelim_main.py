@@ -222,7 +222,7 @@ class FlightTracker:
         if mode == "Monitor":
         #!Testing
             self.anasunucuya_baglan()
-            self.connect_mission()
+            self.connect_mission(port=5762)
             time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
 
@@ -272,8 +272,7 @@ class FlightTracker:
             #time.sleep(0.1)
             print("TEST-MARKERS ADDED..")
 
-
-    def connect_mission(self,port=5763):
+    def connect_mission(self,port=5762):
         parser = argparse.ArgumentParser()
         parser.add_argument('--connect', default=f'tcp:127.0.0.1:{port}')
         args = parser.parse_args()
