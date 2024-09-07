@@ -25,7 +25,7 @@ class App(customtkinter.CTk):
         self.bind("<Command-q>", self.on_closing)
         self.bind("<Command-w>", self.on_closing)
         self.createcommand('tk::mac::Quit', self.on_closing)
-        self.wm_attributes('-fullscreen', True)
+        #self.wm_attributes('-fullscreen', True)
 
         # current_path = os.getcwd()+"\\Savasan-iha\\Mustafa Berkay\\Resources"
         # self.plane_image = ImageTk.PhotoImage(Image.open(os.path.join(current_path,"plane.png")).resize((40, 40)))

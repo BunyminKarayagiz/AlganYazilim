@@ -4,39 +4,41 @@ import datetime,json,pickle,threading
 
 class server_manager:
     def __init__(self,mavlink_ip,mavlink_port,takimNo):
-        
+
         cp.ok("Server Manager Working....")
-        
+
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.mavlink_ip = mavlink_ip
         self.mavlink_port = mavlink_port
         self.takim_no = takimNo
-        
-        #* Servers
-        self.Server_pwm = Server_Tcp.Server(PORT=9001,name="PWM")
-        self.Server_yönelim = Server_Tcp.Server(PORT=9002,name="YÖNELİM")
-        self.Server_mod = Server_Tcp.Server(PORT=9003,name="MOD")
-        self.Server_kamikaze = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
-        self.Server_UI_telem = Server_Tcp.Server(PORT=9005,name="UI_TELEM")
-        self.Server_YKI_ONAY = Server_Tcp.Server(PORT=9006,name="YKI_ONAY")
-        self.Server_ID=Server_Tcp.Server(PORT=9010,name="ID")
-        self.Server_UIframe = Server_Udp.Server(port=11000,name="UI-Frame")
-        self.Server_udp = Server_Udp.Server(port=5555,name="IHA-FRAME")
-        
-        #* Server States
-        self.ana_sunucu_status = False
-        self.Yönelim_sunucusu=False
-        self.Mod_sunucusu=False
-        self.kamikaze_sunucusu=False
-        self.UI_telem_sunucusu = False
-        self.YKI_ONAY_sunucusu = False
-        self.MAV_PROXY_sunucusu=False
-        self.görüntü_sunucusu=False
-        self.UIframe_sunucusu=False
-        self.PWM_sunucusu=False
-        self.ID_sunucusu=False
+
+        #* Servers # IHA:<9000> YONELIM_PC:<11000>
+        self.Server_UDP = Server_Udp.Server(PORT=5555,name="IHA-VIDEO") #Görüntü aktarımı
+        self.Server_PWM = Server_Tcp.Server(PORT=9001,name="KALMAN-PWM")
+        self.Server_TRACK = Server_Tcp.Server(PORT=9002,name="TRACK")
+        self.Server_MOD = Server_Tcp.Server(PORT=9003,name="MODE")
+        self.Server_KAMIKAZE = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
+        self.Server_CONFIRMATION = Server_Tcp.Server(PORT=9005,name="CONFIRMATION")
+
+        self.Server_UI_VIDEO = Server_Udp.Server(PORT=11000,name="UI-VIDEO")
+        self.Server_UI_Telem = Server_Tcp.Server(PORT=11001,name="UI_TELEM")
+        self.Server_UI_Control = Server_Tcp.Server(PORT=11002,name="UI-CONTROL")
+
+        #* Server State
+        self.ANA_SUNUCU_DURUMU=False
+        self.VIDEO_SERVER_STATUS=False
+        self.KALMAN_PWM_SERVER_STATUS=False
+        self.TRACK_SERVER_STATUS=False
+        self.MODE_SERVER_STATUS=False
+        self.KAMIKAZE_SERVER_STATUS=False
+        self.CONFIRMATION_SERVER_STATUS=False
+
+        self.MAVPROXY_SERVER_STATUS=False
+
+        self.UI_TELEM_SERVER_STATUS=False
+        self.UI_VIDEO_SERVER_STATUS=False
         cp.ok("Server Manager initialized ✓✓✓")
 
     def senkron_local_saat(self):
@@ -62,207 +64,184 @@ class server_manager:
                 "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
                 ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(str(self.kullanici_adi),str(self.sifre))
                 if int(durum_kodu) == 200:
-                    cp.ok(f"\x1b[{31}m{'Ana Sunucuya Bağlanıldı: ' + durum_kodu}\x1b[0m")  # Ana sunucuya girerkenki durum kodu.
-                    self.ana_sunucu_status = True
-                    connection_status = self.ana_sunucu_status
+                    cp.ok(f"Ana Sunucuya Bağlanıldı:{durum_kodu}")  # Ana sunucuya girerkenki durum kodu.
+                    connection_status = True
+                    self.ana_sunucu_status = connection_status
                 else:
                     raise Exception("DURUM KODU '200' DEGIL")
             except Exception as e:
                 cp.err(f"ANA SUNUCU : BAGLANTI HATASI -> {e}")
 
-    def Yönelim_sunucusu_oluştur(self):
+    def CREATE_VIDEO_SERVER(self):
         connection_status=False
         while not connection_status:
             try:
-                connection_status = self.Server_yönelim.creat_server()
-                cp.ok("YONELİM : SERVER OLUŞTURULDU")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"YÖNELİM SERVER: oluştururken hata : {e}")
-                cp.warn("YÖNELİM SERVER: yeniden bağlanılıyor...")
-                connection_status=self.Server_yönelim.reconnect()
-                cp.ok("YONELİM : SERVER OLUŞTURULDU.")
-
-        self.Yönelim_sunucusu=connection_status
-        return connection_status
-
-    def Mod_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_mod.creat_server()
+                self.Server_UDP.create_server()
                 connection_status=True
-                cp.ok("MOD : SERVER OLUŞTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"MOD SERVER: oluştururken hata : {e}")
-                cp.warn("MOD SERVER: yeniden bağlanılıyor...\n")
-                connection_status=self.Server_pwm.reconnect()
-                cp.info("MOD : SERVER OLUŞTURULDU\n")
-
-        self.Mod_sunucusu_sunucusu = connection_status
-        return connection_status
-
-    def MAV_PROXY_sunucusu_oluştur(self):
-        mavlink_obj = SimplifiedTelemetry.Telemetry(Mp_Ip=self.mavlink_ip,Mp_Port=self.mavlink_port,takimNo=self.takim_no) 
-        connection_status = False
-        while not connection_status:
-            try:
-                mavlink_obj.connect()
-                connection_status = True
-                cp.ok("MAVLINK : SERVER OLUŞTURULDU")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"MAVLINK SERVER: oluştururken hata :{e}")
-                cp.warn("MAVLINK SERVER: yeniden bağlanılıyor...")
-                connection_status=mavlink_obj.connect()
-                cp.info("MAVLINK : SERVER OLUŞTURULDU")
-        self.MAV_PROXY_sunucusu=connection_status
-        return connection_status,mavlink_obj
-
-    def kamikaze_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_kamikaze.creat_server()
-                connection_status=True
-                cp.ok("KAMIKAZE : SERVER OLUŞTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"KAMIKAZE SERVER: oluştururken hata :{e}")
-                cp.warn("KAMIKAZE SERVER: yeniden bağlanılıyor...\n")
-                self.Server_kamikaze.reconnect()
-                cp.info("KAMIKAZE : SERVER OLUŞTURULDU\n")
-        self.kamikaze_sunucusu = connection_status
-        return connection_status
-
-    def UI_telem_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_UI_telem.creat_server()
-                connection_status=True
-                cp.ok("UI_TELEM : SERVER OLUSTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"UI_TELEM : SERVER OLUSTURURKEN HATA : ", e , " \n")
-                cp.warn("UI_TELEM : SERVER YENIDEN BAGLANIYOR...\n")
-                self.Server_UI_telem.reconnect()
-                cp.info("UI_TELEM : SERVER OLUSTURULDU\n")
-        self.UI_telem_sunucusu = connection_status
-        return connection_status  
-
-    def YKI_ONAY_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_YKI_ONAY.creat_server()
-                connection_status=True
-                cp.ok("YKI_ONAY : SERVER OLUSTURULDU\n")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"YKI_ONAY : SERVER OLUSTURURKEN HATA :{e}")
-                cp.warn("YKI_ONAY : SERVER YENIDEN BAGLANIYOR...\n")
-                self.Server_YKI_ONAY.reconnect()
-                cp.info("YKI_ONAY : SERVER OLUSTURULDU\n")
-        self.YKI_ONAY_sunucusu = connection_status
-        return connection_status
-
-    def Görüntü_sunucusu_oluştur(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_udp.create_server()
-                connection_status=True
-                cp.ok("UDP : SERVER OLUŞTURULDU")
+                cp.ok("VIDEO SERVER : OLUŞTURULDU")
             except (ConnectionError , Exception) as e:
                 cp.warn(f"UDP SERVER: oluştururken hata :{e}")
             #    cp.warn("UDP SERVER'A 3 saniye içinden yeniden bağlanılıyor...\n")
             #   self.Server_udp.close_socket()
             #   self.Server_udp = Server_Udp.Server()
             #   self.Server_udp.create_server() #TODO DÜZENLEME GELEBİLİR
-        self.görüntü_sunucusu = connection_status
+        self.VIDEO_SERVER_STATUS = connection_status
         return connection_status
 
-    def PWM_sunucusu_oluştur(self):
+    def CREATE_PWM_SERVER(self):
         connection_status=False
         while not connection_status:
             try:
-                self.Server_pwm.creat_server()
+                self.Server_PWM.creat_server()
                 connection_status=True
-                cp.ok("PWM : SERVER OLUŞTURULDU..")
+                cp.ok("PWM SERVER : OLUŞTURULDU..")
             except (ConnectionError, Exception) as e:
-                cp.warn(f"PWM SERVER: oluştururken hata :{e}")
-                cp.warn("PWM SERVER: yeniden bağlanılıyor...")
-                self.Server_pwm.reconnect()
-                cp.info("PWM : SERVER OLUŞTURULDU..")
+                cp.warn(f"PWM SERVER: oluştururken hata :{e} \nPWM SERVER: yeniden bağlanılıyor... ")
+                self.Server_PWM.reconnect()
+                cp.info("PWM : SERVER OLUŞTURULDU...RETRY..")
         self.PWM_sunucusu=connection_status
         return connection_status
 
-    def ArayuzFrame_sunucusu_oluştur(self):
+    def CREATE_TRACK_SERVER(self):
         connection_status=False
         while not connection_status:
             try:
-                self.Server_UIframe.create_server()
+                connection_status = self.Server_TRACK.creat_server()
+                cp.ok("TRACK SERVER : OLUSTURULDU")
+            except (ConnectionError, Exception) as e:
+                cp.warn(f"TRACK SERVER : OLUSTURULAMADI : {e} \nTRACK SERVER : YENIDEN BAGLANIYOR...")
+                connection_status=self.Server_TRACK.reconnect()
+                cp.ok("TRACK SERVER: OLUSTURULDU")
+        self.TRACK_SERVER_STATUS=connection_status
+        return connection_status
+
+    def CREATE_MOD_SERVER(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                connection_status = self.Server_MOD.creat_server()
+                cp.ok("TRACK SERVER: OLUSTURULDU")
+            except (ConnectionError, Exception) as e:
+                cp.warn(f"TRACK SERVER: OLUSTURULAMADI : {e}")
+                cp.warn("TRACK SERVER: YENIDEM BAGLANIYOR...")
+                connection_status=self.Server_MOD.reconnect()
+                cp.ok("TRACK SERVER: OLUSTURULDU")
+        self.MODE_SERVER_STATUS=connection_status
+        return connection_status
+
+    def CREATE_KAMIKAZE_SERVER(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_KAMIKAZE.creat_server()
+                connection_status=True
+                cp.ok("KAMIKAZE : SERVER OLUŞTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                cp.warn(f"KAMIKAZE SERVER: oluştururken hata :{e}\nKAMIKAZE SERVER: yeniden bağlanılıyor...")
+                self.Server_KAMIKAZE.reconnect()
+                cp.info("KAMIKAZE : SERVER OLUŞTURULDU\n")
+        self.KAMIKAZE_SERVER_STATUS = connection_status
+        return connection_status
+
+    def CREATE_CONFIRMATION_SERVER(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_CONFIRMATION.creat_server()
+                connection_status=True
+                cp.ok("KONTROL-ONAY : SERVER OLUSTURULDU\n")
+            except (ConnectionError, Exception) as e:
+                cp.warn(f"KONTROL-ONAY SERVER -> SERVER OLUSTURURKEN HATA :{e}\nKONTROL-ONAY SERVER :YENIDEN BAGLANIYOR...")
+                # self.Server_CONFIRMATION.reconnect()
+                # cp.info("KONTROL-ONAY SERVER : OLUSTURULDU\n")
+        self.CONFIRMATION_SERVER_STATUS = connection_status
+        return connection_status
+
+    def CREATE_MAVPROXY_SERVER(self):
+        mavlink_obj = SimplifiedTelemetry.Telemetry(Mp_Ip=self.mavlink_ip,Mp_Port=self.mavlink_port,takimNo=self.takim_no) 
+        connection_status = False
+        while not connection_status:
+            try:
+                mavlink_obj.connect()
+                connection_status = True
+                cp.ok("MAVLINK SERVER : OLUSTURULDU")
+            except (ConnectionError, Exception) as e:
+                cp.warn(f"MAVLINK SERVER : OLUSTURURKEN HATA -> {e}\nMAVLINK SERVER : Yeniden baglanılıyor")
+                connection_status=mavlink_obj.connect()
+                cp.info("MAVLINK : SERVER OLUSTURULDU")
+        self.MAVPROXY_SERVER_STATUS=connection_status
+        return connection_status,mavlink_obj
+
+    def CREATE_UI_VIDEO_SERVER(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_UI_VIDEO.create_server()
                 connection_status=True
                 cp.ok("UI SERVER : SERVER OLUŞTURULDU")
             except (ConnectionError , Exception) as e:
-                cp.warn(f"UI SERVER: oluştururken hata :{e}")
+                cp.warn(f"UI SERVER : SERVER OLUSTURURKEN HATA -> {e}")
         self.UIframe_sunucusu = connection_status
         return connection_status
 
-    def pwm_gonder(self,pwm_tuple):
-        try:
-            self.Server_pwm.send_data_to_client(pickle.dumps(pwm_tuple))
-        except Exception as e:
-            cp.err(f"PWM SUNUCU HATASI :{e}")
-            cp.err("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
-            self.Server_pwm.reconnect()
-
-    def ArayuzFrame_gonder(self,frame): #!Denenmedi...
-        try:
-            self.Server_UIframe.send_frame_to_client(frame)
-        except Exception as e:
-            cp.warn(f"PWM SUNUCU HATASI : {e}")
-            cp.warn("PWM SUNUCUSUNA TEKRAR BAGLANIYOR...")
-            self.Server_pwm.reconnect()
-
-    def ID_sunucusu_oluştur(self):
+    def CREATE_UI_TELEM_SERVER(self):
         connection_status=False
         while not connection_status:
             try:
-                self.Server_ID.creat_server()
+                self.Server_UI_Telem.creat_server()
                 connection_status=True
-                cp.ok("ID : SERVER OLUŞTURULDU..")
+                cp.ok("UI_TELEM : SERVER OLUSTURULDU\n")
             except (ConnectionError, Exception) as e:
-                cp.warn(f"ID : SERVER oluştururken hata :{e}")
-                cp.warn("ID : SERVER yeniden bağlanılıyor..")
-                self.Server_ID.reconnect()
-                cp.info("ID : SERVER OLUŞTURULDU..")
-        self.ID_sunucusu = connection_status
-        return connection_status
+                cp.warn(f"UI_TELEM : SERVER OLUSTURURKEN HATA -> {e}\nUI_TELEM : SERVER YENIDEN BAGLANIYOR..")
+                # self.Server_UI_telem.reconnect()
+                # cp.info("UI_TELEM : SERVER OLUSTURULDU")
+        self.UI_telem_sunucusu = connection_status
+        return connection_status  
 
-    def sunuculari_oluştur(self):
-        self.anasunucuya_baglan()
-        self.senkron_local_saat()
+    def SEND_PWM(self,pwm_data):
+        try:
+            self.Server_PWM.send_data_to_client(pickle.dumps(pwm_data))
+        except Exception as e:
+            cp.err(f"PWM SERVER SEND ERROR -> {e}")
+            #self.KALMAN_PWM_SERVER_STATUS=False
+            #self.Server_PWM.reconnect()
+
+    def SEND_FRAME_TO_UI(self,frame): #!Denenmedi...
+        try:
+            self.Server_UI_Frame.send_frame_to_client(frame)
+        except Exception as e:
+            cp.warn(f"PWM SUNUCU HATASI : {e}")
+            # cp.warn("PWM SUNUCUSUNA TEKRAR BAGLANIYOR.")
+            # self.Server_UI_Frame.reconnect()
+
+    def SV_MAIN(self):
 
         cp.info("Sunucular bekleniyor...")
-        t1 = threading.Thread(target=self.Görüntü_sunucusu_oluştur)
-        t2 = threading.Thread(target=self.PWM_sunucusu_oluştur)
-        t3 = threading.Thread(target=self.Yönelim_sunucusu_oluştur)
-        t4 = threading.Thread(target=self.MAV_PROXY_sunucusu_oluştur) #Multiprocess ile uyumlu değil. "yonelim" içine alındı.
-        t5 = threading.Thread(target=self.Mod_sunucusu_oluştur)
-        t6 = threading.Thread(target=self.kamikaze_sunucusu_oluştur)
-        t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur)
-        t8 = threading.Thread(target=self.YKI_ONAY_sunucusu_oluştur)
-        t9 = threading.Thread(target=self.ID_sunucusu_oluştur)
+        t0 = threading.Thread(target=self.anasunucuya_baglan)
+        t1 = threading.Thread(target=self.CREATE_VIDEO_SERVER)
+        t2 = threading.Thread(target=self.CREATE_PWM_SERVER)
+        t3 = threading.Thread(target=self.CREATE_TRACK_SERVER)
+        t4 = threading.Thread(target=self.CREATE_MOD_SERVER) #Multiprocess ile uyumlu değil. "yonelim" içine alındı.
+        t5 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
+        t6 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
+        t7 = threading.Thread(target=self.CREATE_MAVPROXY_SERVER)
+        t8 = threading.Thread(target=self.CREATE_UI_VIDEO_SERVER)
+        t9= threading.Thread(target=self.CREATE_UI_TELEM_SERVER)
 
+        t0.start()
         t1.start()
         t2.start()
         t3.start()
-        t4.start()
+        #t4.start()
         t5.start()
         t6.start()
         t7.start()
         t8.start()
         t9.start()
-
-        return t1,t2,t3,t4,t5,t6,t7,t8,t9
+        
+        t0.join()
+        return t0,t1,t2,t3,t4,t5,t6,t7,t8,t9
 
 if __name__ == "__main__":
-    server_obj = server_manager(mavlink_ip="127.0.0.1",mavlink_port=5760,takimNo=1)
-    tuple_obj = server_obj.sunuculari_oluştur()
+    server_obj = server_manager(mavlink_ip="127.0.0.1",mavlink_port=14550,takimNo=1)
+    tuple_obj = server_obj.SV_MAIN()

@@ -6,17 +6,17 @@
 from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy
 from Modules.qr_detection import QR_Detection
 from Modules.Cprint import cp
-from Modules.yki_arayuz import main_gui
+from Modules.yki_arayuz import App
 from Server_manager import server_manager
 
 import multiprocessing as mp
 import numpy as np
 
-import threading,cv2,pyvirtualcam,os,json,time,datetime
+import threading,cv2,pyvirtualcam,os,json,time,datetime,av
 
 #!      SORUNLAR
-#!SUNUCU-SAATİ + FARK :                Eksik
-#?Yonelim-PWM Değişimi :               Eksik(Çözüldü.)
+#!SUNUCU-SAATİ + FARK :               Eksik
+#?Yonelim-PWM Değişimi :              Eksik(Çözüldü)
 #?Ana_sunucuya veri gönderimi :        Kusurlu(Çözüldü)
 #?Telemetri verilerinin alınması :     Kusurlu(Kısmen çözüldü)
 #!Yonelim modunda rakip seçimi:        Eksik
@@ -25,7 +25,7 @@ import threading,cv2,pyvirtualcam,os,json,time,datetime
 #!Pwm veri doğruluğu:                  Test edilecek
 #?Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
 #!Logger                                Kusurlu/Eksik
-#!Qr için timeout                       Eksik(İptal edildi.)
+#!Qr için timeout                       Eksik(İptal edildi)
 #!Kalman ile rota tahmin                Eksik
 #?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
@@ -33,10 +33,10 @@ import threading,cv2,pyvirtualcam,os,json,time,datetime
 
 class Yerİstasyonu():
 
-    def __init__(self,event_map,SHUTDOWN_KEY,server_manager,queue_size=1,frame_debug_mode="IHA"): #TODO
+    def __init__(self,event_map,SHUTDOWN_KEY,server_manager_obj,queue_size=1,frame_debug_mode="IHA"): #TODO
 
         self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Models\\V5_best.pt")
-        self._sv = server_manager
+        self.server_manager = server_manager_obj
 
         self.frame_debug_mode = frame_debug_mode
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
@@ -97,14 +97,14 @@ class Yerİstasyonu():
         cp.info(f"Starting Capture-process: {process_name}")
 
         while True:
-            if self._sv.görüntü_sunucusu:
-                print("Video Server ONLINE...")
+            if self.server_manager.VIDEO_SERVER_STATUS:
+                cp.ok("Video Server ONLINE...")
                 if self.frame_debug_mode == "IHA":
                     codec_1 = av.CodecContext.create('h264', 'r')
                     frame_id = 0
                     while True:
                         try:
-                            data = self._sv.Server_udp.recv_frame_from_client()
+                            data = self.server_manager.Server_UDP.recv_frame_from_client()
                             packet = av.Packet(data)
                             frames = codec_1.decode(packet)
                             for frame in frames:
@@ -120,15 +120,15 @@ class Yerİstasyonu():
                                         #print("FRAME : CAPTURE_QUEUE FULL...")
                                         pass
                                 except Exception as e:
-                                    print("FRAME : CAPTURE_QUEUE ERROR -> ",e)
+                                    cp.err("FRAME : CAPTURE_QUEUE ERROR -> ",e)
                         except Exception as e:
-                            print("FRAME : RECEIVE ERROR ->",e)
+                            cp.err("FRAME : RECEIVE ERROR ->",e)
 
                 elif self.frame_debug_mode == "LOCAL":
                     frame_id = 0
                     while True:
                         try:
-                            frame = self.Server_udp.recv_frame_from_client()
+                            frame = self.server_manager.Server_UDP.recv_frame_from_client()
                             try:
                                 if not self.capture_queue.full():
                                     self.capture_queue.put((frame,frame_id))
@@ -152,7 +152,7 @@ class Yerİstasyonu():
 
         # yonelim_queue,yonelim_trigger = self.event_map[4]
         pwm_data_queue,pwm_trigger = self.event_map[5]
-        ana_sunucu_queue,sunucu_event = self.event_map[6]
+        ana_sunucu_queue,sunucu_event = self.event_map[6] #TODO 1 KEZ KILITLENME ICIN DUZELTILMESI GEREK 
         lock_once_event,qr_once_event = self.event_map[7]
         lock_outer_event,qr_outer_event = self.event_map[8]
 
@@ -166,7 +166,7 @@ class Yerİstasyonu():
             if event_trigger.is_set():
                 time.sleep(0.01)
                 event_message = event_queue.get()
-                cp.warn(f"{process_name} received event: {event_message}","red")
+                cp.warn(f"{process_name} received event: {event_message}")
                 event_trigger.clear()
 
             if not self.capture_queue.empty():
@@ -194,7 +194,6 @@ class Yerİstasyonu():
                             pwm_data_queue.put(pwm_tuple)
                             #pwm_trigger.set()
 
-
                     if lockedOrNot == 0 and locked_prev== 1:
                             cv2.putText(img=processed_frame,text="HEDEF KAYBOLDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
                             locked_prev= 0
@@ -209,8 +208,8 @@ class Yerİstasyonu():
                             lock_elapsed_time= time.perf_counter() - lock_start_time
                             cv2.putText(img=processed_frame,text=str(round(lock_elapsed_time,3)),org=(50,370),fontFace=1,fontScale=1.5,color=(0,255,0),thickness=2)
 
-                            """if is_locked == 0:
-                                cv2.putText(img=processed_frame,text="KILITLENIYOR",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)"""
+                            if is_locked == 0:
+                                cv2.putText(img=processed_frame,text="KILITLENIYOR",org=(50,400),fontFace=1,fontScale=1.8,color=(0,255,0),thickness=2)
                                   
 
                             if lock_elapsed_time >= 4.0:
@@ -218,11 +217,12 @@ class Yerİstasyonu():
                                 kilitlenme_bilgisi=True
                                 is_locked=1
                                 self.trigger_event(4,"yonelim")
-                                #pwm_trigger.clear()
+                                #pwm_trigger.clear() 
+                                # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
                                 
                     if pwm_tuple[0] != 1500 or pwm_tuple[1] != 1500: #pwm_tuple -> [0]=pwmx , [1]=pwmy
                         self.trigger_event(5,pwm_tuple)
-                    # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
+                   
                         
                     if is_locked == 1 and sent_once == 0:
                             end_now = datetime.datetime.now()
@@ -267,9 +267,9 @@ class Yerİstasyonu():
                     if qr_text != None :
                         self.trigger_event(6,(qr_text,"qr"))
 
-
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
+                
                 elif event_message == "AUTO" or event_message == "FBWA" or event_message == "RTL":
                     if not self.display_queue.full():
                         self.display_queue.put(frame)
@@ -320,7 +320,7 @@ class Yerİstasyonu():
                 if display_process_event.is_set():
                     time.sleep(0.01)
                     event_message = display_process_queue.get()
-                    cp.err(f"{process_name} received event: {event_message}",interrupt=False)
+                    cp.warn(f"{process_name} received event: {event_message}",interrupt=False)
                     display_process_event.clear()
 
                 if event_message=="stop_capture":
@@ -338,11 +338,10 @@ class Yerİstasyonu():
     #! KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
     def yonelim_gonder(self,hedef): #TODO Yeniden bağlanma durumları kontrol edilecek...
         try:
-            self._sv.Server_yönelim.send_data_to_client(json.dumps(hedef).encode())
+            self.server_manager.Server_TRACK.send_data_to_client(json.dumps(hedef).encode())
         except Exception as e:
-            print("YONELİM : VERİ GÖNDERİLİRKEN HATA --> ",e)
-            print("YONELİM YENİDEN BAĞLANIYOR...")
-            self._sv.Server_yönelim.reconnect()
+            cp.err(f"TRACK : SENDING ERROR -> {e}\nTRACK : YENIDEN BAGLANIYOR..")
+            self.server_manager.Server_TRACK.reconnect()
 
     def rakip_sec(self,bizim_telemetri,rakip_telemetri): #? Ekleme yapılabilir...
             try:
@@ -368,12 +367,17 @@ class Yerİstasyonu():
         print("Waiting for kamikaze_time_packet")
         time.sleep(1)
         while True:
-            try:
-                self.kamikaze_packet=self._sv.Server_kamikaze.recv_tcp_message()
-                print(self.kamikaze_packet)
-                print("Kamikaze_start received...")
-            except Exception as e:
-                print("Kamikaze_start ERROR :",e)
+            if self.server_manager.KAMIKAZE_SERVER_STATUS:
+                cp.fatal(self.server_manager.KAMIKAZE_SERVER_STATUS)
+                try:
+                    self.kamikaze_packet=self.server_manager.Server_kamikaze.recv_tcp_message()
+                    cp.ok(self.kamikaze_packet)
+                    cp.info("Kamikaze_start received...")
+                except Exception as e:
+                    cp.err(f"Kamikaze_start ERROR : {e} ")
+            else:
+                cp.warn("KAMIKAZE_TIME_RECV OFFLINE")
+                time.sleep(1)
 
     #! ANA FONKSİYONLAR
     def yki_onay_ver(self):
@@ -392,7 +396,7 @@ class Yerİstasyonu():
             return False
 
     def yonelim(self,num=4):
-        ret,mavlink_obj=self._sv.MAV_PROXY_sunucusu_oluştur()
+        ret,mavlink_obj=self.server_manager.CREATE_MAVPROXY_SERVER()
         
         event_queue,event_trigger = self.event_map[num]
         event_message = ""
@@ -402,7 +406,7 @@ class Yerİstasyonu():
             if event_trigger.is_set():
                 time.sleep(0.01)
                 event_message = event_queue.get()
-                print("Yonelim received event : ",event_message)
+                cp.warn("Yonelim received event : ",event_message)
                 event_trigger.clear()
             try:
                 bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
@@ -419,12 +423,14 @@ class Yerİstasyonu():
 
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 1 :
-                        rakip_telemetri=self._sv.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
+                        rakip_telemetri=self.server_manager.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         try:
-                            if not self.ID_sunucusu:
-                                self._sv.Server_ID.send_data_to_client(rakip_telemetri)
+                            if self.server_manager.UI_TELEM_SERVER_STATUS:
+                                self.server_manager.Server_UI_Telem.send_data_to_client(rakip_telemetri)
+                            else:
+                                cp.warn("UI-TELEM SERVER OFFLINE")
                         except Exception as e:
-                            print("ID : DATA SENDING ERROR -> ",e)
+                            cp.warn("IU_TELEM : DATA SENDING ERROR -> ",e)
                         timer_start=time.perf_counter()
 
             except Exception as e:
@@ -446,31 +452,31 @@ class Yerİstasyonu():
 
     def UI_TELEM(self): #Denenmedi
         _ , arayuz_telem_queue = self.event_map[9]
-        t7 = threading.Thread(target=self.UI_telem_sunucusu_oluştur)
-        t7.start()
         while True:
-            if self.UI_telem_sunucusu:
+            if self.server_manager.UI_TELEM_SERVER_STATUS:
                 if not arayuz_telem_queue.empty():
                     telemetri=arayuz_telem_queue.get()
                     #Verileri bölme işi arayüz kodunda yapılacak.
                     if not telemetri == None:
-                        self.Server_UI_telem.send_data_to_client(telemetri)
+                        self.server_manager.Server_UI_Telem.send_data_to_client(telemetri)
 
     def UI_FRAME(self):
-        self.ArayuzFrame_sunucusu_oluştur()
-        (arayuz_frame_queue,arayuz_telem_queue) =self.event_map[9]
-        if not arayuz_frame_queue.empty():
-            try:
-                frame = self.arayuz_frame_queue.get()
-                resized_frame = cv2.resize(frame, (480,320), interpolation=cv2.INTER_AREA)
-                _, encoded_frame = cv2.imencode('.jpg', resized_frame) #TODO Bu komuta ihtiyaç olmayabilir.
-                self.ArayuzFrame_gonder(encoded_frame)
-            except Exception as e:
-                print("UI_FRAME :",e)
+        arayuz_frame_queue,_ =self.event_map[9]
+        while True:
+            if self.server_manager.UI_VIDEO_SERVER_STATUS:
+                if not arayuz_frame_queue.empty():
+                    try:
+                        frame = self.arayuz_frame_queue.get()
+                        self.SEND_FRAME_TO_UI(frame)
+                    except Exception as e:
+                        cp.err(f"UI_VIDEO ERROR -> {e}")
+            else:
+                cp.warn("UI-VIDEO SERVER OFFLINE")
+                time.sleep(1)
 
     def PWM(self):
-        self.PWM_sunucusu_oluştur()
-        pwm_data_queue, pwm_trigger = self.event_map[5] 
+        self.server_manager.CREATE_PWM_SERVER()
+        pwm_data_queue, pwm_trigger = self.event_map[5]
 
         stored_packets = [0,0,0,0,0,0,0,0]
         packet_counter = 0
@@ -483,7 +489,7 @@ class Yerİstasyonu():
                 if packet_counter == 5:
                     packet_counter = 0
                     print("Packet Ready:\n",stored_packets,"\n")
-                    self._sv.pwm_gonder(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
+                    self.server_manager.SEND_PWM(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
                     stored_packets = [0,0,0,0,0,0,0,0]
 
     def ana_sunucu_manager(self,num=6):
@@ -528,7 +534,7 @@ class Yerİstasyonu():
                 lock_timer = time.perf_counter()
 
     def process_flow_manager(self):
-        self.sunuculari_oluştur()
+        self.server_manager.SV_MAIN()
 
         th1 = threading.Thread(target=self.yonelim)
         th2 = threading.Thread(target=self.ana_sunucu_manager)
@@ -546,7 +552,7 @@ class Yerİstasyonu():
         th2.start()
         th3.start()
         th4.start()
-        th5.start()
+        #th5.start()
 
         p1 = mp.Process(target=self.capture_frames)
         p2 = mp.Process(target=self.process_frames, args=(1,))
@@ -596,57 +602,61 @@ class Yerİstasyonu():
         time.sleep(2)
 
         while True:
-            try:
-                self.secilen_görev_modu = self._sv.Server_mod.recv_tcp_message()
-            except Exception as e:
-                cp(f"MOD : Secilen modu alirken hata -> {e}","red",attrs=["bold"]) #TODO EKLENECEK...
+            if self.server_manager.MODE_SERVER_STATUS:
+                try:
+                    self.secilen_görev_modu = self.server_manager.Server_MOD.recv_tcp_message()
+                except Exception as e:
+                    cp.err(f"MOD : Secilen modu alirken hata -> {e}") #TODO EKLENECEK...
 
-            try:
-                if self.SHUTDOWN_KEY == "ALGAN":
-                    cp("Final Shutdown..","red","on_white", attrs=["bold"])
-                    self.terminate_all(p1=p1,p2=p2,p3=p3,p4=p4,p5=p5)
-                    break
+                try:
+                    if self.SHUTDOWN_KEY == "ALGAN":
+                        cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
+                        self.terminate_all(p1=p1,p2=p2,p3=p3,p4=p4,p5=p5)
+                        break
 
-                if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
-                    self.trigger_event(1,"kilitlenme")
-                    self.trigger_event(2,"kilitlenme")
-                    self.trigger_event(4,"yonelim")
-                    self.önceki_mod = "kilitlenme"
-                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
+                        self.trigger_event(1,"kilitlenme")
+                        self.trigger_event(2,"kilitlenme")
+                        self.trigger_event(4,"yonelim")
+                        self.önceki_mod = "kilitlenme"
+                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
-                elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
-                    self.trigger_event(1,"kamikaze")
-                    self.trigger_event(2,"kamikaze")
-                    self.trigger_event(4,"qr")
-                    self.önceki_mod = "kamikaze"
-                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
+                        self.trigger_event(1,"kamikaze")
+                        self.trigger_event(2,"kamikaze")
+                        self.trigger_event(4,"qr")
+                        self.önceki_mod = "kamikaze"
+                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
-                elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
-                    self.trigger_event(1,"AUTO")
-                    self.trigger_event(2,"AUTO")
-                    self.trigger_event(4,"yonelim")
-                    self.önceki_mod = "AUTO"
-                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
+                        self.trigger_event(1,"AUTO")
+                        self.trigger_event(2,"AUTO")
+                        self.trigger_event(4,"yonelim")
+                        self.önceki_mod = "AUTO"
+                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
-                elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
-                    self.trigger_event(1,"FBWA")
-                    self.trigger_event(2,"FBWA")
-                    self.trigger_event(4,"yonelim")
-                    self.önceki_mod = "FBWA"
-                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
+                        self.trigger_event(1,"FBWA")
+                        self.trigger_event(2,"FBWA")
+                        self.trigger_event(4,"yonelim")
+                        self.önceki_mod = "FBWA"
+                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
-                elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
-                    self.trigger_event(1,"RTL")
-                    self.trigger_event(2,"RTL")
-                    self.trigger_event(4,"yonelim")
-                    self.önceki_mod = "RTL"
-                    cp(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}","red","on_white", attrs=["bold"])
+                    elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
+                        self.trigger_event(1,"RTL")
+                        self.trigger_event(2,"RTL")
+                        self.trigger_event(4,"yonelim")
+                        self.önceki_mod = "RTL"
+                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
-                else:
-                    cp(f'GOREV MODU :{self.önceki_mod}','yellow', attrs=["bold"])
+                    else:
+                        cp.info(f'GOREV MODU :{self.önceki_mod}')
 
-            except Exception as e:
-                print("ANA_GOREV_KONTROL HATA: ",e)
+                except Exception as e:
+                    print("ANA_GOREV_KONTROL HATA: ",e)
+            else:
+                cp.fatal("MOD SERVER OFFLINE")
+                time.sleep(2)
 
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
@@ -700,21 +710,22 @@ if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
 
-#! Burada mission planner bilgisayarının ip'si(string) verilecek. 10.0.0.240
-
-    server_manager_obj = server_manager(mavlink_ip="10.80.1.60",mavlink_port=5760,takimNo=1)
-    yer_istasyonu_obj = Yerİstasyonu(frame_debug_mode="IHA",
-                                     server_manager=server_manager_obj,
+    server_manager_obj = server_manager(mavlink_ip="10.80.1.33",mavlink_port=14550,takimNo=1) #! mission planner ip(str) -> 10.0.0.240
+    yer_istasyonu_obj = Yerİstasyonu(frame_debug_mode="LOCAL", #! IHA / LOCAL
+                                     server_manager_obj=server_manager_obj,
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
-                                     queue_size=2
+                                     queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
                                      )
-    Gui_obj = main_gui(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
+    
+    Gui_obj = App(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
 
+    # görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
+    # görev_kontrol.start()
 
-    görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
+    görev_kontrol = mp.Process(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
     görev_kontrol.start()
 
-
+    time.sleep(5)
     Gui_obj.run()
     cp.fatal("FINAL")

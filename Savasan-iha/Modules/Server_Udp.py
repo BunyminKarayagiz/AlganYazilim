@@ -4,15 +4,16 @@ import av
 from av import packet
 import cv2
 import numpy as np
+from Modules.Cprint import cp
 
 class Server():
  #65536
  #1000000
-    def __init__(self,port=5555,name="UNNAMED"):
+    def __init__(self,PORT=5555,name="UNNAMED"):
         self.BUFF_SIZE = 65536   # Kullanılabilecek veri bellek boyutu
         self.udp_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)  # UDP için temel tanımlama 
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)  # UDP için temel tanımlama
-        self.port = port
+        self.port = PORT
         self.name = name
 
         self.host_name = socket.gethostname()
@@ -20,7 +21,7 @@ class Server():
 
     def create_server(self):
         self.udp_socket.bind((self.host_ip, self.port))
-        print(f'{self.name} Server Listening at:', (self.host_ip, self.port))
+        cp.info(f"{self.name} Server Listening at: {self.host_ip, self.port}")
 
     def recv_frame_from_client(self):
         frame , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)

@@ -1,7 +1,7 @@
 import argparse
 import json
 import numpy as np
-from Modules import path
+from Modules import path_drone as path
 import pickle
     
 import time , datetime
@@ -21,13 +21,12 @@ class Iha():
     def __init__(self,host_ip) -> None:
 
         # TCP Configurations
-        self.TCP_pwm=Client_Tcp.Client(host_ip,9001)
-        self.TCP_kamikazeyonelim=Client_Tcp.Client(host_ip,9002)
-        self.TCP_mod=Client_Tcp.Client(host_ip,9003)
-        self.TCP_kamikaze=Client_Tcp.Client(host_ip,9004)
-        self.TCP_YKI_ONAY=Client_Tcp.Client(host_ip,9006)
-        self.TCP_Yonelim=Client_Tcp.Client(host_ip,9011)
-
+        self.TCP_PWM=Client_Tcp.Client(HOST=host_ip,PORT=9001,name="KALMAN-PWM")
+        self.TCP_TRACK=Client_Tcp.Client(HOST=host_ip,PORT=9002,name="KALMAN-PWM")
+        self.TCP_MOD=Client_Tcp.Client(HOST=host_ip,PORT=9003,name="KALMAN-PWM")
+        self.TCP_KAMIKAZE=Client_Tcp.Client(HOST=host_ip,PORT=9004,name="KALMAN-PWM")
+        self.TCP_CONFIRMATION=Client_Tcp.Client(HOST=host_ip,PORT=9005,name="KALMAN-PWM")
+        
         self.yönelim_yapılacak_rakip=""
         self.mevcut_mod =""
         self.onceki_mod =""
@@ -35,8 +34,9 @@ class Iha():
         self.yönelim_release_event = threading.Event()
         self.kamikaze_release_event = threading.Event()
 
-        self.YKI_ONAYI_VERILDI = False
+        self.YKI_CONFIRMATION_STATUS = False
 
+    #! Sunucular ve bağlantı
     def KamikazeYonelim_sunucusuna_baglan(self):
         connection=False
         while not connection:
@@ -47,7 +47,7 @@ class Iha():
             except (ConnectionError , Exception) as e:
                 print("KamikazeYONELIM SERVER: baglanırken hata: ", e)
 
-    def Yonelim_sunucusuna_baglan(self):
+    def CONNECT_TRACK_CLIENT(self):
         connection=False
         while not connection:
             try:
@@ -57,7 +57,7 @@ class Iha():
             except (ConnectionError , Exception) as e:
                 print("YONELIM SERVER: baglanırken hata: ", e)
 
-    def PWM_sunucusuna_baglan(self):
+    def CONNECT_PWM_CLIENT(self):
         connection=False
         while not connection:
             try:
@@ -67,7 +67,7 @@ class Iha():
             except (ConnectionError , Exception) as e:
                 print("PWM SERVER: baglanırken hata: ", e)
 
-    def Mod_sunucusuna_baglan(self):
+    def CONNECT_MODE_CLIENT(self):
         connection=False
         while not connection:
             try:
@@ -77,7 +77,7 @@ class Iha():
             except (ConnectionError , Exception) as e:
                 print("MOD SERVER: baglanırken hata: ", e)
 
-    def YKI_ONAY_sunucusuna_baglan(self):
+    def CONNECT_CONFIRMATION_CLIENT(self):
         connection=False
         while not connection:
             try:
@@ -87,7 +87,7 @@ class Iha():
             except (ConnectionError , Exception) as e:
                 print("YKI_ONAY SERVER: baglanırken hata: ", e)
                 
-    def kamikaze_sunucusuna_baglan(self):
+    def CONNECT_KAMIKAZE_CLIENT(self):
         connection=False
         while not connection:
             try:
@@ -111,6 +111,14 @@ class Iha():
         connection_string = args.connect
         return path.Plane(connection_string)
 
+    def sunuculara_baglan(self):
+        self.Mod_sunucusuna_baglan()
+        self.Yonelim_sunucusuna_baglan()
+        self.PWM_sunucusuna_baglan()
+        self.kamikaze_sunucusuna_baglan()
+        self.YKI_ONAY_sunucusuna_baglan()
+        self.KamikazeYonelim_sunucusuna_baglan()
+
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
         print(mod_kodu)
@@ -121,28 +129,20 @@ class Iha():
         if iha.get_ap_mode() != str(mod_kodu):
             iha.set_ap_mode(str(mod_kodu))
 
-    def sunuculara_baglan(self):
-        self.Mod_sunucusuna_baglan()
-        self.Yonelim_sunucusuna_baglan()
-        self.PWM_sunucusuna_baglan()
-        self.kamikaze_sunucusuna_baglan()
-        self.YKI_ONAY_sunucusuna_baglan()
-        self.KamikazeYonelim_sunucusuna_baglan()
-
     def Yki_confirm(self):
         while True:
             try:
                 ONAY=self.TCP_YKI_ONAY.client_recv_message().decode();
                 print("YKI ONAY -> ",ONAY)
                 if ONAY == "ALGAN":
-                    self.YKI_ONAYI_VERILDI = True
+                    self.YKI_CONFIRMATION_STATUS = True
                     print("YKI ONAYI ALINDI..")
                 else:
                     self.YKI_ONAYI_VERILDI = False
                     print("YKI ONAYI REDDEDILDI..")
             except Exception as e:
                 print("YKI ONAYI BEKLERKEN HATA : ",e)
-                self.YKI_ONAYI_VERILDI = False
+                self.YKI_CONFIRMATION_STATUS = False
 
     #KİLİTLENME FONKSİYONLARI
     def receive_pwm(self):
@@ -152,12 +152,12 @@ class Iha():
                 pwm_array=pickle.loads(self.TCP_pwm.client_recv_message())
                 print(pwm_array)
                 try:
-                    if self.YKI_ONAYI_VERILDI == True:
+                    if self.YKI_CONFIRMATION_STATUS == True:
                         if iha_path.get_ap_mode() != "FBWA" :
                                 print("AP MODE SET TO FBWA...")
                                 iha_path.set_ap_mode("FBWA")
 
-                        if self.YKI_ONAYI_VERILDI == True:
+                        if self.YKI_CONFIRMATION_STATUS == True:
                             iha_path.set_rc_channel(1, pwm_array[0]) #pwmX
                             iha_path.set_rc_channel(2, pwm_array[1]) #pwmY
                             iha_path.set_rc_channel(3, 1500)
@@ -187,7 +187,7 @@ class Iha():
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
 
                     try:
-                        if self.YKI_ONAYI_VERILDI == True:
+                        if self.YKI_CONFIRMATION_STATUS == True:
                             if iha_path.get_ap_mode() != "GUIDED":
                                 iha_path.set_ap_mode("GUIDED")
                                 timer = time.perf_counter()
@@ -259,8 +259,8 @@ class Iha():
                     print("KAMIKAZE -> AKTIF")
                     self.kamikaze_release_event.clear()
 
-                if self.YKI_ONAYI_VERILDI == True:
-                    print("YKI_ONAYI : ",self.YKI_ONAYI_VERILDI)
+                if self.YKI_CONFIRMATION_STATUS == True:
+                    print("YKI_ONAYI : ",self.YKI_CONFIRMATION_STATUS)
                     #qr_enlem, qr_boylam = json.loads(self.yönelim_yapılacak_rakip)["qrEnlem"], json.loads(self.yönelim_yapılacak_rakip)["qrBoylam"]
                     # qr_mesafe = vincenty([iha_path.pos_lat, iha_path.pos_lon], [qr_enlem, qr_boylam], 100)
                     # print("QR MESAFE", qr_mesafe)
@@ -303,9 +303,6 @@ class Iha():
         except Exception as e:
             print("ERROR KAMIKAZE ->" + str(e))
 
-
-
-
 class client_manager:
     pass
 
@@ -314,7 +311,7 @@ class autopilot:
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.0.0.236") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.33") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     MissionPlanner_OR_PIXHAWK_Connection = False
     while not MissionPlanner_OR_PIXHAWK_Connection:

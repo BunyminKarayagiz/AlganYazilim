@@ -1,10 +1,11 @@
 import customtkinter
 import tkinter as tk
 from typing import Union,Callable
+from Modules.Cprint import cp
+#from Cprint import cp
 
 customtkinter.set_appearance_mode("dark")  # Modes: system (default), light, dark
 customtkinter.set_default_color_theme("green")  # Themes: blue (default), dark-blue, green
-
 
 class MyCheckboxFrame(customtkinter.CTkFrame):
     def __init__(self, master, title, values):
@@ -129,7 +130,6 @@ class FloatSpinbox(customtkinter.CTkFrame):
         self.entry.delete(0, "end")
         self.entry.insert(0, str(float(value)))
 
-
 #?  LAYER-1
 class MAIN_GUI_FRAME(customtkinter.CTkFrame):
     def __init__(self, master,**kwargs):
@@ -236,6 +236,17 @@ class App(customtkinter.CTk):
         self.main_frame.grid(row=0,column=1, padx=20, pady=20,sticky="nswe")
         self.terminal_frame.grid(row=1,column=1, padx=20, pady=20,sticky="nswe")
         self.companion_frame.grid(row=0,column=2,rowspan=2,padx=20,pady=20,sticky="nswe")
+    
+    def server_stat_check(self):
+        cp.fatal("UI-SERVERCHECK")
+        self.after(2000, self.server_stat_check)
+
+    def run(self):# Run the GUI event
+        try:
+            self.after(5000, self.server_stat_check)
+            self.mainloop()
+        except KeyboardInterrupt:
+            print("KEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\n")
 
 #? Eski arayüz
 class main_gui:
@@ -327,7 +338,6 @@ class main_gui:
             self.root.mainloop()
         except KeyboardInterrupt:
             print("KEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\n")
-
 
 if __name__ == "__main__":
     app = App()

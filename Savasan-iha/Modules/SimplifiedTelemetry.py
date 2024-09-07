@@ -32,23 +32,12 @@ class Telemetry:
             'POWER_STATUS': None,
             'VIBRATION': None
         }
-        self.start_time = time.time()
 
     def connect(self):
         port = f'tcp:{self.Mp_Ip}:{self.MP_Port}'
         self.master = mavutil.mavlink_connection(port)
         self.master.wait_heartbeat()
         return self.master
-
-    def reset_intervals(self):
-        current_time = time.time()
-        if current_time - self.start_time > 10:
-            try:
-                # Burada frekans ayarlama kodu kaldırıldı
-                # Frekans ayarları yapılmadan veri almak için güncellenmiş kod.
-                self.start_time = current_time
-            except Exception as e:
-                print(f"Error in resetting intervals: {e}")
 
     def unix_to_datetime(self, unix_time):
         dt = datetime.datetime.fromtimestamp(unix_time, pytz.timezone('Europe/Istanbul'))
@@ -101,7 +90,6 @@ class Telemetry:
 
     def telemetry_packet(self):
         try:
-            self.reset_intervals()
 
             msg = self.master.recv_match(blocking=True)
             if msg is None:
@@ -114,52 +102,32 @@ class Telemetry:
                 self.update_simplified_data(msg, msg_type)
 
             # gps_saati verisini çekme ve formatlama
-            gps_saati_unix = self.telemetry_data['SYSTEM_TIME']['time_unix_usec'] / 1e6 if self.telemetry_data[
-                                                                                               'SYSTEM_TIME'] and 'time_unix_usec' in \
-                                                                                           self.telemetry_data[
-                                                                                               'SYSTEM_TIME'] else None
+            gps_saati_unix = self.telemetry_data['SYSTEM_TIME']['time_unix_usec'] / 1e6 if self.telemetry_data['SYSTEM_TIME'] and 'time_unix_usec' in self.telemetry_data['SYSTEM_TIME'] else None
             gps_saati_formatted = self.unix_to_datetime(gps_saati_unix) if gps_saati_unix else None
 
             telemetry_output = {
                 "takim_numarasi": self.takimNo,
-                "iha_enlem": self.telemetry_data['GPS_RAW_INT']['lat'] / 1e7 if self.telemetry_data[
-                                                                                    'GPS_RAW_INT'] and 'lat' in
-                                                                                self.telemetry_data[
-                                                                                    'GPS_RAW_INT'] else None,
-                "iha_boylam": self.telemetry_data['GPS_RAW_INT']['lon'] / 1e7 if self.telemetry_data[
-                                                                                     'GPS_RAW_INT'] and 'lon' in
-                                                                                 self.telemetry_data[
-                                                                                     'GPS_RAW_INT'] else None,
-                "iha_irtifa": self.telemetry_data['GLOBAL_POSITION_INT']['relative_alt'] / 1000 if self.telemetry_data['GLOBAL_POSITION_INT'] and 'relative_alt' in
-                                                                       self.telemetry_data['GLOBAL_POSITION_INT'] else None,
-                "iha_dikilme": self.telemetry_data['ATTITUDE']['pitch'] if self.telemetry_data['ATTITUDE'] and 'pitch' in
-                                                                          self.telemetry_data['ATTITUDE'] else None,
-                "iha_yonelme": self.telemetry_data['ATTITUDE']['yaw'] if self.telemetry_data[
-                                                                                'ATTITUDE'] and 'yaw' in
-                                                                            self.telemetry_data['ATTITUDE'] else None,
-                "iha_yatis": self.telemetry_data['ATTITUDE']['roll'] if self.telemetry_data['ATTITUDE'] and 'roll' in
-                                                                       self.telemetry_data['ATTITUDE'] else None,
-                "iha_hiz": self.telemetry_data['VFR_HUD']['airspeed'] if self.telemetry_data[
-                                                                             'VFR_HUD'] and 'airspeed' in
-                                                                         self.telemetry_data['VFR_HUD'] else None,
-                "iha_batarya": self.telemetry_data['SYS_STATUS']['battery_remaining'] if self.telemetry_data[
-                                                                                             'SYS_STATUS'] and 'battery_remaining' in
-                                                                                         self.telemetry_data[
-                                                                                             'SYS_STATUS'] else None,
-                "iha_otonom": 1,
-                "iha_kilitlenme": 1,
-                "hedef_merkez_X": 300,
-                "hedef_merkez_Y": 230,
-                "hedef_genislik": 30,
-                "hedef_yukseklik": 43,
+                "iha_enlem": self.telemetry_data['GPS_RAW_INT']['lat'] / 1e7 if self.telemetry_data['GPS_RAW_INT'] and 'lat' in self.telemetry_data['GPS_RAW_INT'] else None,
+                "iha_boylam": self.telemetry_data['GPS_RAW_INT']['lon'] / 1e7 if self.telemetry_data['GPS_RAW_INT'] and 'lon' in self.telemetry_data['GPS_RAW_INT'] else None,
+                "iha_irtifa": self.telemetry_data['GLOBAL_POSITION_INT']['relative_alt'] / 1000 if self.telemetry_data['GLOBAL_POSITION_INT'] and 'relative_alt' in self.telemetry_data['GLOBAL_POSITION_INT'] else None,
+                "iha_dikilme": self.telemetry_data['ATTITUDE']['pitch'] if self.telemetry_data['ATTITUDE'] and 'pitch' in self.telemetry_data['ATTITUDE'] else None,
+                "iha_yonelme": self.telemetry_data['ATTITUDE']['yaw'] if self.telemetry_data['ATTITUDE'] and 'yaw' in self.telemetry_data['ATTITUDE'] else None,
+                "iha_yatis": self.telemetry_data['ATTITUDE']['roll'] if self.telemetry_data['ATTITUDE'] and 'roll' in self.telemetry_data['ATTITUDE'] else None,
+                "iha_hiz": self.telemetry_data['VFR_HUD']['airspeed'] if self.telemetry_data['VFR_HUD'] and 'airspeed' in self.telemetry_data['VFR_HUD'] else None,
+                "iha_batarya": self.telemetry_data['SYS_STATUS']['battery_remaining'] if self.telemetry_data['SYS_STATUS'] and 'battery_remaining' in self.telemetry_data['SYS_STATUS'] else None,
+                "iha_otonom": 999,
+                "iha_kilitlenme": 999,
+                "hedef_merkez_X": 999,
+                "hedef_merkez_Y": 999,
+                "hedef_genislik": 999,
+                "hedef_yukseklik": 999,
                 "gps_saati": gps_saati_formatted
             }
-
             return [telemetry_output, self.simplified_telemetry_data]
+
         except Exception as e:
             print(f"Error: {e}")
             return [self.telemetry_data, self.simplified_telemetry_data]
-
 
 """if __name__ == "__main__":
     telemetry = Telemetry("127.0.0.1","5762",3)
