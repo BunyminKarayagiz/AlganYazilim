@@ -17,8 +17,9 @@ class Detection:
         self.kalman = KalmanFilter()
         init(autoreset=True)
 
+
     def model_predict(self, frame, frame_id=0):
-        results = self.model.track(source=frame, conf=0.5, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
+        results = self.model.track(source=frame, conf=0.2, iou=0.5, show=False, tracker="botsort.yaml", verbose=False)
 
         kalmanPWM = None
         pwm_verileri:tuple = (1500, 1500, frame_id, 0, 0, 0, 0, 0)
@@ -48,30 +49,24 @@ class Detection:
                 x1, y1, x2, y2 = best_box
                 x_center = int((x1 + x2) / 2)
                 y_center = int((y1 + y2) / 2)
-                width = x2 - x1
-                height = y2 - y1
+                box_width = x2 - x1
+                box_height = y2 - y1
 
-                pwm_verileri = self.coordinates_to_pwm(x_center, y_center, frame_id, width, height)
+                pwm_verileri = self.coordinates_to_pwm(x_center, y_center, frame_id, box_width, box_height)
                 kalmanPWM = self.kalman_filter(x_center, y_center)
 
-                x = x2 - x1
-                y = y2 - y1
-                bound_area = x*y
-                box_area = 640*480
-                box_area_sart = box_area*0.05
-
-                print("box_area : ", box_area)
-                print("bound_area : ", bound_area)
-
-                if bound_area >= box_area_sart:  
+                if (box_width >= x*0.05) and (box_height >= y*0.05):
+                    print("yüzde bes!")
+                    print("Witdh : ", box_width)
+                    print("height : ", box_height)
                     if(target_area_x1 < x1 and target_area_x2 > x2 and target_area_y1 < y1 and target_area_y2 > y2):
+                        uzaklik = self.distanceCM()
                         print("locked_or_not1 : ", locked_or_not)
                         locked_or_not = True 
                         print("locked_or_not2 : ", locked_or_not)                            
 
         return pwm_verileri, annotated_frame, locked_or_not, kalmanPWM
 
-    
     def kalman_filter(self, x_center, y_center):
         print(Fore.RED + "Kalman algoritmasi devrede!")
         data = [x_center, y_center]
@@ -80,7 +75,7 @@ class Detection:
             self.datas = self.datas[-20:]
         kalmanPWM = self.kalman.add_measurements(self.datas)
         return kalmanPWM
-
+    
     def coordinates_to_pwm(self, x_center, y_center, frame_id, width, height):
         screen_width = 640
         screen_height = 480
@@ -124,5 +119,5 @@ class Detection:
         cap.release()
         cv2.destroyAllWindows()
 
-detection = Detection("C:\\Users\\asus\\AlganYazilim\\Calismalar\\Behçet\\Kalman_Filter\\V5_best.pt")
+detection = Detection("C:\\Users\\asus\\AlganYazilim\\Calismalar\\Behçet\\Kalman_Filter\\KALMAN NİHAİ\\Model_2024_V6_best.pt")
 detection()

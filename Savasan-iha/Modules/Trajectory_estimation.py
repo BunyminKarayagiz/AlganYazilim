@@ -136,7 +136,7 @@ def final_estimation(lat,lon,height,speed,roll_degree,pitch_degree,rotation_yaw,
         return x_prime, y_prime,
 
     def nokta_belirleme(konum0,hiz,yaw):
-        konum=nokta_hesapla(konum0)
+        konum=LAT_LON_to_Cartesian(konum0)
        # print(konum)
         # bir sonraki konumunun bulunma ihtimali en yüsek olan alanı belirleme
         #bu alan 5 nokta ile ifade edilecektir
@@ -176,8 +176,8 @@ def final_estimation(lat,lon,height,speed,roll_degree,pitch_degree,rotation_yaw,
         return a,b,c,d
     
     a,b,c,d =nokta_belirleme(konum,hiz,konum[2])
-    a_=kartezyen_to_enlem_boylam(a,referans_konum)
-    b_=kartezyen_to_enlem_boylam(b,referans_konum)
-    c_=kartezyen_to_enlem_boylam(c,referans_konum)
-    d_=kartezyen_to_enlem_boylam(d,referans_konum)
+    a_=Cartesian_to_LAT_LON(a,referans_konum)
+    b_=Cartesian_to_LAT_LON(b,referans_konum)
+    c_=Cartesian_to_LAT_LON(c,referans_konum)
+    d_=Cartesian_to_LAT_LON(d,referans_konum)
     return a_,b_,c_,d_
