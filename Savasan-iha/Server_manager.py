@@ -158,7 +158,7 @@ class server_manager:
         return connection_status
 
     def CREATE_MAVPROXY_SERVER(self):
-        mavlink_obj = SimplifiedTelemetry.Telemetry(Mp_Ip=self.mavlink_ip,Mp_Port=self.mavlink_port,takimNo=self.takim_no) 
+        mavlink_obj = SimplifiedTelemetry.Telemetry(Mp_Ip=self.mavlink_ip,Mp_Port=self.mavlink_port,takimNo=self.takim_no)
         connection_status = False
         while not connection_status:
             try:
@@ -232,13 +232,13 @@ class server_manager:
         t1.start()
         t2.start()
         t3.start()
-        #t4.start()
+        t4.start()
         t5.start()
         t6.start()
-        t7.start()
+        #t7.start()
         t8.start()
         t9.start()
-        
+
         t0.join()
         return t0,t1,t2,t3,t4,t5,t6,t7,t8,t9
 

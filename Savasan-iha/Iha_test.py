@@ -112,7 +112,7 @@ class Iha():
         return path.Plane(connection_string)
 
     def sunuculara_baglan(self):
-        self.Mod_sunucusuna_baglan()
+        self.CONNECT_MODE_CLIENT()
         self.Yonelim_sunucusuna_baglan()
         self.PWM_sunucusuna_baglan()
         self.kamikaze_sunucusuna_baglan()

@@ -303,7 +303,6 @@ class Iha():
         except Exception as e:
             print("ERROR KAMIKAZE ->" + str(e))
 
-
 class client_manager:
     def __init__(self) -> None:
         pass    

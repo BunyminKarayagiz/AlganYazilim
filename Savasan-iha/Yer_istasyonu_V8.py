@@ -3,7 +3,7 @@
 # from path import Plane
 #from Modules import mavproxy2
 
-from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy
+from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy,SimplifiedTelemetry
 from Modules.qr_detection import QR_Detection
 from Modules.Cprint import cp
 from Modules.yki_arayuz import App
@@ -33,10 +33,14 @@ import threading,cv2,pyvirtualcam,os,json,time,datetime,av
 
 class Yerİstasyonu():
 
-    def __init__(self,event_map,SHUTDOWN_KEY,server_manager_obj,queue_size=1,frame_debug_mode="IHA"): #TODO
+    def __init__(self,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,server_manager_obj,queue_size=1,frame_debug_mode="IHA"): #TODO
 
         self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Models\\V5_best.pt")
         self.server_manager = server_manager_obj
+        self.mavlink_ip = mavlink_ip
+        self.mavlink_port = mavlink_port
+        self.takim_no = takimNo
+
 
         self.frame_debug_mode = frame_debug_mode
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
@@ -74,6 +78,21 @@ class Yerİstasyonu():
         self.width=0
         self.height=0
         self.rakip=0
+
+    def CREATE_MAVPROXY_SERVER(self):
+        mavlink_obj = SimplifiedTelemetry.Telemetry(Mp_Ip=self.mavlink_ip,Mp_Port=self.mavlink_port,takimNo=self.takim_no) 
+        connection_status = False
+        while not connection_status:
+            try:
+                mavlink_obj.connect()
+                connection_status = True
+                cp.ok("MAVLINK SERVER : OLUSTURULDU")
+            except (ConnectionError, Exception) as e:
+                cp.warn(f"MAVLINK SERVER : OLUSTURURKEN HATA -> {e}\nMAVLINK SERVER : Yeniden baglanılıyor")
+                connection_status=mavlink_obj.connect()
+                cp.info("MAVLINK : SERVER OLUSTURULDU")
+        self.MAVPROXY_SERVER_STATUS=connection_status
+        return connection_status,mavlink_obj
 
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_number, message):
@@ -376,10 +395,10 @@ class Yerİstasyonu():
                 except Exception as e:
                     cp.err(f"Kamikaze_start ERROR : {e} ")
             else:
-                cp.warn("KAMIKAZE_TIME_RECV OFFLINE")
-                time.sleep(1)
+                pass
 
     #! ANA FONKSİYONLAR
+            
     def yki_onay_ver(self):
         if self.YKI_ONAY_sunucusu:
             cp(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
@@ -396,7 +415,7 @@ class Yerİstasyonu():
             return False
 
     def yonelim(self,num=4):
-        ret,mavlink_obj=self.server_manager.CREATE_MAVPROXY_SERVER()
+        ret,mavlink_obj=self.CREATE_MAVPROXY_SERVER()
         
         event_queue,event_trigger = self.event_map[num]
         event_message = ""
@@ -409,16 +428,16 @@ class Yerİstasyonu():
                 cp.warn("Yonelim received event : ",event_message)
                 event_trigger.clear()
             try:
-                bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
-                # bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
-                #                    "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,
-                #                    "iha_kilitlenme": 1,"hedef_merkez_X": 300,"hedef_merkez_Y": 230,"hedef_genislik": 30,
-                #                    "hedef_yukseklik": 43,"gps_saati": {"saat": time.gmtime().tm_hour,
-                #                                                        "dakika": time.gmtime().tm_min,
-                #                                                        "saniye": time.gmtime().tm_sec,
-                #                                                        "milisaniye": int((time.time() % 1) * 1000)
-                #                                                        }
-                #                     }
+                #bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
+                bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
+                                   "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,
+                                   "iha_kilitlenme": 1,"hedef_merkez_X": 300,"hedef_merkez_Y": 230,"hedef_genislik": 30,
+                                   "hedef_yukseklik": 43,"gps_saati": {"saat": time.gmtime().tm_hour,
+                                                                       "dakika": time.gmtime().tm_min,
+                                                                       "saniye": time.gmtime().tm_sec,
+                                                                       "milisaniye": int((time.time() % 1) * 1000)
+                                                                       }
+                                    }
                 #arayüze gidecek telemetri eklenecek.
 
                 if bizim_telemetri is not None:
@@ -475,7 +494,6 @@ class Yerİstasyonu():
                 time.sleep(1)
 
     def PWM(self):
-        self.server_manager.CREATE_PWM_SERVER()
         pwm_data_queue, pwm_trigger = self.event_map[5]
 
         stored_packets = [0,0,0,0,0,0,0,0]
@@ -489,7 +507,8 @@ class Yerİstasyonu():
                 if packet_counter == 5:
                     packet_counter = 0
                     print("Packet Ready:\n",stored_packets,"\n")
-                    self.server_manager.SEND_PWM(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
+                    if self.server_manager.KALMAN_PWM_SERVER_STATUS:
+                        self.server_manager.SEND_PWM(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
                     stored_packets = [0,0,0,0,0,0,0,0]
 
     def ana_sunucu_manager(self,num=6):
@@ -597,7 +616,7 @@ class Yerİstasyonu():
             # cp("Listener process joined..\n","red","on_white", attrs=["bold"])
 
     def ANA_GOREV_KONTROL(self):
-        th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5 = self.process_flow_manager()
+        #th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5 = self.process_flow_manager()
 
         time.sleep(2)
 
@@ -688,8 +707,6 @@ def create_event_map():
 
     display_process_queue=mp.Queue()
     display_process_event=mp.Event()
-
-
     #event_map -> (1,2,3):process_frames <> (4,5):pwm-yonelim switch <> (6):Ana Sunucu <> (7,8):DEPRECATED <> (9):Arayüz veri yolları <> (10):Video kayıta erişim
     event_map = {
     1: (message_queue_1, event_1),
@@ -706,26 +723,35 @@ def create_event_map():
     }
     return event_map
 
+def gui_process(yer_istasyonu_obj,server_manager_obj):
+    Gui_obj = App(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
+    Gui_obj.run()
+
 if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
 
-    server_manager_obj = server_manager(mavlink_ip="10.80.1.33",mavlink_port=14550,takimNo=1) #! mission planner ip(str) -> 10.0.0.240
-    yer_istasyonu_obj = Yerİstasyonu(frame_debug_mode="LOCAL", #! IHA / LOCAL
+    #server_manager_obj = server_manager(mavlink_ip="10.80.1.33",mavlink_port=14550,takimNo=1) #! mission planner ip(str) -> 10.0.0.240
+    yer_istasyonu_obj = Yerİstasyonu(mavlink_ip="10.80.1.33",mavlink_port=14550,takimNo=1,frame_debug_mode="LOCAL", #! IHA / LOCAL
                                      server_manager_obj=server_manager_obj,
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
                                      )
     
-    Gui_obj = App(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
+    #Gui_obj = App(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
+    yer_istasyonu_obj.process_flow_manager()
 
-    # görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
-    # görev_kontrol.start()
-
-    görev_kontrol = mp.Process(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
+    görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
     görev_kontrol.start()
 
-    time.sleep(5)
-    Gui_obj.run()
+    # görev_kontrol = mp.Process(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
+    # görev_kontrol.start()
+
+    #Gui_process = mp.Process(target=gui_process,args=(yer_istasyonu_obj,server_manager_obj,))
+    # Gui_process = mp.Process(target=gui_process,args=(yer_istasyonu_obj,server_manager_obj,))
+    # Gui_process.start()
+
+    # time.sleep(5)
+    # Gui_obj.run()
     cp.fatal("FINAL")

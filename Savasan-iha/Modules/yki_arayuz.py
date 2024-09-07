@@ -217,9 +217,8 @@ class App(customtkinter.CTk):
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
         self.title("ALGAN - GROUND CONTROL STATION")
-        #self.geometry("1920x1080")
+        self.geometry("1920x1080")
         #self.wm_attributes("-fullscreen",True)
-        self.after(0, lambda:self.state('zoomed'))
 
         self.rowconfigure(0,weight=3)
         self.rowconfigure(1,weight=1)
