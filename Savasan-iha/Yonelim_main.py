@@ -111,6 +111,7 @@ class FlightTracker:
         self.ID_Client=Client_Tcp.Client(Yazılım_ip,9010) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
         self.TCP_UI_TELEM = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
         
+        
         self.iha:any
         
         self.planes = {}

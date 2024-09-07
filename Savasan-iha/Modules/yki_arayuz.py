@@ -1,4 +1,4 @@
-import customtkinter
+import customtkinter,os
 import tkinter as tk
 from typing import Union,Callable
 from Modules.Cprint import cp
@@ -148,7 +148,6 @@ class MAIN_GUI_FRAME(customtkinter.CTkFrame):
         self.left_main_frame.grid(row=0,column=0,padx=10,pady=10,sticky="nsew")
         self.right_main_frame.grid(row=0,column=1,padx=10,pady=10,sticky="nsew")
 
-
 #?  LAYER-1
 class COMPANION_FRAMES(customtkinter.CTkFrame):
     def __init__(self, master,**kwargs):
@@ -211,9 +210,8 @@ class TERMINAL_FRAME(customtkinter.CTkFrame):
 
 #? MAIN-LAYER
 class App(customtkinter.CTk):
-    def __init__(self,Yer_istasyonu_obj=None,server_manager=None):
+    def __init__(self,Yer_istasyonu_obj=None,):
         super().__init__()
-        self._sv = server_manager
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
         self.title("ALGAN - GROUND CONTROL STATION")
@@ -277,7 +275,7 @@ class main_gui:
         self.indicator1_MAV_PROXY.pack(pady=10)
         self.send_button.pack(pady=20)
         
-        self._sv = server_manager
+        self.Yer_istasyonu_obj = server_manager
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
     def server_status_check(self):
@@ -286,37 +284,37 @@ class main_gui:
         else:
             self.send_button.config(image=self.lock_img)
 
-        if self._sv.ana_sunucu_status:
+        if self.Yer_istasyonu_obj.ana_sunucu_status:
             self.indicator_anasunucu.config(bg='green')
         else:
             self.indicator_anasunucu.config(bg='red')
         
-        if self._sv.Yönelim_sunucusu:
+        if self.Yer_istasyonu_obj.Yönelim_sunucusu:
             self.indicator_yonelim.config(bg='green')
         else:
             self.indicator_yonelim.config(bg='red')
 
-        if self._sv.kamikaze_sunucusu:
+        if self.Yer_istasyonu_obj.kamikaze_sunucusu:
             self.indicator_mod.config(bg='green')
         else:
             self.indicator_mod.config(bg='red')
 
-        if self._sv.kamikaze_sunucusu:
+        if self.Yer_istasyonu_obj.kamikaze_sunucusu:
             self.indicator_kamikaze.config(bg='green')
         else:
             self.indicator_kamikaze.config(bg='red')
 
-        if self._sv.UI_telem_sunucusu:
+        if self.Yer_istasyonu_obj.UI_telem_sunucusu:
             self.indicator_UI_telem.config(bg='green')
         else:
             self.indicator_UI_telem.config(bg='red')
 
-        if self._sv.YKI_ONAY_sunucusu:
+        if self.Yer_istasyonu_obj.YKI_ONAY_sunucusu:
             self.indicator_YKI_ONAY.config(bg='green')
         else:
             self.indicator_YKI_ONAY.config(bg='red')
 
-        if self._sv.MAV_PROXY_sunucusu:
+        if self.Yer_istasyonu_obj.MAV_PROXY_sunucusu:
             self.indicator1_MAV_PROXY.config(bg='green')
         else:
             self.indicator1_MAV_PROXY.config(bg='red')
