@@ -14,18 +14,18 @@ import numpy as np
 import threading,cv2,pyvirtualcam,os,json,time,datetime,av
 
 #!      SORUNLAR
-#!SUNUCU-SAATİ + FARK :               Eksik
+#!SUNUCU-SAATİ + FARK :               Eksik(Mevcut Durum yeterli)
 #?Yonelim-PWM Değişimi :              Eksik(Çözüldü)
 #?Ana_sunucuya veri gönderimi :        Kusurlu(Çözüldü)
-#?Telemetri verilerinin alınması :     Kusurlu(Kısmen çözüldü)
-#!Yonelim modunda rakip seçimi:        Eksik
-#!Aşırı yönelim(pwm):                   Eksik
-#!Hava savunma sistemi:                Eksik
+#?Telemetri verilerinin alınması :     Kusurlu(Çözüldü)
+#TODOYonelim modunda rakip seçimi:        Eksik(GÖREVLERE EKLENDİ)
+#!Aşırı yönelim(pwm):                   Eksik(iptal)
+#TODO Hava savunma sistemi:                Eksik(GÖREVLERE EKLENDI.)
 #!Pwm veri doğruluğu:                  Test edilecek
 #?Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
-#!Logger                                Kusurlu/Eksik
+#!Logger                                Kusurlu/Eksik(iptal)
 #!Qr için timeout                       Eksik(İptal edildi)
-#!Kalman ile rota tahmin                Eksik
+#TODO Kalman ile rota tahmin                Eksik(görevlere eklendi.)
 #?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
