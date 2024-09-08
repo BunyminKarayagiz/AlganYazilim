@@ -16,25 +16,25 @@ import threading,cv2,pyvirtualcam,os,json,time,datetime,av, pickle
 from Modules.prediction_algorithm_try import KalmanFilter
 
 #!      SORUNLAR
-#!SUNUCU-SAATİ + FARK :               Eksik(Mevcut Durum yeterli)
-#?Yonelim-PWM Değişimi :              Eksik(Çözüldü)
+#!SUNUCU-SAATİ + FARK :                Eksik(Mevcut Durum yeterli)
+#?Yonelim-PWM Değişimi :               Eksik(Çözüldü)
 #?Ana_sunucuya veri gönderimi :        Kusurlu(Çözüldü)
 #?Telemetri verilerinin alınması :     Kusurlu(Çözüldü)
-#TODOYonelim modunda rakip seçimi:        Eksik(GÖREVLERE EKLENDİ)
-#!Aşırı yönelim(pwm):                   Eksik(iptal)
-#TODO Hava savunma sistemi:                Eksik(GÖREVLERE EKLENDI.)
+#TODOYonelim modunda rakip seçimi:     Eksik(GÖREVLERE EKLENDİ)
+#!Aşırı yönelim(pwm):                  Eksik(iptal)
+#TODO Hava savunma sistemi:            Eksik(GÖREVLERE EKLENDI.)
 #!Pwm veri doğruluğu:                  Test edilecek
 #?Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
 #!Logger                                Kusurlu/Eksik(iptal)
 #!Qr için timeout                       Eksik(İptal edildi)
-#TODO Kalman ile rota tahmin                Eksik(görevlere eklendi.)
+#TODO Kalman ile rota tahmin            Eksik(görevlere eklendi.)
 #?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 
-class Yerİstasyonu():
+class YerIstasyonu():
 
-    def __init__(self,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"): #TODO
+    def __init__(self,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"):
 
         self.yolo_model = YOLOv8_deploy.Detection2("C:\\Users\\asus\\AlganYazilim-1\\Savasan-iha\\Models\\Model_2024_V6_best.pt")
         self.mavlink_ip = mavlink_ip
@@ -79,7 +79,6 @@ class Yerİstasyonu():
         self.height=0
         self.rakip=0
 
-
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
@@ -87,17 +86,18 @@ class Yerİstasyonu():
         self.mavlink_port = mavlink_port
         self.takim_no = takimNo
 
-        #* Servers # IHA:<9000> YONELIM_PC:<11000>
-        self.Server_UDP = Server_Udp.Server(PORT=5555,name="IHA-VIDEO") #Görüntü aktarımı
-        self.Server_PWM = Server_Tcp.Server(PORT=9001,name="KALMAN-PWM")
-        self.Server_TRACK = Server_Tcp.Server(PORT=9002,name="TRACK")
-        self.Server_MOD = Server_Tcp.Server(PORT=9003,name="MODE")
-        self.Server_KAMIKAZE = Server_Tcp.Server(PORT=9004,name="KAMIKAZE")
-        self.Server_CONFIRMATION = Server_Tcp.Server(PORT=9005,name="CONFIRMATION")
-
-        self.Server_UI_VIDEO = Server_Udp.Server(PORT=11000,name="UI-VIDEO")
-        self.Server_UI_Telem = Server_Tcp.Server(PORT=11001,name="UI_TELEM")
-        self.Server_UI_Control = Server_Tcp.Server(PORT=11002,name="UI-CONTROL")
+        #* Servers # 
+        #* < Yazılım_PC-IHA :8000 >  <Yazılım_PC-Yonelim_PC :9000 >   <Yonelim_PC-IHA :11000 >
+        #* IHA -- YazılımPC
+        self.Server_PWM = Server_Tcp.Server(PORT=8001,name="KALMAN-PWM")
+        self.Server_MOD = Server_Tcp.Server(PORT=8002,name="MODE")
+        self.Server_KAMIKAZE = Server_Tcp.Server(PORT=8003,name="KAMIKAZE")
+        self.Server_CONFIRMATION = Server_Tcp.Server(PORT=8004,name="CONFIRMATION")
+        self.Server_UDP = Server_Udp.Server(PORT=5555,name="IHA-VIDEO") #!Görüntü
+        #* YonelimPC -- YazılımPC
+        self.Server_UI_Telem = Server_Tcp.Server(PORT=11000,name="UI_TELEM")
+        self.Server_UI_Control = Server_Tcp.Server(PORT=11001,name="UI-CONTROL")
+        self.Server_UI_VIDEO = Server_Udp.Server(PORT=11002,name="UI-VIDEO")
 
         #* Server State
         self.ANA_SUNUCU_DURUMU=False
@@ -155,7 +155,7 @@ class Yerİstasyonu():
             try:
                 self.Server_UDP.create_server()
                 connection_status=True
-                cp.ok("VIDEO SERVER : OLUŞTURULDU")
+                cp.ok("VIDEO SERVER : OLUŞTURULDU..")
             except (ConnectionError , Exception) as e:
                 cp.warn(f"UDP SERVER: oluştururken hata :{e}")
             #    cp.warn("UDP SERVER'A 3 saniye içinden yeniden bağlanılıyor...\n")
@@ -175,34 +175,20 @@ class Yerİstasyonu():
             except (ConnectionError, Exception) as e:
                 cp.warn(f"PWM SERVER: oluştururken hata :{e} \nPWM SERVER: yeniden bağlanılıyor... ")
                 self.Server_PWM.reconnect()
-                cp.info("PWM : SERVER OLUŞTURULDU...RETRY..")
+                cp.ok("PWM : SERVER OLUŞTURULDU...RETRY..")
         self.PWM_sunucusu=connection_status
-        return connection_status
-
-    def CREATE_TRACK_SERVER(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                connection_status = self.Server_TRACK.creat_server()
-                cp.ok("TRACK SERVER : OLUSTURULDU")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"TRACK SERVER : OLUSTURULAMADI : {e} \nTRACK SERVER : YENIDEN BAGLANIYOR...")
-                connection_status=self.Server_TRACK.reconnect()
-                cp.ok("TRACK SERVER: OLUSTURULDU")
-        self.TRACK_SERVER_STATUS=connection_status
         return connection_status
 
     def CREATE_MOD_SERVER(self):
         connection_status=False
         while not connection_status:
             try:
-                connection_status = self.Server_MOD.creat_server()
-                cp.ok("TRACK SERVER: OLUSTURULDU")
+                connection_status=self.Server_MOD.creat_server()
+                cp.ok("TRACK SERVER: OLUSTURULDU..")
             except (ConnectionError, Exception) as e:
-                cp.warn(f"TRACK SERVER: OLUSTURULAMADI : {e}")
-                cp.warn("TRACK SERVER: YENIDEM BAGLANIYOR...")
+                cp.warn(f"TRACK SERVER: OLUSTURULAMADI : {e}\TRACK SERVER: YENIDEN BAGLANIYOR...")
                 connection_status=self.Server_MOD.reconnect()
-                cp.ok("TRACK SERVER: OLUSTURULDU")
+                cp.ok("TRACK SERVER: OLUSTURULDU..")
         self.MODE_SERVER_STATUS=connection_status
         return connection_status
 
@@ -212,11 +198,11 @@ class Yerİstasyonu():
             try:
                 self.Server_KAMIKAZE.creat_server()
                 connection_status=True
-                cp.ok("KAMIKAZE : SERVER OLUŞTURULDU\n")
+                cp.ok("KAMIKAZE : SERVER OLUŞTURULDU..")
             except (ConnectionError, Exception) as e:
                 cp.warn(f"KAMIKAZE SERVER: oluştururken hata :{e}\nKAMIKAZE SERVER: yeniden bağlanılıyor...")
                 self.Server_KAMIKAZE.reconnect()
-                cp.info("KAMIKAZE : SERVER OLUŞTURULDU\n")
+                cp.ok("KAMIKAZE : SERVER OLUŞTURULDU..RETRY..")
         self.KAMIKAZE_SERVER_STATUS = connection_status
         return connection_status
 
@@ -226,11 +212,11 @@ class Yerİstasyonu():
             try:
                 self.Server_CONFIRMATION.creat_server()
                 connection_status=True
-                cp.ok("KONTROL-ONAY : SERVER OLUSTURULDU\n")
+                cp.ok("KONTROL-ONAY : SERVER OLUSTURULDU..\n")
             except (ConnectionError, Exception) as e:
                 cp.warn(f"KONTROL-ONAY SERVER -> SERVER OLUSTURURKEN HATA :{e}\nKONTROL-ONAY SERVER :YENIDEN BAGLANIYOR...")
-                # self.Server_CONFIRMATION.reconnect()
-                # cp.info("KONTROL-ONAY SERVER : OLUSTURULDU\n")
+                self.Server_CONFIRMATION.reconnect()
+                cp.ok("KONTROL-ONAY SERVER : OLUSTURULDU..RETRY..\n")
         self.CONFIRMATION_SERVER_STATUS = connection_status
         return connection_status
 
@@ -241,11 +227,11 @@ class Yerİstasyonu():
             try:
                 mavlink_obj.connect()
                 connection_status = True
-                cp.ok("MAVLINK SERVER : OLUSTURULDU")
+                cp.ok("MAVLINK SERVER : OLUSTURULDU..")
             except (ConnectionError, Exception) as e:
-                cp.warn(f"MAVLINK SERVER : OLUSTURURKEN HATA -> {e}\nMAVLINK SERVER : Yeniden baglanılıyor")
+                cp.warn(f"MAVLINK SERVER : OLUSTURURKEN HATA -> {e}\nMAVLINK SERVER : Yeniden baglanılıyor..")
                 connection_status=mavlink_obj.connect()
-                cp.info("MAVLINK : SERVER OLUSTURULDU")
+                cp.ok("MAVLINK : SERVER OLUSTURULDU...RETRY..")
         self.MAVPROXY_SERVER_STATUS=connection_status
         return connection_status,mavlink_obj
 
@@ -257,8 +243,8 @@ class Yerİstasyonu():
                 connection_status=True
                 cp.ok("UI SERVER : SERVER OLUŞTURULDU")
             except (ConnectionError , Exception) as e:
-                cp.warn(f"UI SERVER : SERVER OLUSTURURKEN HATA -> {e}")
-        self.UIframe_sunucusu = connection_status
+                cp.warn(f"UI SERVER : SERVER OLUSTURURKEN HATA -> {e} , NO RETRIES IN THIS SERVER...")
+        self.UI_VIDEO_SERVER_STATUS = connection_status
         return connection_status
 
     def CREATE_UI_TELEM_SERVER(self):
@@ -267,13 +253,13 @@ class Yerİstasyonu():
             try:
                 self.Server_UI_Telem.creat_server()
                 connection_status=True
-                cp.ok("UI_TELEM : SERVER OLUSTURULDU\n")
+                cp.ok("UI_TELEM : SERVER OLUSTURULDU..")
             except (ConnectionError, Exception) as e:
                 cp.warn(f"UI_TELEM : SERVER OLUSTURURKEN HATA -> {e}\nUI_TELEM : SERVER YENIDEN BAGLANIYOR..")
-                # self.Server_UI_telem.reconnect()
-                # cp.info("UI_TELEM : SERVER OLUSTURULDU")
+                self.Server_UI_telem.reconnect()
+                cp.ok("UI_TELEM : SERVER OLUSTURULDU..")
         self.UI_telem_sunucusu = connection_status
-        return connection_status  
+        return connection_status
 
     def SEND_PWM(self,pwm_data):
         try:
@@ -295,15 +281,14 @@ class Yerİstasyonu():
 
         cp.info("Sunucular bekleniyor...")
         t0 = threading.Thread(target=self.anasunucuya_baglan)
-        t1 = threading.Thread(target=self.CREATE_VIDEO_SERVER)
+        t1 = threading.Thread(target=self.CREATE_VIDEO_SERVER) #CAPTURE-FRAMES İÇİNE TASINDI.
         t2 = threading.Thread(target=self.CREATE_PWM_SERVER)
-        t3 = threading.Thread(target=self.CREATE_TRACK_SERVER)
-        t4 = threading.Thread(target=self.CREATE_MOD_SERVER) #Multiprocess ile uyumlu değil. "yonelim" içine alındı.
-        t5 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
-        t6 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
-        t7 = threading.Thread(target=self.CREATE_MAVPROXY_SERVER)
-        t8 = threading.Thread(target=self.CREATE_UI_VIDEO_SERVER)
-        t9= threading.Thread(target=self.CREATE_UI_TELEM_SERVER)
+        t3 = threading.Thread(target=self.CREATE_MOD_SERVER)
+        t4 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
+        t5 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
+        t6 = threading.Thread(target=self.CREATE_MAVPROXY_SERVER)
+        t7 = threading.Thread(target=self.CREATE_UI_VIDEO_SERVER)
+        t8= threading.Thread(target=self.CREATE_UI_TELEM_SERVER)
 
         t0.start()
         t1.start()
@@ -312,12 +297,11 @@ class Yerİstasyonu():
         t4.start()
         t5.start()
         t6.start()
-        #t7.start()
-        #t8.start()
-        #t9.start()
+        t7.start()
+        t8.start()
 
         t0.join()
-        return t0,t1,t2,t3,t4,t5,t6,t7,t8,t9
+        return t0,t2,t3,t4,t5,t7,t8 #t1,t6
 
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_number, message):
@@ -420,11 +404,11 @@ class Yerİstasyonu():
                 if event_message == "kilitlenme":
                     telemetri_verileri, kalman_data, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
                     # Burada pwm_tuple dan çekilen veriler telemetri paketinin içinde kullanılacak şekilde düzenlenmeli
-                    self.rakip= pwm_tuple[3]
-                    self.x_center =pwm_tuple[4]
-                    self.y_center = pwm_tuple[5]
-                    self.width =  pwm_tuple[6]
-                    self.height = pwm_tuple[7]
+                    self.rakip= telemetri_verileri[3]
+                    self.x_center =telemetri_verileri[4]
+                    self.y_center = telemetri_verileri[5]
+                    self.width =  telemetri_verileri[6]
+                    self.height = telemetri_verileri[7]
 
                     #* 4 SANIYE-KILITLENME
                     if lockedOrNot == 1 and locked_prev == 0:
@@ -435,7 +419,7 @@ class Yerİstasyonu():
 
                     #Hedef Görüldü. Yönelim modu devre dışı.
                             self.trigger_event(4,"STOP")
-                            pwm_data_queue.put(pwm_tuple)
+                            pwm_data_queue.put(telemetri_verileri)
                             #pwm_trigger.set()
 
                     if lockedOrNot == 0 and locked_prev== 1:
@@ -464,8 +448,8 @@ class Yerİstasyonu():
                                 #pwm_trigger.clear() 
                                 # #Kilitlenme gerçekleşti. Yönelim moduna geri dön.
                                 
-                    if pwm_tuple[0] != 1500 or pwm_tuple[1] != 1500: #pwm_tuple -> [0]=pwmx , [1]=pwmy
-                        self.trigger_event(5,pwm_tuple)
+                    if telemetri_verileri[0] != 1500 or telemetri_verileri[1] != 1500: #pwm_tuple -> [0]=pwmx , [1]=pwmy
+                        self.trigger_event(5, telemetri_verileri)
                    
                         
                     if is_locked == 1 and sent_once == 0:
@@ -573,7 +557,7 @@ class Yerİstasyonu():
 
         videoKayit.release()
         cv2.destroyAllWindows()
-    
+
     def kalman_filter(self, x_center, y_center):
         data = [x_center, y_center]
         self.datas.append(data)
@@ -589,20 +573,6 @@ class Yerİstasyonu():
         return kalmanPWMx, KalmanPWMy
 
     #! KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
-    def yonelim_gonder(self,hedef): #TODO Yeniden bağlanma durumları kontrol edilecek...
-        try:
-            self.Server_TRACK.send_data_to_client(json.dumps(hedef).encode())
-        except Exception as e:
-            cp.err(f"TRACK : SENDING ERROR -> {e}\nTRACK : YENIDEN BAGLANIYOR..")
-            self.Server_TRACK.reconnect()
-
-    def rakip_sec(self,bizim_telemetri,rakip_telemetri): #? Ekleme yapılabilir...
-            try:
-                secilen_rakip= self.yönelim_obj.rakip_sec(rakip_telemetri,bizim_telemetri) 
-                secilen_rakip = 0
-                return secilen_rakip
-            except Exception as e:
-                print("YONELİM: TELEMETRİ ALINIRKEN HATA --> ",e)
 
     #! KAMİKAZE MODUNDA ÇALIŞACAK FONKSİYONLAR
     def get_qrCoord(self,timeout=1): #TODO Timeout özelliği eklenecek...
@@ -617,7 +587,7 @@ class Yerİstasyonu():
                 #TODO EKLEME YAPILACAK
 
     def kamikaze_time_recv(self):
-        print("Waiting for kamikaze_time_packet")
+        cp.info("........Waiting for kamikaze_time_packet....")
         time.sleep(1)
         while True:
             if self.KAMIKAZE_SERVER_STATUS:
@@ -806,11 +776,13 @@ class Yerİstasyonu():
 
         th1.start()
         th2.start()
-        th3.start()
+        # th3.start()
         th4.start()
-        #th5.start()
+        th5.start()
 
-        p1 = mp.Process(target=self.capture_frames)
+        time.sleep(5)
+
+        p1 = mp.Process(target=self.capture_frames) 
         p2 = mp.Process(target=self.process_frames, args=(1,))
         p3 = mp.Process(target=self.process_frames, args=(2,))
         p4 = mp.Process(target=self.process_frames, args=(3,))
@@ -853,7 +825,7 @@ class Yerİstasyonu():
             # cp("Listener process joined..\n","red","on_white", attrs=["bold"])
 
     def ANA_GOREV_KONTROL(self):
-        #th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5 = self.process_flow_manager()
+        th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5 = self.process_flow_manager()
 
         time.sleep(2)
 
@@ -960,29 +932,57 @@ def create_event_map():
     }
     return event_map
 
-def gui_process(yer_istasyonu_obj,server_manager_obj):
+def check_picklability(obj):
+    """
+    This function checks if the attributes of an object are picklable.
+    It returns a list of attributes that are not picklable.
+    """
+    non_picklable_attrs = []
+    
+    for attr_name in dir(obj):
+        # Ignore built-in attributes and methods (anything that starts with '__')
+        if attr_name.startswith("__"):
+            continue
+        
+        attr_value = getattr(obj, attr_name)
+        
+        try:
+            pickle.dumps(attr_value)  # Attempt to pickle the attribute
+        except Exception as e:
+            non_picklable_attrs.append((attr_name, type(attr_value), str(e)))
+    
+    return non_picklable_attrs
+
+def gui_process(yer_istasyonu_obj):
     Gui_obj = App(Yer_istasyonu_obj=yer_istasyonu_obj)
     Gui_obj.run()
 
 if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
+    mp.set_start_method('spawn', force=True)
 
     #server_manager_obj = server_manager(mavlink_ip="10.80.1.33",mavlink_port=14550,takimNo=1) #! mission planner ip(str) -> 10.0.0.240
-    yer_istasyonu_obj = Yerİstasyonu(mavlink_ip="10.80.1.59",mavlink_port=14550,takimNo=1,frame_debug_mode="LOCAL", #! IHA / LOCAL
+    yer_istasyonu_obj = YerIstasyonu(mavlink_ip="10.80.1.59",mavlink_port=14550,takimNo=1,frame_debug_mode="LOCAL", #! IHA / LOCAL
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
                                      )
     
-    #Gui_obj = App(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
-    yer_istasyonu_obj.process_flow_manager()
+    non_picklable_attributes = check_picklability(yer_istasyonu_obj)
+    if non_picklable_attributes:
+        print("Non-picklable attributes found:")
+        for attr_name, attr_type, error in non_picklable_attributes:
+            print(f"Attribute: {attr_name}, Type: {attr_type}, Error: {error}")
+    else:
+        print("All attributes are picklable.")
+
+
+    # Gui_obj = App(Yer_istasyonu_obj=yer_istasyonu_obj,server_manager=server_manager_obj)
 
     görev_kontrol = threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
     görev_kontrol.start()
 
-    # görev_kontrol = mp.Process(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
-    # görev_kontrol.start()
 
     #Gui_process = mp.Process(target=gui_process,args=(yer_istasyonu_obj,server_manager_obj,))
     # Gui_process = mp.Process(target=gui_process,args=(yer_istasyonu_obj,server_manager_obj,))

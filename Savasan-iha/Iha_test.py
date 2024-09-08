@@ -20,15 +20,16 @@ from dronekit import LocationGlobalRelative
 class Iha():
 
     def __init__(self,host_ip) -> None:
+
+        # TCP Configurations {muhtemel host_ip -> 10.0.0.236(YazılımPC) }
+        #* IHA -- YazılımPC
+        self.TCP_PWM=Client_Tcp.Client(HOST=host_ip,PORT=8001,name="KALMAN-PWM")
+        self.TCP_MOD=Client_Tcp.Client(HOST=host_ip,PORT=8002,name="MODE")
+        self.TCP_KAMIKAZE=Client_Tcp.Client(HOST=host_ip,PORT=8003,name="KAMIKAZE")
+        self.TCP_CONFIRMATION=Client_Tcp.Client(HOST=host_ip,PORT=8004,name="CONFIRMATION")
         
-        # TCP Configurations
-        self.TCP_PWM=Client_Tcp.Client(HOST=host_ip,PORT=9001,name="KALMAN-PWM")
-        self.TCP_TRACK=Client_Tcp.Client(HOST=host_ip,PORT=9002,name="KALMAN-PWM")
-        self.TCP_MOD=Client_Tcp.Client(HOST=host_ip,PORT=9003,name="KALMAN-PWM")
-        self.TCP_KAMIKAZE=Client_Tcp.Client(HOST=host_ip,PORT=9004,name="KALMAN-PWM")
-        self.TCP_CONFIRMATION=Client_Tcp.Client(HOST=host_ip,PORT=9005,name="KALMAN-PWM")
         
-        self.TCP_GUIDED_TRACK=Client_Tcp.Client(HOST=host_ip,PORT=9011,name="YONELIM-PWM")
+        self.TCP_TRACK=Client_Tcp.Client(HOST=host_ip,PORT="UNDEFINED",name="TRACK")
         
         self.yönelim_yapılacak_rakip=""
         self.mevcut_mod =""

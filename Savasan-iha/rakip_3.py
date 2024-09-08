@@ -5,10 +5,10 @@ import time
 
 ana_sunucu=ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
 
-ana_sunucu.sunucuya_giris("rakip2","rakip2")
+ana_sunucu.sunucuya_giris("rakip3","rakip3")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--connect', default=f'tcp:127.0.0.1:5772')
+parser.add_argument('--connect', default=f'tcp:127.0.0.1:5782')
 args = parser.parse_args()
 connection_string = args.connect
 rakip=path.Plane(connection_string)

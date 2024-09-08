@@ -105,7 +105,7 @@ class FlightTracker:
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
 
-        self.Algan_ID = "1"
+        self.Algan_ID = "5"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.ana_sunucu_status = False
 
@@ -182,6 +182,16 @@ class FlightTracker:
                     self.add_plane(takim_numarasi)
                     print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                 a,b,c,d = self.planes[takim_numarasi].append_data(entry)
+
+
+            for i in range(10):
+                pass
+
+            
+
+
+
+                
             return (a,b,c,d)
         except Exception as e:
             cp.fatal(e)
@@ -221,7 +231,7 @@ class FlightTracker:
         if mode == "Monitor":
         #!Testing
             self.anasunucuya_baglan()
-            self.connect_mission()
+            self.connect_mission(port=5762)
             time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
 
