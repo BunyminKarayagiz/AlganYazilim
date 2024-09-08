@@ -18,14 +18,17 @@ from dronekit import LocationGlobalRelative
 #!Logging.decorator                 .....
 
 class Iha():
-    def __init__(self,host_ip) -> None:
 
+    def __init__(self,host_ip) -> None:
+        
         # TCP Configurations
         self.TCP_PWM=Client_Tcp.Client(HOST=host_ip,PORT=9001,name="KALMAN-PWM")
         self.TCP_TRACK=Client_Tcp.Client(HOST=host_ip,PORT=9002,name="KALMAN-PWM")
         self.TCP_MOD=Client_Tcp.Client(HOST=host_ip,PORT=9003,name="KALMAN-PWM")
         self.TCP_KAMIKAZE=Client_Tcp.Client(HOST=host_ip,PORT=9004,name="KALMAN-PWM")
         self.TCP_CONFIRMATION=Client_Tcp.Client(HOST=host_ip,PORT=9005,name="KALMAN-PWM")
+        
+        self.TCP_GUIDED_TRACK=Client_Tcp.Client(HOST=host_ip,PORT=9011,name="YONELIM-PWM")
         
         self.yönelim_yapılacak_rakip=""
         self.mevcut_mod =""
@@ -56,6 +59,16 @@ class Iha():
                 print("YONELIM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("YONELIM SERVER: baglanırken hata: ", e)
+
+    def CONNECT_GUIDED_CLIENT(self):
+        connection=False
+        while not connection:
+            try:
+                self.TCP_GUIDED_TRACK.connect_to_server()
+                connection=True
+                print("GUIDED YONELIM SERVER: BAĞLANDI.")
+            except (ConnectionError , Exception) as e:
+                print("GUIDED YONELIM SERVER: baglanırken hata: ", e)
 
     def CONNECT_MODE_CLIENT(self):
         connection=False
@@ -107,6 +120,7 @@ class Iha():
         self.CONNECT_TRACK_CLIENT()
         self.CONNECT_KAMIKAZE_CLIENT()
         self.CONNECT_CONFIRMATION_CLIENT()
+        self.CONNECT_GUIDED_CLIENT()
 
     def change_mod(self, mod_kodu, iha: path.Plane):
         telemetri = self.get_telemetri_verisi(iha)
@@ -121,7 +135,7 @@ class Iha():
     def Yki_confirm(self):
         while True:
             try:
-                ONAY=self.TCP_CONFIRMATION.client_recv_message().decode();
+                ONAY=self.TCP_CONFIRMATION.client_recv_message().decode()
                 print("YKI ONAY -> ",ONAY)
                 if ONAY == "ALGAN":
                     self.YKI_CONFIRMATION_STATUS = True
@@ -171,7 +185,7 @@ class Iha():
                     self.yönelim_release_event.clear()
                 try:
                     print("YÖNELİM VERİSİ BEKLENİYOR..")
-                    self.yönelim_yapılacak_rakip = self.TCP_TRACK.client_recv_message()
+                    self.yönelim_yapılacak_rakip = self.TCP_GUIDED_TRACK.client_recv_message()
                     rakip_enlem,rakip_boylam = self.yönelim_yapılacak_rakip
                     print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
 
@@ -300,7 +314,7 @@ class autopilot:
 
 if __name__ == '__main__':
 
-    iha_obj = Iha("10.80.1.33") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
+    iha_obj = Iha("10.80.1.59") #UÇAK İÇİN VERİLEN İP DEĞİŞTİRİLECEK. 10.0.0.236
     
     MissionPlanner_OR_PIXHAWK_Connection = False
     while not MissionPlanner_OR_PIXHAWK_Connection:

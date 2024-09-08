@@ -94,6 +94,7 @@ class Plane:
 
 #!CLASS MAIN
 class FlightTracker:
+
     def __init__(self,Yazılım_ip) -> None:
         
         self.UI=App()
@@ -108,8 +109,8 @@ class FlightTracker:
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.ana_sunucu_status = False
 
-        self.ID_Client=Client_Tcp.Client(Yazılım_ip,9010) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
-        self.TCP_UI_TELEM = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
+        self.TCP_UI_TELEM=Client_Tcp.Client(Yazılım_ip,9010) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
+        self.TCP_GUIDED_TRACK = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
         
         self.iha:any
         
@@ -149,15 +150,14 @@ class FlightTracker:
         connection_status=False
         while not connection_status:
             try:
-                self.TCP_UI_TELEM.creat_server()
+                self.TCP_GUIDED_TRACK.creat_server()
                 connection_status=True
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
                 print("IHA_YONELIM SERVER: oluştururken hata : ", e , " \n")
                 print("IHA_YONELIM SERVER: yeniden bağlanılıyor...\n")
-                self.TCP_UI_TELEM.reconnect()
+                self.TCP_GUIDED_TRACK.reconnect()
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
-        self.kamikaze_sunucusu = connection_status
         return connection_status
 
     def receive_telem(self):
@@ -206,7 +206,6 @@ class FlightTracker:
         print("Current Working Mode : ",mode)
 
         if mode == "IHA":
-
             self.Yonelim_sunucusu_oluştur()
             self.Telemetri_sunucusuna_baglan()
             time.sleep(self.TK_INIT_TIME_SEC)
@@ -236,7 +235,6 @@ class FlightTracker:
         if mode == "UI_TEST":
             time.sleep(2)
             self.add_plane_for_testing(start_lat=52.5164,start_lon=13.3734,limit=20,rotation=10,plane_id="TEST")
-
 
 #!Testing
     def add_plane_for_testing(self,start_lat,start_lon,limit,rotation,plane_id):
@@ -271,7 +269,6 @@ class FlightTracker:
             rotation += 10
             #time.sleep(0.1)
             print("TEST-MARKERS ADDED..")
-
 
     def connect_mission(self,port=5763):
         parser = argparse.ArgumentParser()

@@ -11,7 +11,9 @@ from Modules.yki_arayuz import App
 import multiprocessing as mp
 import numpy as np
 
-import threading,cv2,pyvirtualcam,os,json,time,datetime,av
+import threading,cv2,pyvirtualcam,os,json,time,datetime,av, pickle
+
+from Modules.prediction_algorithm_try import KalmanFilter
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :               Eksik(Mevcut Durum yeterli)
@@ -34,7 +36,7 @@ class Yerİstasyonu():
 
     def __init__(self,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"): #TODO
 
-        self.yolo_model = YOLOv8_deploy.Detection("D:\\Visual Code File Workspace\\ALGAN\\AlganYazilim\\Savasan-iha\\Models\\V5_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection2("C:\\Users\\asus\\AlganYazilim-1\\Savasan-iha\\Models\\Model_2024_V6_best.pt")
         self.mavlink_ip = mavlink_ip
         self.mavlink_port = mavlink_port
         self.takim_no = takimNo
@@ -111,6 +113,10 @@ class Yerİstasyonu():
         self.UI_TELEM_SERVER_STATUS=False
         self.UI_VIDEO_SERVER_STATUS=False
         cp.ok("Server Manager initialized ✓✓✓")
+
+        #* Kalman Filter 
+        self.datas = []
+        self.kalman = KalmanFilter()
 
     def senkron_local_saat(self):
         status_code, sunuc_saati = self.ana_sunucu.sunucu_saati_al()
@@ -412,7 +418,7 @@ class Yerİstasyonu():
                 #print(f"{process_name} -> ",frame_id)
 
                 if event_message == "kilitlenme":
-                    pwm_tuple, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
+                    telemetri_verileri, kalman_data, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
                     # Burada pwm_tuple dan çekilen veriler telemetri paketinin içinde kullanılacak şekilde düzenlenmeli
                     self.rakip= pwm_tuple[3]
                     self.x_center =pwm_tuple[4]
@@ -567,11 +573,20 @@ class Yerİstasyonu():
 
         videoKayit.release()
         cv2.destroyAllWindows()
+    
+    def kalman_filter(self, x_center, y_center):
+        data = [x_center, y_center]
+        self.datas.append(data)
+        if len(self.datas) >= 20:
+            self.datas = self.datas[-20:]
+        kalmanPWM = self.kalman.add_measurements(self.datas)
 
-    def kalman_predict(self,kalman_buffer,buffer_size=5):
-        #! Kalman burada uygulanacak
+        return kalmanPWM
+    
+    def kalman_predict(self, x_center, y_center):
+        kalmanPWMx, KalmanPWMy = self.kalman_filter(x_center, y_center)
 
-        return kalman_buffer[0]
+        return kalmanPWMx, KalmanPWMy
 
     #! KİLİTLENME MODUNDA ÇALIŞACAK FONKSİYONLAR
     def yonelim_gonder(self,hedef): #TODO Yeniden bağlanma durumları kontrol edilecek...
@@ -659,7 +674,7 @@ class Yerİstasyonu():
                 #arayüze gidecek telemetri eklenecek.
 
                 if bizim_telemetri is not None:
-                    if time.perf_counter() - timer_start > 1 :
+                    if time.perf_counter() - timer_start > 1:
                         rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
@@ -716,6 +731,7 @@ class Yerİstasyonu():
 
         stored_packets = [0,0,0,0,0,0,0,0]
         packet_counter = 0
+
         while True:
             if not pwm_data_queue.empty():
                 pwm_tuple= pwm_data_queue.get()
@@ -725,8 +741,11 @@ class Yerİstasyonu():
                 if packet_counter == 5:
                     packet_counter = 0
                     print("Packet Ready:\n",stored_packets,"\n")
+
                     if self.KALMAN_PWM_SERVER_STATUS:
-                        self.SEND_PWM(pwm_tuple=self.kalman_predict(kalman_buffer=stored_packets,buffer_size=5))
+                        pwm_tuple=self.kalman_predict(x_center=0, y_center=0)
+                        self.SEND_PWM(pwm_tuple)
+
                     stored_packets = [0,0,0,0,0,0,0,0]
 
     def ana_sunucu_manager(self,num=6):
@@ -950,7 +969,7 @@ if __name__ == '__main__':
     event_map = create_event_map()
 
     #server_manager_obj = server_manager(mavlink_ip="10.80.1.33",mavlink_port=14550,takimNo=1) #! mission planner ip(str) -> 10.0.0.240
-    yer_istasyonu_obj = Yerİstasyonu(mavlink_ip="10.80.1.33",mavlink_port=14550,takimNo=1,frame_debug_mode="LOCAL", #! IHA / LOCAL
+    yer_istasyonu_obj = Yerİstasyonu(mavlink_ip="10.80.1.59",mavlink_port=14550,takimNo=1,frame_debug_mode="LOCAL", #! IHA / LOCAL
                                      event_map=event_map,
                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
                                      queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
