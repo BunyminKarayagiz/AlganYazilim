@@ -242,7 +242,7 @@ class App(customtkinter.CTk):
         self.companion_frame.grid(row=0,column=2,rowspan=2,padx=20,pady=20,sticky="nswe")
     
     def server_stat_check(self):
-        cp.fatal("UI-SERVERCHECK")
+        #cp.fatal("UI-SERVERCHECK")
         self.after(2000, self.server_stat_check)
 
     def run(self):# Run the GUI event

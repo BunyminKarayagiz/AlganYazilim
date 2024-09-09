@@ -109,7 +109,7 @@ class FlightTracker:
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.ana_sunucu_status = False
 
-        self.TCP_UI_TELEM=Client_Tcp.Client(Yazılım_ip,9010) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
+        self.TCP_UI_TELEM=Client_Tcp.Client(Yazılım_ip,11000) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
         self.TCP_TRACK = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
         
         self.iha:any
@@ -139,7 +139,7 @@ class FlightTracker:
         connection=False
         while not connection:
             try:
-                self.ID_Client.connect_to_server()
+                self.TCP_UI_TELEM.connect_to_server()
                 connection=True
                 self.Telem_client_status=connection
                 print("TELEM SERVER: BAĞLANDI.")
@@ -168,7 +168,7 @@ class FlightTracker:
 
     def send_coord_to_uav(self,coord_data):
         try:
-            self.TCP_UI_TELEM.send_data_to_client(coord_data)        
+            self.TCP_TRACK.send_data_to_client(coord_data)        
         except Exception as e:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
 
@@ -205,7 +205,7 @@ class FlightTracker:
 
 #! UI-OPERATIONS
     def add_plane_marker(self,lat,lon,rotation,plane_id):
-        self.UI.set_plane(lat=lat,lon=lon,rotation=rotation,plane_id=plane_id,)  
+        self.UI.set_plane(lat=lat,lon=lon,rotation=rotation,plane_id=plane_id,)
         print(f"ID:{plane_id} -> [lat:{lat} , lon:{lon} , rotation:{rotation} ]")
 
     def start_ui(self):
@@ -218,12 +218,12 @@ class FlightTracker:
         if mode == "IHA":
             self.Yonelim_sunucusu_oluştur()
             self.Telemetri_sunucusuna_baglan()
-            time.sleep(self.TK_INIT_TIME_SEC)
+            #time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
 
             if self.Telem_client_status:
                 while not mainloop:
-                    telemetri_cevabı = self.ID_Client.client_recv_message()
+                    telemetri_cevabı = self.TCP_UI_TELEM.client_recv_message()
                     coord_data=self.process_data_stream(telemetri_cevabı)
                     self.send_coord_to_uav(coord_data=coord_data)
                     #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerektirse açılabilir..
@@ -301,7 +301,7 @@ class FlightTracker:
 
 if __name__ == "__main__":
 
-    Mode = "Monitor" #Monitor / IHA / UI_TEST
+    Mode = "IHA" #Monitor / IHA / UI_TEST
 
     tracker=FlightTracker("10.80.1.59") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))

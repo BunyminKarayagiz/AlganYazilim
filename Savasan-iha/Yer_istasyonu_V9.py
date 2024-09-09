@@ -208,7 +208,7 @@ class YerIstasyonu():
                 cp.warn(f"UI_TELEM : SERVER OLUSTURURKEN HATA -> {e}\nUI_TELEM : SERVER YENIDEN BAGLANIYOR..")
                 self.Server_UI_telem.reconnect()
                 cp.ok("UI_TELEM : SERVER OLUSTURULDU..")
-        self.UI_telem_sunucusu = connection_status
+        self.UI_TELEM_SERVER_STATUS = connection_status
         return connection_status
 
     def SEND_PWM(self,pwm_data):
@@ -286,19 +286,21 @@ class YerIstasyonu():
                 #                     }
 
                 if bizim_telemetri is not None:
-                    if time.perf_counter() - timer_start > 1:
-                        rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
+                    if time.perf_counter() - timer_start > 3:
+                        status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
+                        #print(json.dumps(rakip_telemetri))
+                        print(rakip_telemetri)
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
-                                self.Server_UI_Telem.send_data_to_client(rakip_telemetri)
+                                self.Server_UI_Telem.send_data_to_client(rakip_telemetri.encode()) #json.dumps(rakip_telemetri).encode('utf-8'))
                             else:
                                 cp.warn("UI-TELEM SERVER OFFLINE")
                         except Exception as e:
-                            cp.warn("IU_TELEM : DATA SENDING ERROR -> ",e)
+                            cp.warn(f"IU_TELEM : DATA SENDING ERROR -> {e}",)
                         timer_start=time.perf_counter()
 
             except Exception as e:
-                print("TELEMETRI : VERI HATASI -> ",e)
+                cp.warn(f"TELEMETRI : VERI HATASI -> {e}")
 
     def ana_sunucu_manager(self):
         mission_queue,mission_event=self.event_map["Gorev_verisi"]
@@ -349,7 +351,6 @@ class YerIstasyonu():
                 try:
                     if self.SHUTDOWN_KEY == "ALGAN":
                         cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
-                        self.terminate_all(p1=p1,p2=p2,p3=p3,p4=p4,p5=p5)
                         break
 
                     if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
@@ -668,7 +669,7 @@ class Frame_processing:
                 if display_record_trigger.is_set():
                     time.sleep(0.01)
                     event_message = display_record_queue.get()
-                    cp.warn(f"{process_name} received event: {event_message}",interrupt=False)
+                    cp.warn(f"{process_name} received event: {event_message}")
                     display_record_trigger.clear()
 
                     if event_message=="stop_capture":
