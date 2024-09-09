@@ -94,6 +94,7 @@ class Plane:
 
 #!CLASS MAIN
 class FlightTracker:
+
     def __init__(self,Yazılım_ip) -> None:
         
         self.UI=App()
@@ -108,8 +109,8 @@ class FlightTracker:
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.ana_sunucu_status = False
 
-        self.ID_Client=Client_Tcp.Client(Yazılım_ip,9010) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
-        self.TCP_UI_TELEM = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
+        self.TCP_UI_TELEM=Client_Tcp.Client(Yazılım_ip,11000) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
+        self.TCP_TRACK = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
         
         self.iha:any
         
@@ -140,7 +141,7 @@ class FlightTracker:
         connection=False
         while not connection:
             try:
-                self.ID_Client.connect_to_server()
+                self.TCP_UI_TELEM.connect_to_server()
                 connection=True
                 self.Telem_client_status=connection
                 print("TELEM SERVER: BAĞLANDI.")
@@ -151,15 +152,14 @@ class FlightTracker:
         connection_status=False
         while not connection_status:
             try:
-                self.TCP_UI_TELEM.creat_server()
+                self.TCP_TRACK.creat_server()
                 connection_status=True
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
                 print("IHA_YONELIM SERVER: oluştururken hata : ", e , " \n")
                 print("IHA_YONELIM SERVER: yeniden bağlanılıyor...\n")
-                self.TCP_UI_TELEM.reconnect()
+                self.TCP_TRACK.reconnect()
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
-        self.kamikaze_sunucusu = connection_status
         return connection_status
 
     def receive_telem(self):
@@ -170,7 +170,7 @@ class FlightTracker:
 
     def send_coord_to_uav(self,coord_data):
         try:
-            self.TCP_UI_TELEM.send_data_to_client(coord_data)        
+            self.TCP_TRACK.send_data_to_client(coord_data)        
         except Exception as e:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
 
@@ -240,7 +240,7 @@ class FlightTracker:
 
 #! UI-OPERATIONS
     def add_plane_marker(self,lat,lon,rotation,plane_id):
-        self.UI.set_plane(lat=lat,lon=lon,rotation=rotation,plane_id=plane_id,)  
+        self.UI.set_plane(lat=lat,lon=lon,rotation=rotation,plane_id=plane_id,)
         print(f"ID:{plane_id} -> [lat:{lat} , lon:{lon} , rotation:{rotation} ]")
 
     def start_ui(self):
@@ -251,15 +251,14 @@ class FlightTracker:
         print("Current Working Mode : ",mode)
 
         if mode == "IHA":
-
             self.Yonelim_sunucusu_oluştur()
             self.Telemetri_sunucusuna_baglan()
-            time.sleep(self.TK_INIT_TIME_SEC)
+            #time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
 
             if self.Telem_client_status:
                 while not mainloop:
-                    telemetri_cevabı = self.ID_Client.client_recv_message()
+                    telemetri_cevabı = self.TCP_UI_TELEM.client_recv_message()
                     coord_data=self.process_data_stream(telemetri_cevabı)
                     self.send_coord_to_uav(coord_data=coord_data)
                     #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerektirse açılabilir..
@@ -281,7 +280,6 @@ class FlightTracker:
         if mode == "UI_TEST":
             time.sleep(2)
             self.add_plane_for_testing(start_lat=52.5164,start_lon=13.3734,limit=20,rotation=10,plane_id="TEST")
-
 
 #!Testing
     def add_plane_for_testing(self,start_lat,start_lon,limit,rotation,plane_id):
@@ -317,7 +315,7 @@ class FlightTracker:
             #time.sleep(0.1)
             print("TEST-MARKERS ADDED..")
 
-    def connect_mission(self,port=5762):
+    def connect_mission(self,port=5763):
         parser = argparse.ArgumentParser()
         parser.add_argument('--connect', default=f'tcp:127.0.0.1:{port}')
         args = parser.parse_args()
@@ -338,7 +336,7 @@ class FlightTracker:
 
 if __name__ == "__main__":
 
-    Mode = "Monitor" #Monitor / IHA / UI_TEST
+    Mode = "IHA" #Monitor / IHA / UI_TEST
 
     tracker=FlightTracker("10.80.1.73") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))

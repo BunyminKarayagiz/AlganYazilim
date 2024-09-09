@@ -1,4 +1,4 @@
-import customtkinter
+import customtkinter,os
 import tkinter as tk
 from typing import Union,Callable
 from Modules.Cprint import cp
@@ -132,21 +132,30 @@ class FloatSpinbox(customtkinter.CTkFrame):
 
 #?  LAYER-1
 class MAIN_GUI_FRAME(customtkinter.CTkFrame):
-    def __init__(self, master,**kwargs):
+    def __init__(self, master,Yer_istasyonu_obj,**kwargs):
+        
+        self.Yer_istasyonu_obj = Yer_istasyonu_obj
+        
         super().__init__(master,**kwargs)
         self.rowconfigure(0,weight=1)
-
         self.columnconfigure(0,weight=1)
         self.columnconfigure(1,weight=1)
 
     #? LAYER-2
         self.left_main_frame = customtkinter.CTkTabview(self,corner_radius=5,border_width=1)
-        self.left_main_frame.add("CUSTOM")
+        self.left_main_frame.add("CONTROL")
         self.right_main_frame=customtkinter.CTkTabview(self,corner_radius=5,border_width=1)
         self.right_main_frame.add("VIDEO-FEED")
 
         self.left_main_frame.grid(row=0,column=0,padx=10,pady=10,sticky="nsew")
         self.right_main_frame.grid(row=0,column=1,padx=10,pady=10,sticky="nsew")
+
+    #? LAYER-3
+        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="Onay VER/AL",command=Yer_istasyonu_obj.yki_onay_ver)
+        self.Confirmation_button.grid(row=0,column=0,padx=10,pady=10,sticky="nwe")
+
+
+
 
 
 #?  LAYER-1
@@ -164,9 +173,6 @@ class COMPANION_FRAMES(customtkinter.CTkFrame):
         self.tabview.add("MONITOR")
         # self.tabview.tab("TAB-1").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
         # self.tabview.tab("TAB-2").grid_columnconfigure(0, weight=1)
-
-
-
         #? LAYER-3
         # self.optionmenu_1 = customtkinter.CTkOptionMenu(self.tabview.tab("TAB-1"), dynamic_resizing=False,
         #                                                 values=["Value 1", "Value 2", "Value Long Long Long"])
@@ -211,9 +217,8 @@ class TERMINAL_FRAME(customtkinter.CTkFrame):
 
 #? MAIN-LAYER
 class App(customtkinter.CTk):
-    def __init__(self,Yer_istasyonu_obj=None,server_manager=None):
+    def __init__(self,Yer_istasyonu_obj=None):
         super().__init__()
-        self._sv = server_manager
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
         self.title("ALGAN - GROUND CONTROL STATION")
@@ -227,7 +232,7 @@ class App(customtkinter.CTk):
         self.grid_columnconfigure(2, weight=0)
 
         self.menu_frame = MENU_FRAME(master=self,width=150,corner_radius=0)
-        self.main_frame = MAIN_GUI_FRAME(master=self)
+        self.main_frame = MAIN_GUI_FRAME(master=self,Yer_istasyonu_obj=Yer_istasyonu_obj)
         self.terminal_frame = TERMINAL_FRAME(master=self)
         self.companion_frame = COMPANION_FRAMES(master=self,width=500)
 
@@ -237,7 +242,7 @@ class App(customtkinter.CTk):
         self.companion_frame.grid(row=0,column=2,rowspan=2,padx=20,pady=20,sticky="nswe")
     
     def server_stat_check(self):
-        cp.fatal("UI-SERVERCHECK")
+        #cp.fatal("UI-SERVERCHECK")
         self.after(2000, self.server_stat_check)
 
     def run(self):# Run the GUI event
@@ -277,7 +282,7 @@ class main_gui:
         self.indicator1_MAV_PROXY.pack(pady=10)
         self.send_button.pack(pady=20)
         
-        self._sv = server_manager
+        self.Yer_istasyonu_obj = server_manager
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
     def server_status_check(self):
@@ -286,37 +291,37 @@ class main_gui:
         else:
             self.send_button.config(image=self.lock_img)
 
-        if self._sv.ana_sunucu_status:
+        if self.Yer_istasyonu_obj.ana_sunucu_status:
             self.indicator_anasunucu.config(bg='green')
         else:
             self.indicator_anasunucu.config(bg='red')
         
-        if self._sv.Yönelim_sunucusu:
+        if self.Yer_istasyonu_obj.Yönelim_sunucusu:
             self.indicator_yonelim.config(bg='green')
         else:
             self.indicator_yonelim.config(bg='red')
 
-        if self._sv.kamikaze_sunucusu:
+        if self.Yer_istasyonu_obj.kamikaze_sunucusu:
             self.indicator_mod.config(bg='green')
         else:
             self.indicator_mod.config(bg='red')
 
-        if self._sv.kamikaze_sunucusu:
+        if self.Yer_istasyonu_obj.kamikaze_sunucusu:
             self.indicator_kamikaze.config(bg='green')
         else:
             self.indicator_kamikaze.config(bg='red')
 
-        if self._sv.UI_telem_sunucusu:
+        if self.Yer_istasyonu_obj.UI_telem_sunucusu:
             self.indicator_UI_telem.config(bg='green')
         else:
             self.indicator_UI_telem.config(bg='red')
 
-        if self._sv.YKI_ONAY_sunucusu:
+        if self.Yer_istasyonu_obj.YKI_ONAY_sunucusu:
             self.indicator_YKI_ONAY.config(bg='green')
         else:
             self.indicator_YKI_ONAY.config(bg='red')
 
-        if self._sv.MAV_PROXY_sunucusu:
+        if self.Yer_istasyonu_obj.MAV_PROXY_sunucusu:
             self.indicator1_MAV_PROXY.config(bg='green')
         else:
             self.indicator1_MAV_PROXY.config(bg='red')

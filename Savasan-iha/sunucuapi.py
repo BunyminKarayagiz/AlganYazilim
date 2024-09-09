@@ -1,4 +1,4 @@
-# ALGAN Takımı tarafından oluşturulan basit test sunucu API dosyası
+# ALGAN Takımı tarafından oluturulan basit test sunucu API dosyası
 import datetime
 import random
 import flask
@@ -46,10 +46,11 @@ def get_hss_coord():
             }
         ]
     }
+    
     return jsonify(hava_savunma_sistemleri)
 def durum(cls, kod):
     if kod == 200:
-        return "İstek başarılı"
+        return "İstek baarili"
     elif kod == 204:
         return "Gonderilen paketin Formati Yanlis"
     elif kod == 400:
@@ -62,7 +63,6 @@ def durum(cls, kod):
         return "Gecersiz URL."
     elif kod == 500:
         return "Sunucu ici hata."
-
 
 sunucusaati = {"saat": datetime.datetime.now().hour,
                "dakika": datetime.datetime.now().minute,
@@ -87,6 +87,7 @@ veri1=[{
     "iha_hizi":0,
     "zaman_farki": 0
 }]
+
 veri2=[{
     "takim_numarasi": 2,
     "iha_enlem": -34.9042521,
@@ -112,7 +113,7 @@ veri3=[{
 
 @app.route('/api/giris', methods=["POST"])
 def giris():
-    # gelen değişkeni kullanıcı adını ve sifreyi döndürüyor.
+    # gelen deikeni kullanıcı adını ve sifreyi döndürüyor.
     gelen = json.loads(request.data)
     if gelen in girisveri:
         print(gelen["kadi"].upper() + " Giris Yapti")
