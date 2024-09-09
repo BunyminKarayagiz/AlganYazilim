@@ -10,7 +10,7 @@ import argparse
 from typing import Dict,Any
 from random import randint
 import math
-
+from vincenty import vincenty
 #!CLASS OBJ
 class Plane:
     def __init__(self, takim_numarasi: int, UI ,data_limit=5,marker_limit = 5,shadow=3):
@@ -104,7 +104,7 @@ class FlightTracker:
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
 
-        self.Algan_ID = "5"
+        self.Algan_ID = "1"
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.ana_sunucu_status = False
 
@@ -117,6 +117,8 @@ class FlightTracker:
         self.threads = []
         self.plane_dict = {}
         self.plane_show_limit = 3
+        self.secilen_rakip=""
+        self.yonelim_deg_value=50
 
 #!SERVER-OPERATIONS
     def anasunucuya_baglan(self):
@@ -172,27 +174,60 @@ class FlightTracker:
         except Exception as e:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
 
+    def fark_hesapla(self,ac1, ac2):
+        fark = abs(ac1 - ac2)
+        if fark > 180:
+            fark = 360 - fark
+        return fark
+
     def process_data_stream(self, data_stream: str):
+        max_uzaklik=0
         try:
             parsed_data = json.loads(data_stream)["konumBilgileri"]
-
             for entry in parsed_data:
                 takim_numarasi = entry["takim_numarasi"]
                 if takim_numarasi not in self.planes:
                     self.add_plane(takim_numarasi)
                     print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                 a,b,c,d = self.planes[takim_numarasi].append_data(entry)
+            if self.secilen_rakip == "":      
+                for i in parsed_data:
+                    if i["takim_numarasi"] == int(self.Algan_ID):
+                        continue
+                    
+                    fark = abs(i["iha_yonelme"] - parsed_data[int(self.Algan_ID)-1]["iha_yonelme"])
+                    if fark > 180:
+                        aradaki_fark = 360 - fark
+                    else:
+                        aradaki_fark = fark
 
-
-            for i in range(10):
-                pass
-
-            
-
-
-
+                    if aradaki_fark <= self.yonelim_deg_value:
+                        benEnlem_rad = math.radians(parsed_data[int(self.Algan_ID)-1]["iha_enlem"])
+                        rakipEnlem_rad = math.radians(i["iha_enlem"])
+                        deltaBoylam = math.radians(i["iha_boylam"] - parsed_data[int(self.Algan_ID)-1]["iha_boylam"])
+                    
+                        # Azimut hesaplama.
+                        y = math.sin(deltaBoylam) * math.cos(rakipEnlem_rad)
+                        x = math.cos(benEnlem_rad) * math.sin(rakipEnlem_rad) - math.sin(benEnlem_rad) * math.cos(rakipEnlem_rad) * math.cos(deltaBoylam)
+                        azimut = math.degrees(math.atan2(y, x))
+                        azimut = (azimut + 360) % 360
+                        
+                        # Azimut ve yön farkı kontrolü
+                        yon_farki = self.fark_hesapla(parsed_data[int(self.Algan_ID)-1]["iha_yonelme"], azimut)
+                        # Geliştirilmiş kontrol ve çıktı
+                        if yon_farki <= 50:  # Burada önümüzdeki rakipler arasındaki en uzaktaki rakibi seçiyoruz. Ve bu bizim yöneleceğimiz rakip olmuş oluyor
+                            rakip_konum=(i["iha_enlem"],i["iha_boylam"])
+                            uzaklık = vincenty((rakip_konum),(parsed_data[int(self.Algan_ID)-1]["iha_enlem"],parsed_data[int(self.Algan_ID)-1]["iha_boylam"]))
+                            if max_uzaklik < uzaklık:
+                                max_uzaklik=uzaklık
+                                self.secilen_rakip=i # rakibin seçimi burada yapılıyor. for dışında secilen_rakip değişkeni kullanılabilir.
+                        else:
+                            # Bu kısmı, yön farkı kontrolünden önce sağlayan test kodunu kaldırdık
+                            print("RAKİP BULUNAMADI:")
+                            self.yonelim_deg_value += 5
                 
-            return (a,b,c,d)
+
+            print( "SEÇİLEN RAKİP: ", self.secilen_rakip)
         except Exception as e:
             cp.fatal(e)
 
@@ -305,7 +340,7 @@ if __name__ == "__main__":
 
     Mode = "Monitor" #Monitor / IHA / UI_TEST
 
-    tracker=FlightTracker("10.0.0.236") #Yazılım bilgisayarı IP -> 10.0.0.236
+    tracker=FlightTracker("10.80.1.73") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()

@@ -17,7 +17,7 @@ time.sleep(2)
 
 while True:
     rakip_veri = {
-                "takim_numarasi": 2,
+                "takim_numarasi": 3,
                 "iha_enlem": rakip.pos_lat,
                 "iha_boylam": rakip.pos_lon,
                 "iha_irtifa": rakip.pos_alt_rel,

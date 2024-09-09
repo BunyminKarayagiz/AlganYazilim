@@ -89,11 +89,11 @@ veri1=[{
 }]
 veri2=[{
     "takim_numarasi": 2,
-    "iha_enlem": 0.0,
-    "iha_boylam": 0.0,
+    "iha_enlem": -34.9042521,
+    "iha_boylam": 149.1631579,
     "iha_irtifa": 0,
     "iha_dikilme": 0,
-    "iha_yonelme": 0,
+    "iha_yonelme": 49,
     "iha_yatis": 0,
     "iha_hizi":0,
     "zaman_farki": 0
@@ -104,7 +104,7 @@ veri3=[{
     "iha_boylam": 0.0,
     "iha_irtifa": 0,
     "iha_dikilme": 0,
-    "iha_yonelme": 0,
+    "iha_yonelme": 99,
     "iha_yatis": 0,
     "iha_hizi":0,
     "zaman_farki": 0
