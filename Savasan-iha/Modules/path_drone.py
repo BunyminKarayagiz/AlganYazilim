@@ -98,7 +98,6 @@ class Plane():
         #self.master = self.vehicle.alganrc
         self._setup_listeners()
 
-
     def _setup_listeners(self):  # -- (private) Set up listeners
         # ----------------------------
         # --- CALLBACKS
@@ -527,7 +526,6 @@ class Plane():
             }
         }
         return self.mesaj
-
 
     def arm_mavlink(self):
         self.master.mav.command_long_send(

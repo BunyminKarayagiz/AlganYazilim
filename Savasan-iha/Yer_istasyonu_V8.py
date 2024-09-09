@@ -7,13 +7,12 @@ from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy,SimplifiedTe
 from Modules.qr_detection import QR_Detection
 from Modules.Cprint import cp
 from Modules.yki_arayuz import App
+from Modules.prediction_algorithm_try import KalmanFilter
 
 import multiprocessing as mp
 import numpy as np
-
 import threading,cv2,pyvirtualcam,os,json,time,datetime,av, pickle
-
-from Modules.prediction_algorithm_try import KalmanFilter
+from typing import Tuple
 
 #!      SORUNLAR
 #!SUNUCU-SAATİ + FARK :                Eksik(Mevcut Durum yeterli)
@@ -419,7 +418,7 @@ class YerIstasyonu():
 
                     #Hedef Görüldü. Yönelim modu devre dışı.
                             self.trigger_event(4,"STOP")
-                            pwm_data_queue.put(telemetri_verileri)
+                            pwm_data_queue.put(kalman_data)
                             #pwm_trigger.set()
 
                     if lockedOrNot == 0 and locked_prev== 1:
@@ -433,6 +432,8 @@ class YerIstasyonu():
                             #pwm_trigger.clear()
 
                     if lockedOrNot == 1 and locked_prev== 1:
+                            pwm_data_queue.put(kalman_data)
+
                             lock_elapsed_time= time.perf_counter() - lock_start_time
                             cv2.putText(img=processed_frame,text=str(round(lock_elapsed_time,3)),org=(50,370),fontFace=1,fontScale=1.5,color=(0,255,0),thickness=2)
 
@@ -535,7 +536,7 @@ class YerIstasyonu():
                     videoKayit.write(frame)    
                     if not arayuz_frame_queue.full():
                         arayuz_frame_queue.put(frame)
-                    cam.send(frame= frame)
+                    cam.send(frame= virtual_frame)
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
@@ -553,7 +554,6 @@ class YerIstasyonu():
 
                 if event_message=="stop_capture":
                     videoKayit.release()
-
 
         videoKayit.release()
         cv2.destroyAllWindows()
@@ -698,25 +698,12 @@ class YerIstasyonu():
 
     def PWM(self):
         pwm_data_queue, pwm_trigger = self.event_map[5]
-
-        stored_packets = [0,0,0,0,0,0,0,0]
-        packet_counter = 0
-
         while True:
             if not pwm_data_queue.empty():
-                pwm_tuple= pwm_data_queue.get()
-                stored_packets[packet_counter]=pwm_tuple
-                packet_counter +=1
-
-                if packet_counter == 5:
-                    packet_counter = 0
-                    print("Packet Ready:\n",stored_packets,"\n")
-
-                    if self.KALMAN_PWM_SERVER_STATUS:
-                        pwm_tuple=self.kalman_predict(x_center=0, y_center=0)
-                        self.SEND_PWM(pwm_tuple)
-
-                    stored_packets = [0,0,0,0,0,0,0,0]
+                coord_data:tuple = pwm_data_queue.get()
+            if self.KALMAN_PWM_SERVER_STATUS:
+                pwm_tuple=self.kalman_predict(x_center=coord_data[0], y_center=coord_data[1])
+                self.SEND_PWM(pwm_tuple)
 
     def ana_sunucu_manager(self,num=6):
         event_queue,event_trigger = self.event_map[num]
@@ -827,7 +814,7 @@ class YerIstasyonu():
     def ANA_GOREV_KONTROL(self):
         th1,th2,th3,th4,th5 , p1,p2,p3,p4,p5 = self.process_flow_manager()
 
-        time.sleep(2)
+        time.sleep(10)
 
         while True:
             if self.MODE_SERVER_STATUS:

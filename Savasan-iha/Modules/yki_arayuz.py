@@ -163,9 +163,6 @@ class COMPANION_FRAMES(customtkinter.CTkFrame):
         self.tabview.add("MONITOR")
         # self.tabview.tab("TAB-1").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
         # self.tabview.tab("TAB-2").grid_columnconfigure(0, weight=1)
-
-
-
         #? LAYER-3
         # self.optionmenu_1 = customtkinter.CTkOptionMenu(self.tabview.tab("TAB-1"), dynamic_resizing=False,
         #                                                 values=["Value 1", "Value 2", "Value Long Long Long"])

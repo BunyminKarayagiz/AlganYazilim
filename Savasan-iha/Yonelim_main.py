@@ -303,7 +303,7 @@ if __name__ == "__main__":
 
     Mode = "Monitor" #Monitor / IHA / UI_TEST
 
-    tracker=FlightTracker("10.0.0.236") #Yazılım bilgisayarı IP -> 10.0.0.236
+    tracker=FlightTracker("10.80.1.59") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()

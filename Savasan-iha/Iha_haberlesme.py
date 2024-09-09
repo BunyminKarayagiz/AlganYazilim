@@ -1,6 +1,7 @@
 import socket
 from Modules import Client_Tcp , Client_Udp
 import threading
+import cv2
 
 class iha_haberlesme():
     def __init__(self,host_ip) -> None:
