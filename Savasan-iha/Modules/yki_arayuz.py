@@ -132,21 +132,31 @@ class FloatSpinbox(customtkinter.CTkFrame):
 
 #?  LAYER-1
 class MAIN_GUI_FRAME(customtkinter.CTkFrame):
-    def __init__(self, master,**kwargs):
+    def __init__(self, master,Yer_istasyonu_obj,**kwargs):
+        
+        self.Yer_istasyonu_obj = Yer_istasyonu_obj
+        
         super().__init__(master,**kwargs)
         self.rowconfigure(0,weight=1)
-
         self.columnconfigure(0,weight=1)
         self.columnconfigure(1,weight=1)
 
     #? LAYER-2
         self.left_main_frame = customtkinter.CTkTabview(self,corner_radius=5,border_width=1)
-        self.left_main_frame.add("CUSTOM")
+        self.left_main_frame.add("CONTROL")
         self.right_main_frame=customtkinter.CTkTabview(self,corner_radius=5,border_width=1)
         self.right_main_frame.add("VIDEO-FEED")
 
         self.left_main_frame.grid(row=0,column=0,padx=10,pady=10,sticky="nsew")
         self.right_main_frame.grid(row=0,column=1,padx=10,pady=10,sticky="nsew")
+
+    #? LAYER-3
+        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="Onay VER/AL",command=Yer_istasyonu_obj.yki_onay_ver)
+        self.Confirmation_button.grid(row=0,column=0,padx=10,pady=10,sticky="nwe")
+
+
+
+
 
 #?  LAYER-1
 class COMPANION_FRAMES(customtkinter.CTkFrame):
@@ -207,7 +217,7 @@ class TERMINAL_FRAME(customtkinter.CTkFrame):
 
 #? MAIN-LAYER
 class App(customtkinter.CTk):
-    def __init__(self,Yer_istasyonu_obj=None,):
+    def __init__(self,Yer_istasyonu_obj=None):
         super().__init__()
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
@@ -222,7 +232,7 @@ class App(customtkinter.CTk):
         self.grid_columnconfigure(2, weight=0)
 
         self.menu_frame = MENU_FRAME(master=self,width=150,corner_radius=0)
-        self.main_frame = MAIN_GUI_FRAME(master=self)
+        self.main_frame = MAIN_GUI_FRAME(master=self,Yer_istasyonu_obj=Yer_istasyonu_obj)
         self.terminal_frame = TERMINAL_FRAME(master=self)
         self.companion_frame = COMPANION_FRAMES(master=self,width=500)
 

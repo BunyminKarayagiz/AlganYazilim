@@ -49,7 +49,7 @@ class YerIstasyonu():
         self.fark = 0
         self.is_qrAvailable = False
         self.is_qr_transmitted = "False"
-        self.Yki_onayi_verildi = False
+        self.YKI_CONFIRMATION_STATUS = False
         
         self.qr_coordinat = ""
 
@@ -96,7 +96,7 @@ class YerIstasyonu():
         self.UI_TELEM_SERVER_STATUS=False
         self.UI_VIDEO_SERVER_STATUS=False
         cp.ok("Server Manager initialized ✓✓✓")
-
+    
     def senkron_local_saat(self):
         status_code, sunuc_saati = self.ana_sunucu.sunucu_saati_al()
         local_saat = datetime.datetime.today()
@@ -251,19 +251,22 @@ class YerIstasyonu():
 
     #! ANA FONKSİYONLAR     
     def yki_onay_ver(self):
-        if self.YKI_ONAY_sunucusu:
-            cp(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}","red","on_white", attrs=["bold"])
-            if self.Yki_onayi_verildi == False:
-                self.Server_YKI_ONAY.send_data_to_client("ALGAN".encode())
-                self.Yki_onayi_verildi = True
-                cp.warn(f"ONAY VERILDI ---> {self.Yki_onayi_verildi}")
+        if self.CONFIRMATION_SERVER_STATUS:
+            cp.ok(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
+            if self.YKI_CONFIRMATION_STATUS == False:
+                self.Server_CONFIRMATION.send_data_to_client("ALGAN".encode())
+                self.YKI_CONFIRMATION_STATUS = True
+                cp.warn(f"ONAY VERILDI ---> {self.YKI_CONFIRMATION_STATUS}")
             else:
-                self.Server_YKI_ONAY.send_data_to_client("RED".encode())
-                self.Yki_onayi_verildi = False
-                cp.warn(f"ONAY REDDEDILDI ---> {self.Yki_onayi_verildi}")
+                self.Server_CONFIRMATION.send_data_to_client("RED".encode())
+                self.YKI_CONFIRMATION_STATUS = False
+                cp.warn(f"ONAY REDDEDILDI ---> {self.YKI_CONFIRMATION_STATUS}")
         else:
-            cp.err(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.Yki_onayi_verildi}")
+            cp.err(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
             return False
+    # def yki_onay_ver(self):
+    #     print("'Onay Ver/Al' butonu kullanıldı")
+
         
     def telemetri(self):
         timer_start=time.perf_counter()

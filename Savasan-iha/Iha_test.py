@@ -22,9 +22,10 @@ class client_manager:
         # TCP Configurations {muhtemel host_ip -> 10.0.0.236(YazılımPC)}
         self.TCP_PWM=Client_Tcp.Client(HOST=yazilim_ip,PORT=8001,name="KALMAN-PWM")
         self.TCP_MOD=Client_Tcp.Client(HOST=yazilim_ip,PORT=8002,name="MODE")
-        self.TCP_TRACK=Client_Tcp.Client(HOST=yonelim_ip,PORT="UNDEFINED",name="TRACK")
         self.TCP_KAMIKAZE=Client_Tcp.Client(HOST=yazilim_ip,PORT=8003,name="KAMIKAZE")
         self.TCP_CONFIRMATION=Client_Tcp.Client(HOST=yazilim_ip,PORT=8004,name="CONFIRMATION")
+
+        self.TCP_TRACK=Client_Tcp.Client(HOST=yonelim_ip,PORT=9011,name="TRACK")
 
         self.PWM_SERVER_STATUS=False
         self.TRACK_SERVER_STATUS=False
@@ -138,6 +139,17 @@ class autopilot:
         self.FAILSAFE_TAKEOVER = False
         self.YKI_CONFIRMATION_STATUS = False
 
+        self.enemy_track_location = None
+        
+        #Kamikaze_parametreleri
+        self.is_qr_available=False
+        self.qr_location=None
+        self.heading_to_qr=False
+        self.kamikaze_dive_state=False
+        self.kamikaze_recover_state=False
+        self.kamikaze_start=None
+        self.kamikaze_end=None
+
     def change_mod(self, mod_kodu, iha: path_drone.Plane):
         telemetri = self.get_telemetri_verisi(iha)
         print(mod_kodu)
@@ -149,16 +161,17 @@ class autopilot:
             iha.set_ap_mode(str(mod_kodu))
 
     def stall_check(self):
-        pass
+        stall_error= self.TUYGUN_PIXHAWK.groundspeed - self.stall_speed
+        return stall_error , self.TUYGUN_PIXHAWK.groundspeed
 
     def alt_check(self):
-        pass
+        return self.TUYGUN_PIXHAWK.pos_alt_rel
 
     def roll_check(self):
-        pass
+        return self.TUYGUN_PIXHAWK.att_roll_deg
     
     def pitch_check(self):
-        pass
+        return self.TUYGUN_PIXHAWK.att_pitch_deg
 
     def trigger_failsafe(self):
         pass
@@ -182,31 +195,37 @@ class autopilot:
         pass
 
     def test_throttle(self):
-        pass
+        for throttle_val in range(1000,2000,10):
+            self.TUYGUN_PIXHAWK.set_rc_channel(rc_chan=3,value_us=throttle_val)
+            time.sleep(0.1)
 
     def test_pitch(self):
-        pass
+        for pitch_servo in range(1000,2000,10):
+            self.TUYGUN_PIXHAWK.set_rc_channel(rc_chan=2,value_us=pitch_servo)
+            time.sleep(0.1)
 
     def test_roll(self):
         for roll_servo in range(1000,2000,10):
-            self.TUYGUN_PIXHAWK
-            time.sleep(0.05)
+            self.TUYGUN_PIXHAWK.set_rc_channel(rc_chan=1,value_us=roll_servo)
+            time.sleep(0.1)
 
     def wait_for_pwm(self):
         while True:
             try:
                 pwm_data=pickle.loads(self.TCP_PWM.client_recv_message())
-                print(pwm_data)
+                print("PWM RECEIVED : ",pwm_data)
                 try:
                     if self.YKI_CONFIRMATION_STATUS == True:
-                        if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA" :
-                                print("AP MODE SET TO FBWA...")
-                                self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
+                        print("")
+                    
+                    #     if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA" :
+                    #             print("AP MODE SET TO FBWA...")
+                    #             self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
-                        if self.YKI_CONFIRMATION_STATUS == True:
-                            self.TUYGUN_PIXHAWK.set_rc_channel(1, pwm_data[0]) #pwmX
-                            self.TUYGUN_PIXHAWK.set_rc_channel(2, pwm_data[1]) #pwmY
-                            self.TUYGUN_PIXHAWK.set_rc_channel(3, 1500)
+                        # if self.YKI_CONFIRMATION_STATUS == True:
+                        #     self.TUYGUN_PIXHAWK.set_rc_channel(1, pwm_data[0]) #pwmX
+                        #     self.TUYGUN_PIXHAWK.set_rc_channel(2, pwm_data[1]) #pwmY
+                        #     self.TUYGUN_PIXHAWK.set_rc_channel(3, 1500)
                     else:
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                             self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
@@ -217,128 +236,194 @@ class autopilot:
 
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
+            
+    def wait_for_track(self):
+        while True:
+            try:
+                self.enemy_track_location = self.CLIENT_MANAGER.TCP_TRACK.client_recv_message()
+            except Exception as e:
+                print(f"YONELİM : VERİ ALIRKEN HATA -> {e}")
+
+    def wait_for_qr_konum(self):
+        while True:
+            try:
+                self.CLIENT_MANAGER.TCP_KAMIKAZE.send_message_to_server("QR-KONUM")
+                self.qr_location = self.CLIENT_MANAGER.TCP_KAMIKAZE.client_recv_message()
+                self.is_qr_available=True
+            except Exception as e:
+                print(f"KAMIKAZE : QR-KONUM ALIRKEN HATA -> {e}")
+                self.is_qr_available=False
 
     def TRACK_BY_LOCATION(self): #!KONUMA BAĞLI TAKİP/YÖNELİM
-            while True:
-                if self.mevcut_mod != "kilitlenme":
-                    print("KILITLENME -> BEKLEME MODU")
-                    self.yönelim_release_event.wait()
-                    print("KILITLENME -> AKTIF")
-                    self.yönelim_release_event.clear()
-                try:
-                    print("YÖNELİM VERİSİ BEKLENİYOR..")
-                    self.yönelim_yapılacak_rakip = self.TCP_GUIDED_TRACK.client_recv_message()
-                    rakip_enlem,rakip_boylam = self.yönelim_yapılacak_rakip
-                    print("YONELIM VERISI: ", self.yönelim_yapılacak_rakip)
-
-                    try:
-                        if self.YKI_CONFIRMATION_STATUS == True:
-                            if iha_path.get_ap_mode() != "GUIDED":
-                                iha_path.set_ap_mode("GUIDED")
-                                timer = time.perf_counter()
-                             
-                            if time.perf_counter() - timer > 1.1:
-                                qr_git = LocationGlobalRelative(rakip_enlem, rakip_boylam, 100)
-                                #iha_path.set_rc_channel(3, 1500)
-                                iha_path.goto(qr_git)
-                                timer = time.perf_counter()
-                        else:
-                            if iha_path.get_ap_mode() != "AUTO":
-                                iha_path.set_ap_mode("AUTO")
-                            print("YKI_ONAYI BEKLENIYOR...")
-
-                    except Exception as e:
-                        print("KONTROL(Telem) : YÖNELİRKEN HATA ->",e)
-                except Exception as e:
-                    print("YONELIM SERVER: Veri çekilirken hata :", e)
-    
-    def KAMIKAZE(self): #!KONUM VE KAMIKAZE   KRITIK, Dalış anında modu değişimi sorun olabilir..
-        #time.sleep(0.3)
-        if self.mevcut_mod != "kamikaze" :
-                    print("KAMIKAZE -> BEKLEME MODU")
-                    self.kamikaze_release_event.wait()
-                    print("KAMIKAZE -> AKTIF")
-                    self.kamikaze_release_event.clear()
-        # is_qr_available= False
-        # try:
-            # while not is_qr_available:
-                # is_qr_available=self.qr_konum_al() #TODO Code-Blocking line..
-                # print("QRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\nQRKONUM ALINDI\n")
-        # except Exception as e:
-            # print("KAMIKAZE :QR-Konum gg ->",e)
-
-        #Manuel verilen qr self.yönelim_yapılacak_rakip = {
-        qr_enlem = 0
-        qr_boylam = 0
-
         try:
-            qr_gidiyor=False
-            kalkista = False
-            while True:
-                if self.mevcut_mod != "kamikaze" :
-                    print("KAMIKAZE -> BEKLEME MODU")
-                    self.kamikaze_release_event.wait()
-                    print("KAMIKAZE -> AKTIF")
-                    self.kamikaze_release_event.clear()
+            rakip_enlem,rakip_boylam = self.enemy_track_location
+            if self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS == True:
+                if self.TUYGUN_PIXHAWK.get_ap_mode() != "GUIDED":
+                    self.TUYGUN_PIXHAWK.set_ap_mode("GUIDED")
+                    
+                qr_git = LocationGlobalRelative(rakip_enlem, rakip_boylam, 100)
+                #iha_path.set_rc_channel(3, 1500)
+                self.TUYGUN_PIXHAWK.goto(qr_git)
+            else:
+                if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
+                    self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
+                print("YKI_ONAYI BEKLENIYOR...")
 
-                if self.YKI_CONFIRMATION_STATUS == True:
-                    print("YKI_ONAYI : ",self.YKI_CONFIRMATION_STATUS)
-                    qr_enlem, qr_boylam = json.loads(self.yönelim_yapılacak_rakip)["qrEnlem"], json.loads(self.yönelim_yapılacak_rakip)["qrBoylam"]
+        except Exception as e:
+            print(f"TRACK : ERROR WHILE TRACKING -> {e}")
+            if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
+                self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
+            
+    def KAMIKAZE(self): #!KONUM VE KAMIKAZE   KRITIK, Dalış anında modu değişimi sorun olabilir..
+        print(f"is_qr_available:{self.is_qr_available} , qr_location:{self.qr_location}")
+        try:
+            if not self.is_qr_available:
+
+                if self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS == True:
+                    print(f"KAMIKAZE- YKI_ONAYI :{self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS}")
+                    qr_enlem, qr_boylam = self.qr_location
                     qr_mesafe = vincenty([self.TUYGUN_PIXHAWK.pos_lat, self.TUYGUN_PIXHAWK.pos_lon], [qr_enlem, qr_boylam], 100)
-                    print("QR MESAFE", qr_mesafe)
-                    if not qr_gidiyor and not kalkista and qr_mesafe > 0.15:  # and iha.pos_alt_rel > 100:
-                        print('qr_gidiyor')
+                    print(f"Qr_distance:{qr_mesafe} -- heading_to_qr:{self.heading_to_qr} -- kamikaze_dive_state:{self.kamikaze_dive_state} -- kamikaze_recover_state:{self.kamikaze_recover_state}")
+
+                    #! QR'a yönelim
+                    if qr_mesafe > 0.15 and not self.heading_to_qr and not self.kamikaze_dive_state:  #and self.TUYGUN_PIXHAWK.pos_alt_rel > 100:
+                        print('HEADING TO QR...')
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "GUIDED":
                             self.TUYGUN_PIXHAWK.set_ap_mode("GUIDED")
-                        qr_git = LocationGlobalRelative(qr_enlem, qr_boylam, 100)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1500)
+                        qr_git = LocationGlobalRelative(qr_enlem, qr_boylam, 150)
+                        #self.TUYGUN_PIXHAWK.set_rc_channel(3, 1500)
                         self.TUYGUN_PIXHAWK.goto(qr_git)
-                        qr_gidiyor = True
-                    if qr_mesafe < 0.08 and qr_gidiyor:  # 150 metre
+                        self.heading_to_qr = True
+
+                    #! Dalış başlangıç(dive)
+                    if qr_mesafe < 0.08 and not self.kamikaze_dive_state and self.TUYGUN_PIXHAWK.pos_alt_rel > 140:  # 150 metre
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                             self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
-                            kamikaze_start= datetime.datetime.now()
-                            self.TCP_kamikaze.send_message_to_server(kamikaze_start)
+                            self.kamikaze_start= datetime.datetime.now()
                         self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)  # Channel 1 is for Roll Input,
                         self.TUYGUN_PIXHAWK.set_rc_channel(2, 1100)  # Channel 2 is for Pitch Input,
                         self.TUYGUN_PIXHAWK.set_rc_channel(3, 1100)  # Channel 3 is for Throttle Input,
-                    if self.TUYGUN_PIXHAWK.pos_alt_rel < 60:
+                        self.kamikaze_dive_state=True
+
+                    if self.TUYGUN_PIXHAWK.pos_alt_rel < 100 and self.kamikaze_dive_state and (not self.kamikaze_recover_state):
+                        print(f"Qr_distance:{qr_mesafe} -- heading_to_qr:{self.heading_to_qr} -- kamikaze_dive_state:{self.kamikaze_dive_state} -- kamikaze_recover_state:{self.kamikaze_recover_state}")
                         self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
                         self.TUYGUN_PIXHAWK.set_rc_channel(2, 1900)
                         self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
-                        qr_gidiyor = False
-                        kalkista = True
-                    if kalkista and self.TUYGUN_PIXHAWK.pos_alt_rel < 80:
-                        print("kalkiyor")
+
+                    if self.TUYGUN_PIXHAWK.pos_alt_rel < 90:
                         self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1900)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1800)
                         self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
-                    if kalkista and self.TUYGUN_PIXHAWK.pos_alt_rel > 30:
-                        print("kalkis bitti AUTO")
+
+                    #! AdımLı toparlanma(recovery)
+                    if self.TUYGUN_PIXHAWK.pos_alt_rel < 80:
+                        print(f"Qr_distance:{qr_mesafe} -- heading_to_qr:{self.heading_to_qr} -- kamikaze_dive_state:{self.kamikaze_dive_state} -- kamikaze_recover_state:{self.kamikaze_recover_state}")
+                        self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1750)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
+                        self.heading_to_qr = False
+                        self.kamikaze_recover_state = True
+
+                    if self.kamikaze_recover_state and self.TUYGUN_PIXHAWK.pos_alt_rel < 80:
+                        print(f"Qr_distance:{qr_mesafe} -- heading_to_qr:{self.heading_to_qr} -- kamikaze_dive_state:{self.kamikaze_dive_state} -- kamikaze_recover_state:{self.kamikaze_recover_state}")
+                        self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1700)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
+
+                    if self.kamikaze_recover_state and self.TUYGUN_PIXHAWK.pos_alt_rel > 40:
+                        print("Recovery Done")
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                             self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
-                        kalkista = False
+                        self.kamikaze_recover_state = False
+                
                 else:
                     print("YKI_ONAYI BEKLENIYOR...")
-
+            else:
+                print(f"QR-KONUM IS NOT AVAILABLE -> {self.qr_location}")
         except Exception as e:
-            print("ERROR KAMIKAZE ->" + str(e))
+            print(f"ERROR KAMIKAZE -> {e}")
 
     def AUTOPILOT_STATE_CONTROL(self):
         while True:
             if (not self.FAILSAFE_TAKEOVER) and self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS:
 
                 if self.current_mode == "AUTO":
+                    print(f"SELECTED MODE : {self.current_mode}")
                     if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                         self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
 
 
 
                 elif self.current_mode == "FBWA":
+                    print(f"SELECTED MODE : {self.current_mode}")
                     if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                         self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
 
+
+                elif self.current_mode == "RTL":
+                    print(f"SELECTED MODE : {self.current_mode}")
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "RTL":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("RTL")
+
+
+
+                elif self.current_mode == "KAMIKAZE":
+                    print(f"SELECTED MODE : {self.current_mode}")
+                    # if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
+                    #     self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
+                    self.KAMIKAZE()
+
+                elif self.current_mode == "KILITLENME":
+                    print(f"SELECTED MODE : {self.current_mode}")
+                    # if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
+                    #     self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
+                    self.TRACK_BY_LOCATION()
+
+                elif self.current_mode == "TESTING_MODE":
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
+                    print("TEST_ROLL-FBWA")
+                    time.sleep(1)
+                    self.test_roll()
+
+                    print("TEST_PITCH-FBWA")
+                    time.sleep(1)
+                    self.test_pitch()
+
+                    print("TEST_THROTTLE-FBWA")
+                    time.sleep(1)
+                    self.test_throttle()
+                    time.sleep(3)
+
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "MANUAL":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("MANUAL")
+                    print("TEST_ROLL-MANUAL")
+                    time.sleep(1)
+                    self.test_roll()
+
+                    print("TEST_PITCH-MANUAL")
+                    time.sleep(1)
+                    self.test_pitch()
+
+                    print("TEST_THROTTLE-MANUAL")
+                    time.sleep(1)
+                    self.test_throttle()
+                    time.sleep(1)
+
+
+
+            elif (not self.FAILSAFE_TAKEOVER) and (not self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS):
+                print("NEED GCS CONFIRMATION..")
+
+                if self.current_mode == "AUTO":
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
+
+                elif self.current_mode == "FBWA":
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
                 elif self.current_mode == "RTL":
                     if self.TUYGUN_PIXHAWK.get_ap_mode() != "RTL":
@@ -346,21 +431,6 @@ class autopilot:
 
 
 
-                elif self.current_mode == "KAMIKAZE":
-                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
-                        self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
-
-
-
-                elif self.current_mode == "KILITLENME":
-                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
-                        self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
-
-
-
-
-            elif (not self.FAILSAFE_TAKEOVER) and (not self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS):
-                print("NEED GCS CONFIRMATION..")
 
             elif (self.FAILSAFE_TAKEOVER) and (not self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS):
                 print("AUTOPILOT-FAILSAFE TRYING TO TAKE CONTROL..")
@@ -421,9 +491,18 @@ class Iha():
         th2.start()
 
     def start_system_autopilot(self):
-        th1=self.autopilot.AUTOPILOT_STATE_CONTROL()
+        th1=threading.Thread(target=self.autopilot.AUTOPILOT_STATE_CONTROL)
+        th1_1=threading.Thread(target=self.autopilot.wait_for_track)
+        th1_2=threading.Thread(target=self.autopilot.wait_for_pwm)
+        th1_3=threading.Thread(target=self.autopilot.wait_for_qr_konum)
+
         th2=self.autopilot.trigger_failsafe()
+        
         th1.start()
+        th1_1.start()
+        th1_2.start()
+        th1_3.start()
+
         th2.start()
 
     def main_operation(self):
@@ -463,20 +542,17 @@ class Iha():
                 self.autopilot.previous_mode = "KILITLENME"
 
             # #TODO ÇOK KRİTİK SWİTCH DÜZENLEMESİ
-            # if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 < 1400):  # ch6: Low, ch8: Low
-            #     self.autopilot.current_mode = "UNDEFINED"
-            #     self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
-            #     self.autopilot.previous_mode = "UNDEFINED"
-            #     if iha_obj.autopilot.TUYGUN_PIXHAWK.get_ap_mode()!="UNDEFINED":
-            #         iha_obj.autopilot.TUYGUN_PIXHAWK.set_ap_mode("UNDEFINED")
-            #     print("SELECTED MOD : UNDEFINED")
+            if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 < 1400):  # ch6: Low, ch8: Low
+                self.autopilot.current_mode = "TESTING_MODE"
+                self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+                self.autopilot.previous_mode = "TESTING_MODE"
 
 if __name__ == '__main__':
 
     TUYGUN = Iha(
             connect_type = "PLANNER" , # PLANNER / PIXHAWK
-            yazilim_ip = "10.0.0.236", #Yazılım:10.0.0.236
-            yonelim_ip = "10.0.0.236", #Yönelim:10.0.0.23x -Belirsiz
+            yazilim_ip = "10.80.1.59", #Yazılım:10.0.0.236
+            yonelim_ip = "10.80.1.59", #Yönelim:10.0.0.23x -Belirsiz
                   )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)
@@ -484,4 +560,3 @@ if __name__ == '__main__':
     print("2 Sn bekleniyor...")
     time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
     main_thread.run()
-

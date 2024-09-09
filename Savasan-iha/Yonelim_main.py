@@ -110,7 +110,7 @@ class FlightTracker:
         self.ana_sunucu_status = False
 
         self.TCP_UI_TELEM=Client_Tcp.Client(Yazılım_ip,9010) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
-        self.TCP_GUIDED_TRACK = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
+        self.TCP_TRACK = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
         
         self.iha:any
         
@@ -150,13 +150,13 @@ class FlightTracker:
         connection_status=False
         while not connection_status:
             try:
-                self.TCP_GUIDED_TRACK.creat_server()
+                self.TCP_TRACK.creat_server()
                 connection_status=True
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
                 print("IHA_YONELIM SERVER: oluştururken hata : ", e , " \n")
                 print("IHA_YONELIM SERVER: yeniden bağlanılıyor...\n")
-                self.TCP_GUIDED_TRACK.reconnect()
+                self.TCP_TRACK.reconnect()
                 print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
         return connection_status
 
