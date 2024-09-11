@@ -69,7 +69,6 @@ class Plane:
                 self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
         a,b,c,d=self.predict_next_position(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],height=new_data['iha_irtifa'],
                                                           speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
-                                                          speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
                                                           pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
         
         self.data.append(new_data)

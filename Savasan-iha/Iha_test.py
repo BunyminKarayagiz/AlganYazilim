@@ -76,7 +76,7 @@ class client_manager:
                 connection=True
                 print("KAMIKAZE SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
-                print("MOD SERVER: baglanırken hata: ", e)
+                print("KAMIKAZE SERVER: baglanırken hata: ", e)
         self.KAMIKAZE_SERVER_STATUS=connection
 
     def CONNECT_CONFIRMATION_CLIENT(self):
@@ -85,9 +85,9 @@ class client_manager:
             try:
                 self.TCP_CONFIRMATION.connect_to_server()
                 connection=True
-                print("YKI_ONAY SERVER: BAĞLANDI.")
+                print("CONFIRMATION SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
-                print("YKI_ONAY SERVER: baglanırken hata: ", e)
+                print("CONFIRMATION SERVER: baglanırken hata: ", e)
         self.CONFIRMATION_SERVER_STATUS=connection
         
     def wait_for_confirmation(self):
@@ -119,7 +119,7 @@ class client_manager:
         th5.start()
 
         print("WAITING FOR 'MODE' OR 'CONFIRM' ....  ")
-        th1.join()
+        #th1.join()
         th5.join()
 
 class autopilot:
@@ -217,7 +217,7 @@ class autopilot:
     def wait_for_pwm(self):
         while True:
             try:
-                pwm_data=pickle.loads(self.TCP_PWM.client_recv_message())
+                pwm_data=pickle.loads(self.CLIENT_MANAGER.TCP_PWM.client_recv_message())
                 print("PWM RECEIVED : ",pwm_data)
                 try:
                     if self.YKI_CONFIRMATION_STATUS == True:
@@ -372,7 +372,7 @@ class autopilot:
 
     def AUTOPILOT_STATE_CONTROL(self):
         while True:
-            print("AUTOPILOT STATE CONTROL")
+            #print("AUTOPILOT STATE CONTROL")
             if (not self.FAILSAFE_TAKEOVER) and self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS:
 
                 if self.current_mode == "AUTO":
@@ -411,33 +411,36 @@ class autopilot:
                 elif self.current_mode == "TESTING_MODE":
                     if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                         self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
-                    print("TEST_ROLL-FBWA")
-                    time.sleep(1)
-                    self.test_roll()
+                    print("TESTING_MODE...")
 
-                    print("TEST_PITCH-FBWA")
-                    time.sleep(1)
-                    self.test_pitch()
+                    if False:
+                        print("TEST_ROLL-FBWA")
+                        time.sleep(1)
+                        self.test_roll()
 
-                    print("TEST_THROTTLE-FBWA")
-                    time.sleep(1)
-                    self.test_throttle()
-                    time.sleep(3)
+                        print("TEST_PITCH-FBWA")
+                        time.sleep(1)
+                        self.test_pitch()
 
-                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "MANUAL":
-                        self.TUYGUN_PIXHAWK.set_ap_mode("MANUAL")
-                    print("TEST_ROLL-MANUAL")
-                    time.sleep(1)
-                    self.test_roll()
+                        print("TEST_THROTTLE-FBWA")
+                        time.sleep(1)
+                        self.test_throttle()
+                        time.sleep(3)
 
-                    print("TEST_PITCH-MANUAL")
-                    time.sleep(1)
-                    self.test_pitch()
+                        if self.TUYGUN_PIXHAWK.get_ap_mode() != "MANUAL":
+                            self.TUYGUN_PIXHAWK.set_ap_mode("MANUAL")
+                        print("TEST_ROLL-MANUAL")
+                        time.sleep(1)
+                        self.test_roll()
 
-                    print("TEST_THROTTLE-MANUAL")
-                    time.sleep(1)
-                    self.test_throttle()
-                    time.sleep(1)
+                        print("TEST_PITCH-MANUAL")
+                        time.sleep(1)
+                        self.test_pitch()
+
+                        print("TEST_THROTTLE-MANUAL")
+                        time.sleep(1)
+                        self.test_throttle()
+                        time.sleep(1)
 
 
 
@@ -512,8 +515,8 @@ class Iha():
         return path_drone.Plane(connection_string)
 
     def start_system_dataLines(self):
-        th1=self.client_manager.connect_to_servers()
-        th2=self.client_manager.wait_for_confirmation()
+        th1=threading.Thread(target=self.client_manager.connect_to_servers)
+        th2=threading.Thread(target=self.client_manager.wait_for_confirmation)
         th1.start()
         th2.start()
 
@@ -523,22 +526,32 @@ class Iha():
         th1_2=threading.Thread(target=self.autopilot.wait_for_pwm)
         th1_3=threading.Thread(target=self.autopilot.wait_for_qr_konum)
 
-        th2=self.autopilot.trigger_failsafe()
+        th2=threading.Thread(target=self.autopilot.trigger_failsafe())
         
         th1.start()
+        print("AUTOPILOT_STATE_CONTROL ... STARTED")
         th1_1.start()
+        print("autopilot.wait_for_track ... STARTED")
         th1_2.start()
+        print("autopilot.wait_for_pwm ... STARTED")
         th1_3.start()
+        print("autopilot.wait_for_qr_konum ... STARTED")
 
         th2.start()
+        print("autopilot.trigger_failsafe ... STARTED")
 
     def main_operation(self):
+        print("system_dataLines STARTING...")
         self.start_system_dataLines()
+        print("system_dataLines DONE...")
+
+        print("system_dataLines STARTING...")
         self.start_system_autopilot()
+        print("system_autopilot DONE...")
 
         while True:
-            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.ch_6
-            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.ch_8
+            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.servo6 #ch_6 servo6
+            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7 #ch_8 servo7
             print("SERVO:8", selected_servo_ch_8)
             print("SERVO:6", selected_servo_ch_6)
             time.sleep(0.1)
@@ -578,8 +591,8 @@ if __name__ == '__main__':
 
     TUYGUN = Iha( 
             connect_type = "PLANNER" , # PLANNER / PIXHAWK
-            yazilim_ip = "127.0.0.1", #Yazılım:10.0.0.236
-            yonelim_ip = "127.0.0.1", #Yönelim:10.0.0.239 -Belirsiz
+            yazilim_ip = "10.0.0.236", #Yazılım:10.0.0.236
+            yonelim_ip = "10.0.0.239", #Yönelim:10.0.0.239 -Belirsiz
                   )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)
