@@ -290,7 +290,6 @@ class YerIstasyonu:
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
-                                print("RAKİPTELEMETRI",rakip_telemetri)
                                 self.Server_UI_Telem.send_data(data=rakip_telemetri) #json.dumps(rakip_telemetri).encode('utf-8'))
                             else:
                                 cp.warn("UI-TELEM SERVER OFFLINE")
@@ -815,9 +814,9 @@ if __name__ == '__main__':
                                           event_map=event_map) #! IHA / LOCAL
     
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="127.0.0.1", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
-                                    ana_sunucu_ip="127.0.0.1", #! Teknofest Sunucu ip(str) -> Belirsiz
-                                    mavlink_ip="127.0.0.1", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
+                                    yonelim_ip="10.0.0.239", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
+                                    ana_sunucu_ip="10.0.0.250", #! Teknofest Sunucu ip(str) -> Belirsiz
+                                    mavlink_ip="10.0.0.237", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
                                     takimNo=1,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,

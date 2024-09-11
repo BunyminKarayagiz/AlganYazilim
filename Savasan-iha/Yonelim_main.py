@@ -69,7 +69,6 @@ class Plane:
                 self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
         a,b,c,d=self.predict_next_position(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],height=new_data['iha_irtifa'],
                                                           speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
-                                                          speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
                                                           pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
         
         self.data.append(new_data)
@@ -95,7 +94,7 @@ class Plane:
 
 #!CLASS MAIN
 class FlightTracker:
-    def __init__(self,Yazılım_ip,) -> None:
+    def __init__(self,Yazılım_ip) -> None:
         self.UI=App()
 
         self.TK_INIT_TIME_SEC = 2
@@ -293,7 +292,7 @@ if __name__ == "__main__":
 
     Mode = "IHA" #Monitor / IHA / UI_TEST
 
-    tracker=FlightTracker("127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0.236
+    tracker=FlightTracker(Yazılım_ip="127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()
