@@ -90,11 +90,11 @@ veri1=[{
 
 veri2=[{
     "takim_numarasi": 2,
-    "iha_enlem": -34.9042521,
-    "iha_boylam": 149.1631579,
+    "iha_enlem": 0,
+    "iha_boylam": 0,
     "iha_irtifa": 0,
     "iha_dikilme": 0,
-    "iha_yonelme": 49,
+    "iha_yonelme": 0,
     "iha_yatis": 0,
     "iha_hizi":0,
     "zaman_farki": 0
@@ -105,7 +105,7 @@ veri3=[{
     "iha_boylam": 0.0,
     "iha_irtifa": 0,
     "iha_dikilme": 0,
-    "iha_yonelme": 99,
+    "iha_yonelme": 0,
     "iha_yatis": 0,
     "iha_hizi":0,
     "zaman_farki": 0
@@ -121,7 +121,6 @@ def giris():
     else:
         print("basarisiz giris")
         return "403"
-
 
 @app.route('/api/sunucusaati', methods=["GET"])
 def getData():
@@ -146,8 +145,8 @@ def tele():
         veri1.append(gelen)
     elif gelen["takim_numarasi"] == 2:
         veri2.append(gelen)
-    elif gelen["takim_numarasi"] == 3:
-        veri3.append(gelen)
+    """elif gelen["takim_numarasi"] == 3:
+        veri3.append(gelen)"""
 
     gelenveri = {
         "sunucusaati": {
@@ -160,7 +159,7 @@ def tele():
         "konumBilgileri": [
             veri1[-1],
             veri2[-1],
-            veri3[-1]
+            #veri3[-1]
         ]
     }  # Test verileri
     print(gelenveri)

@@ -1,4 +1,4 @@
-from vincenty import vincenty
+"""from vincenty import vincenty
 import math
 
 class Hesaplamalar():
@@ -47,4 +47,4 @@ class Hesaplamalar():
                 secilen_rakip=i
         self.rakip_telemetri_verileri = []
         self.aradaki_mesafeler= []
-        return secilen_rakip
+        return secilen_rakip"""

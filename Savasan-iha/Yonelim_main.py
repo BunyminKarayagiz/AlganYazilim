@@ -11,6 +11,7 @@ from typing import Dict,Any
 from random import randint
 import math
 from vincenty import vincenty
+
 #!CLASS OBJ
 class Plane:
     def __init__(self, takim_numarasi: int, UI ,data_limit=5,marker_limit = 5,shadow=3):
@@ -68,7 +69,7 @@ class Plane:
                 self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
 
         a,b,c,d=self.predict_next_position(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],height=new_data['iha_irtifa'],
-                                                          speed=new_data['iha_hizi'],roll_degree=new_data['iha_yatis'],
+                                                          speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
                                                           pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
         
         self.data.append(new_data)
@@ -181,7 +182,6 @@ class FlightTracker:
         return fark
 
     def process_data_stream(self, data_stream: str):
-        max_uzaklik=0
         try:
             parsed_data = json.loads(data_stream)["konumBilgileri"]
             for entry in parsed_data:
@@ -190,46 +190,14 @@ class FlightTracker:
                     self.add_plane(takim_numarasi)
                     print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                 a,b,c,d = self.planes[takim_numarasi].append_data(entry)
-            if self.secilen_rakip == "":      
-                for i in parsed_data:
-                    if i["takim_numarasi"] == int(self.Algan_ID):
-                        continue
-                    
-                    fark = abs(i["iha_yonelme"] - parsed_data[int(self.Algan_ID)-1]["iha_yonelme"])
-                    if fark > 180:
-                        aradaki_fark = 360 - fark
-                    else:
-                        aradaki_fark = fark
-
-                    if aradaki_fark <= self.yonelim_deg_value:
-                        benEnlem_rad = math.radians(parsed_data[int(self.Algan_ID)-1]["iha_enlem"])
-                        rakipEnlem_rad = math.radians(i["iha_enlem"])
-                        deltaBoylam = math.radians(i["iha_boylam"] - parsed_data[int(self.Algan_ID)-1]["iha_boylam"])
-                    
-                        # Azimut hesaplama.
-                        y = math.sin(deltaBoylam) * math.cos(rakipEnlem_rad)
-                        x = math.cos(benEnlem_rad) * math.sin(rakipEnlem_rad) - math.sin(benEnlem_rad) * math.cos(rakipEnlem_rad) * math.cos(deltaBoylam)
-                        azimut = math.degrees(math.atan2(y, x))
-                        azimut = (azimut + 360) % 360
-                        
-                        # Azimut ve yön farkı kontrolü
-                        yon_farki = self.fark_hesapla(parsed_data[int(self.Algan_ID)-1]["iha_yonelme"], azimut)
-                        # Geliştirilmiş kontrol ve çıktı
-                        if yon_farki <= 50:  # Burada önümüzdeki rakipler arasındaki en uzaktaki rakibi seçiyoruz. Ve bu bizim yöneleceğimiz rakip olmuş oluyor
-                            rakip_konum=(i["iha_enlem"],i["iha_boylam"])
-                            uzaklık = vincenty((rakip_konum),(parsed_data[int(self.Algan_ID)-1]["iha_enlem"],parsed_data[int(self.Algan_ID)-1]["iha_boylam"]))
-                            if max_uzaklik < uzaklık:
-                                max_uzaklik=uzaklık
-                                self.secilen_rakip=i # rakibin seçimi burada yapılıyor. for dışında secilen_rakip değişkeni kullanılabilir.
-                        else:
-                            # Bu kısmı, yön farkı kontrolünden önce sağlayan test kodunu kaldırdık
-                            print("RAKİP BULUNAMADI:")
-                            self.yonelim_deg_value += 5
-                
-
-            print( "SEÇİLEN RAKİP: ", self.secilen_rakip)
         except Exception as e:
-            cp.fatal(e)
+                print(f"Process data stream error_2__:{e}")
+        try:
+                if entry["takim_numarasi"]==2:
+                    print("FORCE-TRACK ID-2")
+                    self.send_coord_to_uav([entry["iha_enlem"],entry["iha_boylam"]].encode())
+        except Exception as e:
+            cp.fatal(f"Process data stream error: {e}")
 
     def add_plane(self, takim_numarasi: int):
         new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,data_limit=5,marker_limit=5,shadow=5)
@@ -251,16 +219,20 @@ class FlightTracker:
         print("Current Working Mode : ",mode)
 
         if mode == "IHA":
-            self.Yonelim_sunucusu_oluştur()
+            th1=threading.Thread(target=self.Yonelim_sunucusu_oluştur)
+            th1.start()
             self.Telemetri_sunucusuna_baglan()
             #time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
-
-            if self.Telem_client_status:
-                while not mainloop:
-                    telemetri_cevabı = self.TCP_UI_TELEM.client_recv_message()
-                    coord_data=self.process_data_stream(telemetri_cevabı)
-                    self.send_coord_to_uav(coord_data=coord_data)
+            while not mainloop:
+                while not self.Telem_client_status:
+                    print("mainloop")
+                    print(f"client-status :{self.Telem_client_status}")
+                    telemetri_cevabı = self.TCP_UI_TELEM.client_recv_message().decode()
+                    print(telemetri_cevabı)
+                    self.process_data_stream(telemetri_cevabı)
+                    print("after_process_stream")
+                    #self.send_coord_to_uav(coord_data=coord_data)
                     #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerektirse açılabilir..
 
         if mode == "Monitor":
@@ -331,14 +303,14 @@ class FlightTracker:
                     "iha_dikilme":self.iha.att_pitch_deg,
                     "iha_yonelme": self.iha.att_heading_deg,
                     "iha_yatis": self.iha.att_roll_deg,
-                    "iha_hizi": self.iha.airspeed,
+                    "iha_hiz": self.iha.airspeed,
                     "zaman_farki": 500}
 
 if __name__ == "__main__":
 
     Mode = "IHA" #Monitor / IHA / UI_TEST
 
-    tracker=FlightTracker("10.80.1.73") #Yazılım bilgisayarı IP -> 10.0.0.236
+    tracker=FlightTracker("10.80.1.107") #Yazılım bilgisayarı IP -> 10.0.0.236 
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()

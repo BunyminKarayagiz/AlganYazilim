@@ -94,14 +94,14 @@ class App(customtkinter.CTk):
         self.appearance_mode_optionemenu.grid(row=12, column=0, padx=(20, 20), pady=(10, 20))
 
         # ============ frame_mid ============
-
+ 
         self.frame_mid.grid_rowconfigure(1, weight=1)
         self.frame_mid.grid_rowconfigure(0, weight=0)
         self.frame_mid.grid_columnconfigure(0, weight=1)
         self.frame_mid.grid_columnconfigure(1, weight=0)
         self.frame_mid.grid_columnconfigure(2, weight=1)
 
-        database_path = "D:\\Visual Code File Workspace\\ALGAN\AlganYazilim\\Savasan-iha\\Resources\\PoligonDenizli_tiles.db"
+        database_path = "C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Modules\\PoligonDenizli_tiles.db"
         script_directory = os.path.dirname(os.path.abspath(__file__))
         database_path = os.path.join(script_directory, "PoligonDenizli_tiles.db")
 
