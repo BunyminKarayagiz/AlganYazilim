@@ -1,5 +1,5 @@
 from Modules.yonelim_arayuz import App
-from Modules import Client_Tcp ,Server_Tcp,Trajectory_estimation
+from Modules import Client_Tcp ,Server_Tcp,Trajectory_estimation,Server_Udp,Client_Udp
 from Modules.Cprint import cp
 from Modules import Trajectory_estimation #simple_estimation,advanced_estimation,high_resolution_estimation
 import threading,time
@@ -67,8 +67,8 @@ class Plane:
         else:
                 self.path_obj.add_position(new_data['iha_enlem'],new_data['iha_boylam'])
                 self.path_list.append((new_data['iha_enlem'],new_data['iha_boylam']))
-
         a,b,c,d=self.predict_next_position(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],height=new_data['iha_irtifa'],
+                                                          speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
                                                           speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
                                                           pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
         
@@ -95,9 +95,7 @@ class Plane:
 
 #!CLASS MAIN
 class FlightTracker:
-
-    def __init__(self,Yazılım_ip) -> None:
-        
+    def __init__(self,Yazılım_ip,) -> None:
         self.UI=App()
 
         self.TK_INIT_TIME_SEC = 2
@@ -110,13 +108,15 @@ class FlightTracker:
         self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
         self.ana_sunucu_status = False
 
-        self.TCP_UI_TELEM=Client_Tcp.Client(Yazılım_ip,11000) #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
-        self.TCP_TRACK = Server_Tcp.Server(PORT=9011,name="TELEM-DATA") #Iha'ya yonelim verisini gönderecek Server
-        
+        self.TCP_UI_TELEM=Server_Udp.data_Server(PORT=11000,name="UI-TELEM") #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
+        self.TCP_TRACK = Server_Tcp.Server(PORT=9011,name="TRACK") #Iha'ya yonelim verisini gönderecek Server
+
+        self.TCP_UI_TELEM_STATUS=False
+        self.TCP_TRACK_STATUS=False
+
         self.iha:any
         
         self.planes = {}
-        self.threads = []
         self.plane_dict = {}
         self.plane_show_limit = 3
         self.secilen_rakip=""
@@ -142,25 +142,26 @@ class FlightTracker:
         connection=False
         while not connection:
             try:
-                self.TCP_UI_TELEM.connect_to_server()
+                self.TCP_UI_TELEM.create_server()
                 connection=True
                 self.Telem_client_status=connection
-                print("TELEM SERVER: BAĞLANDI.")
+                cp.ok("TELEM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
-                print("TELEM SERVER: baglanırken hata: ", e)
+                cp.err(f"TELEM SERVER: baglanırken hata: {e}")
 
     def Yonelim_sunucusu_oluştur(self):
-        connection_status=False
+        connection_status=False   
         while not connection_status:
             try:
+                cp.info("Yonelim/TRACK Server_ON_WAIT")
                 self.TCP_TRACK.creat_server()
                 connection_status=True
-                print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
+                cp.ok("IHA_YONELIM : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
-                print("IHA_YONELIM SERVER: oluştururken hata : ", e , " \n")
-                print("IHA_YONELIM SERVER: yeniden bağlanılıyor...\n")
+                cp.err(f"IHA_YONELIM SERVER: oluştururken hata : {e}")
+                cp.info("IHA_YONELIM SERVER: yeniden bağlanılıyor...")
                 self.TCP_TRACK.reconnect()
-                print("IHA_YONELIM : SERVER OLUŞTURULDU\n")
+                cp.ok("IHA_YONELIM : SERVER OLUŞTURULDU..ON_RETRY..")
         return connection_status
 
     def receive_telem(self):
@@ -171,40 +172,26 @@ class FlightTracker:
 
     def send_coord_to_uav(self,coord_data):
         try:
-            self.TCP_TRACK.send_data_to_client(coord_data)        
+            self.TCP_TRACK.send_data_to_client(coord_data)
         except Exception as e:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
 
-    def fark_hesapla(self,ac1, ac2):
-        fark = abs(ac1 - ac2)
-        if fark > 180:
-            fark = 360 - fark
-        return fark
+    def process_data_stream(self, data_stream):
 
-    def process_data_stream(self, data_stream: str):
         try:
-            parsed_data = json.loads(data_stream)["konumBilgileri"]
-            for entry in parsed_data:
+            for entry in data_stream["konumBilgileri"]:
                 takim_numarasi = entry["takim_numarasi"]
                 if takim_numarasi not in self.planes:
                     self.add_plane(takim_numarasi)
                     print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                 a,b,c,d = self.planes[takim_numarasi].append_data(entry)
+            return (a,b,c,d)
         except Exception as e:
-                print(f"Process data stream error_2__:{e}")
-        try:
-                if entry["takim_numarasi"]==2:
-                    print("FORCE-TRACK ID-2")
-                    self.send_coord_to_uav([entry["iha_enlem"],entry["iha_boylam"]].encode())
-        except Exception as e:
-            cp.fatal(f"Process data stream error: {e}")
+           cp.fatal(f"Process data_stream_err: {e}")
 
     def add_plane(self, takim_numarasi: int):
         new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,data_limit=5,marker_limit=5,shadow=5)
         self.planes[takim_numarasi] = new_plane
-        # thread = threading.Thread(target=new_plane.process_data)
-        # thread.start()
-        # self.threads.append(thread)
 
 #! UI-OPERATIONS
     def add_plane_marker(self,lat,lon,rotation,plane_id):
@@ -213,45 +200,6 @@ class FlightTracker:
 
     def start_ui(self):
         self.UI.start()
-
-#! MAIN
-    def main_op(self,mode):
-        print("Current Working Mode : ",mode)
-
-        if mode == "IHA":
-            th1=threading.Thread(target=self.Yonelim_sunucusu_oluştur)
-            th1.start()
-            self.Telemetri_sunucusuna_baglan()
-            #time.sleep(self.TK_INIT_TIME_SEC)
-            mainloop=False
-            while not mainloop:
-                while not self.Telem_client_status:
-                    print("mainloop")
-                    print(f"client-status :{self.Telem_client_status}")
-                    telemetri_cevabı = self.TCP_UI_TELEM.client_recv_message().decode()
-                    print(telemetri_cevabı)
-                    self.process_data_stream(telemetri_cevabı)
-                    print("after_process_stream")
-                    #self.send_coord_to_uav(coord_data=coord_data)
-                    #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerektirse açılabilir..
-
-        if mode == "Monitor":
-        #!Testing
-            self.anasunucuya_baglan()
-            self.connect_mission(port=5762)
-            time.sleep(self.TK_INIT_TIME_SEC)
-            mainloop=False
-
-            #? USER_CODE_START
-            while not mainloop:
-                self.get_plane_data() #self.bizim_veri = get_plane_data
-                durum_kodu,telemetri_cevabı = self.ana_sunucu.sunucuya_postala(self.bizim_veri)
-                self.process_data_stream(telemetri_cevabı)
-                time.sleep(self.TK_INTERVAL_TIME_SEC)
-
-        if mode == "UI_TEST":
-            time.sleep(2)
-            self.add_plane_for_testing(start_lat=52.5164,start_lon=13.3734,limit=20,rotation=10,plane_id="TEST")
 
 #!Testing
     def add_plane_for_testing(self,start_lat,start_lon,limit,rotation,plane_id):
@@ -306,11 +254,46 @@ class FlightTracker:
                     "iha_hiz": self.iha.airspeed,
                     "zaman_farki": 500}
 
+#! MAIN
+    def main_op(self,mode):
+        print("Current Working Mode : ",mode)
+
+        if mode == "IHA":
+            th1=threading.Thread(target=self.Yonelim_sunucusu_oluştur)
+            th1.start()
+            self.Telemetri_sunucusuna_baglan()
+            #time.sleep(self.TK_INIT_TIME_SEC)
+            mainloop=False
+
+            while not mainloop:
+                while self.Telem_client_status:
+                    telemetri_cevabı = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
+                    self.process_data_stream(json.loads(telemetri_cevabı))
+                    #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerekirse açılabilir..
+
+        if mode == "Monitor":
+        #!Testing
+            self.anasunucuya_baglan()
+            self.connect_mission(port=5762)
+            time.sleep(self.TK_INIT_TIME_SEC)
+            mainloop=False
+
+            #? USER_CODE_START
+            while not mainloop:
+                self.get_plane_data() #self.bizim_veri = get_plane_data
+                durum_kodu,telemetri_cevabı = self.ana_sunucu.sunucuya_postala(self.bizim_veri)
+                self.process_data_stream(telemetri_cevabı)
+                time.sleep(self.TK_INTERVAL_TIME_SEC)
+
+        if mode == "UI_TEST":
+            time.sleep(2)
+            self.add_plane_for_testing(start_lat=52.5164,start_lon=13.3734,limit=20,rotation=10,plane_id="TEST")
+
 if __name__ == "__main__":
 
     Mode = "IHA" #Monitor / IHA / UI_TEST
 
-    tracker=FlightTracker("10.80.1.107") #Yazılım bilgisayarı IP -> 10.0.0.236 
+    tracker=FlightTracker("127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()

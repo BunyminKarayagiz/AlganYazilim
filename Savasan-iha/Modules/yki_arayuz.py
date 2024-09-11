@@ -4,7 +4,7 @@ from typing import Union,Callable
 from Modules.Cprint import cp
 #from Cprint import cp
 
-customtkinter.set_appearance_mode("dark")  # Modes: system (default), light, dark
+customtkinter.set_appearance_mode("light")  # Modes: system (default), light, dark
 customtkinter.set_default_color_theme("green")  # Themes: blue (default), dark-blue, green
 
 class MyCheckboxFrame(customtkinter.CTkFrame):
@@ -151,17 +151,17 @@ class MAIN_GUI_FRAME(customtkinter.CTkFrame):
         self.right_main_frame.grid(row=0,column=1,padx=10,pady=10,sticky="nsew")
 
     #? LAYER-3
-        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="Onay VER/AL",command=Yer_istasyonu_obj.yki_onay_ver)
-        self.Confirmation_button.grid(row=0,column=0,padx=10,pady=10,sticky="nwe")
-
-
-
-
+        try:
+            self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="Onay VER/AL",command=Yer_istasyonu_obj.yki_onay_ver)
+            self.Confirmation_button.grid(row=0,column=0,padx=10,pady=10,sticky="nwe")
+        except:
+            pass
 
 #?  LAYER-1
 class COMPANION_FRAMES(customtkinter.CTkFrame):
-    def __init__(self, master,**kwargs):
+    def __init__(self, master,Yer_istasyonu_obj,**kwargs):
         super().__init__(master,**kwargs)
+        self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
         self.rowconfigure(0,weight=1)
 
@@ -186,20 +186,85 @@ class COMPANION_FRAMES(customtkinter.CTkFrame):
         #                                                 values=["Value 1", "Value 2", "Value Long Long Long"])
         # self.optionmenu_1.grid(row=0, column=0, padx=20, pady=(20, 10))
 
+        self.tabview.tab("MONITOR").columnconfigure(0,weight=1)
+
+        try:
+            self.ana_sunucu_label=customtkinter.CTkLabel(master=self.tabview.tab("MONITOR"),text="ANA SUNUCU",bg_color="orange")
+            self.ana_sunucu_label.grid(row=0,column=0,padx=10,pady=10,sticky="nwe")
+            self.pwm_sunucu_label=customtkinter.CTkLabel(master=self.tabview.tab("MONITOR"),text="PWM",bg_color="orange")
+            self.pwm_sunucu_label.grid(row=1,column=0,padx=10,pady=10,sticky="we")        
+            self.Mod_sunucu_label=customtkinter.CTkLabel(master=self.tabview.tab("MONITOR"),text="MODE",bg_color="orange")
+            self.Mod_sunucu_label.grid(row=2,column=0,padx=10,pady=10,sticky="we")
+            self.Kamikaze_sunucu_label=customtkinter.CTkLabel(master=self.tabview.tab("MONITOR"),text="KAMIKAZE",bg_color="orange")
+            self.Kamikaze_sunucu_label.grid(row=3,column=0,padx=10,pady=10,sticky="we")
+            self.Onay_sunucu_label=customtkinter.CTkLabel(master=self.tabview.tab("MONITOR"),text="YKI ONAY",bg_color="orange")
+            self.Onay_sunucu_label.grid(row=4,column=0,padx=10,pady=10,sticky="we")
+            self.Mavproxy_sunucu_label=customtkinter.CTkLabel(master=self.tabview.tab("MONITOR"),text="MAVPROXY",bg_color="orange")
+            self.Mavproxy_sunucu_label.grid(row=5,column=0,padx=10,pady=10,sticky="we")
+        except Exception as e:
+            cp.fatal(f"LABEL ERROR -> {e}")
+        
+        """
+        self.ANA_SUNUCU_DURUMU=False
+        self.KALMAN_PWM_SERVER_STATUS=False
+        self.MODE_SERVER_STATUS=False
+        self.KAMIKAZE_SERVER_STATUS=False
+        self.CONFIRMATION_SERVER_STATUS=False
+
+        self.MAVPROXY_SERVER_STATUS=False
+
+        self.UI_TELEM_SERVER_STATUS=False
+        self.UI_VIDEO_SERVER_STATUS=False
+        """
+    def check_server_status(self):
+        if self.Yer_istasyonu_obj.ANA_SUNUCU_DURUMU:
+            self.ana_sunucu_label.configure(bg_color="green")
+        else:
+            self.ana_sunucu_label.configure(bg_color='orange')
+
+        if self.Yer_istasyonu_obj.KALMAN_PWM_SERVER_STATUS:
+            self.pwm_sunucu_label.configure(bg_color='green')
+        else:
+            self.pwm_sunucu_label.configure(bg_color='orange')
+
+        if self.Yer_istasyonu_obj.MODE_SERVER_STATUS:
+            self.Mod_sunucu_label.configure(bg_color='green')
+        else:
+            self.Mod_sunucu_label.configure(bg_color='orange')
+        
+        if self.Yer_istasyonu_obj.KAMIKAZE_SERVER_STATUS:
+            self.Kamikaze_sunucu_label.configure(bg_color='green')
+        else:
+            self.Kamikaze_sunucu_label.configure(bg_color='orange')
+        
+        if self.Yer_istasyonu_obj.CONFIRMATION_SERVER_STATUS:
+            self.Onay_sunucu_label.configure(bg_color='green')
+        else:
+            self.Onay_sunucu_label.configure(bg_color='orange')
+        
+        if self.Yer_istasyonu_obj.MAVPROXY_SERVER_STATUS:
+            self.Mavproxy_sunucu_label.configure(bg_color='green')
+        else:
+            self.Mavproxy_sunucu_label.configure(bg_color='orange')
+
+        cp.warn("SERVER-CHECK")
+        self.after(2000, self.check_server_status)
+
+
 #?  LAYER-1
 class MENU_FRAME(customtkinter.CTkFrame):
     def __init__(self, master,**kwargs):
         super().__init__(master,**kwargs)
 
         #? LAYER-2
-        button = customtkinter.CTkButton(self,text="A",width=50,height=50,corner_radius=150)
-        button.grid(row=0,column=0,padx=5, pady=20,sticky="n")
-        button = customtkinter.CTkButton(self,text="B",width=50,height=50)
-        button.grid(row=1,column=0,padx=5, pady=20)
-        button = customtkinter.CTkButton(self,text="C",width=50,height=50)
-        button.grid(row=2,column=0,padx=5, pady=20)
-        button = customtkinter.CTkButton(self,text="D",width=50,height=50)
-        button.grid(row=3,column=0,padx=5, pady=20,sticky="s")
+        button1 = customtkinter.CTkButton(self,text="   MAIN   ",width=50,height=50,corner_radius=20)
+        button1.grid(row=0,column=0,padx=5, pady=20,sticky="n")
+        button2 = customtkinter.CTkButton(self,text="CUSTOM-1",width=50,height=50,corner_radius=20)
+        button2.grid(row=1,column=0,padx=5, pady=20)
+        button3 = customtkinter.CTkButton(self,text="CUSTOM-2",width=50,height=50,corner_radius=20)
+        button3.grid(row=2,column=0,padx=5, pady=20)
+        button4 = customtkinter.CTkButton(self,text="SETTINGS",width=50,height=50,corner_radius=20)
+        button4.grid(row=3,column=0,padx=5, pady=20,sticky="s")
 
 #?  LAYER-1
 class TERMINAL_FRAME(customtkinter.CTkFrame):
@@ -217,7 +282,7 @@ class TERMINAL_FRAME(customtkinter.CTkFrame):
 
 #? MAIN-LAYER
 class App(customtkinter.CTk):
-    def __init__(self,Yer_istasyonu_obj=None):
+    def __init__(self,Yer_istasyonu_obj):
         super().__init__()
         self.Yer_istasyonu_obj = Yer_istasyonu_obj
 
@@ -234,7 +299,7 @@ class App(customtkinter.CTk):
         self.menu_frame = MENU_FRAME(master=self,width=150,corner_radius=0)
         self.main_frame = MAIN_GUI_FRAME(master=self,Yer_istasyonu_obj=Yer_istasyonu_obj)
         self.terminal_frame = TERMINAL_FRAME(master=self)
-        self.companion_frame = COMPANION_FRAMES(master=self,width=500)
+        self.companion_frame = COMPANION_FRAMES(master=self,Yer_istasyonu_obj=Yer_istasyonu_obj,width=500)
 
         self.menu_frame.grid(row=0,column=0,rowspan=2,pady=(0,20),sticky="nsw")
         self.main_frame.grid(row=0,column=1, padx=20, pady=20,sticky="nswe")
@@ -247,11 +312,12 @@ class App(customtkinter.CTk):
 
     def run(self):# Run the GUI event
         try:
-            self.after(5000, self.server_stat_check)
+            self.after(5000, self.companion_frame.check_server_status)
             self.mainloop()
         except KeyboardInterrupt:
             print("KEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\n")
 
+"""
 #? Eski arayüz
 class main_gui:
     def __init__(self,Yer_istasyonu_obj,server_manager) -> None:
@@ -342,7 +408,10 @@ class main_gui:
             self.root.mainloop()
         except KeyboardInterrupt:
             print("KEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\nKEYBOARD INTERRUPT\n")
+"""
+
 
 if __name__ == "__main__":
-    app = App()
+    Yer_istasyonu_obj=None
+    app = App(Yer_istasyonu_obj=Yer_istasyonu_obj)
     app.mainloop()

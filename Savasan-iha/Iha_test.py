@@ -3,7 +3,7 @@ import json
 import numpy as np
 from Modules import path_drone
 import pickle
-    
+
 import time , datetime
 import threading
 from Modules import Client_Tcp
@@ -74,7 +74,7 @@ class client_manager:
             try:
                 self.TCP_KAMIKAZE.connect_to_server()
                 connection=True
-                print("MOD SERVER: BAĞLANDI.")
+                print("KAMIKAZE SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("MOD SERVER: baglanırken hata: ", e)
         self.KAMIKAZE_SERVER_STATUS=connection
@@ -135,6 +135,11 @@ class autopilot:
         self.max_pitch = 30
         self.max_roll  = 30
         self.desired_altitude= 100
+
+        self.aileron_roll_channel = 1
+        self.left_rudder_channel = 4
+        self.right_rudder_channel = 5
+        self.throttle_channel = 3
 
         self.FAILSAFE_TAKEOVER = False
         self.YKI_CONFIRMATION_STATUS = False
@@ -262,7 +267,7 @@ class autopilot:
                     self.TUYGUN_PIXHAWK.set_ap_mode("GUIDED")
                     
                 qr_git = LocationGlobalRelative(rakip_enlem, rakip_boylam, 100)
-                #iha_path.set_rc_channel(3, 1500)
+                #iha_path.set_rc_channel(self.throttle_channel, 1500)
                 self.TUYGUN_PIXHAWK.goto(qr_git)
             else:
                 if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
@@ -294,48 +299,69 @@ class autopilot:
                         #self.TUYGUN_PIXHAWK.set_rc_channel(3, 1500)
                         self.TUYGUN_PIXHAWK.goto(qr_git)
                         self.heading_to_qr = True
+                        self.kamikaze_dive_state=False
+                        self.kamikaze_recover_state=False
 
                     #! Dalış başlangıç(dive)
-                    if qr_mesafe < 0.08 and not self.kamikaze_dive_state and self.TUYGUN_PIXHAWK.pos_alt_rel > 140:  # 150 metre
+                    if qr_mesafe < 0.08 and self.TUYGUN_PIXHAWK.pos_alt_rel >= 140 and self.heading_to_qr :  # 150 metre
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                             self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
                             self.kamikaze_start= datetime.datetime.now()
-                        self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)  # Channel 1 is for Roll Input,
-                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1100)  # Channel 2 is for Pitch Input,
-                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1100)  # Channel 3 is for Throttle Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.aileron_roll_channel, 1650)  # Channel 1 is for Roll Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.left_rudder_channel, 1100)  # Channel 2 is for Pitch Input, #Burun aşağı -> kanatlar yukarı
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.right_rudder_channel, 1900)  # Channel 2 is for Pitch Input, #Burun aşağı -> kanatlar yukarı
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.throttle_channel, 1100)  # Channel 3 is for Throttle Input,
+                        self.heading_to_qr=True
                         self.kamikaze_dive_state=True
+                        self.kamikaze_recover_state=False
 
-                    if self.TUYGUN_PIXHAWK.pos_alt_rel < 100 and self.kamikaze_dive_state and (not self.kamikaze_recover_state):
+                    elif self.TUYGUN_PIXHAWK.pos_alt_rel >= 120 and self.TUYGUN_PIXHAWK.pos_alt_rel < 140 and self.heading_to_qr and self.kamikaze_dive_state:
                         print(f"Qr_distance:{qr_mesafe} -- heading_to_qr:{self.heading_to_qr} -- kamikaze_dive_state:{self.kamikaze_dive_state} -- kamikaze_recover_state:{self.kamikaze_recover_state}")
-                        self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1900)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.aileron_roll_channel, 1650)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.left_rudder_channel, 1200)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.right_rudder_channel, 1800)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.throttle_channel, 1600)
+                        self.heading_to_qr=True
+                        self.kamikaze_dive_state=True
+                        self.kamikaze_recover_state=False
 
-                    if self.TUYGUN_PIXHAWK.pos_alt_rel < 90:
-                        self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1800)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
-
-                    #! AdımLı toparlanma(recovery)
-                    if self.TUYGUN_PIXHAWK.pos_alt_rel < 80:
+                    elif self.TUYGUN_PIXHAWK.pos_alt_rel >= 100 and self.TUYGUN_PIXHAWK.pos_alt_rel < 120 and self.heading_to_qr and self.kamikaze_dive_state:
                         print(f"Qr_distance:{qr_mesafe} -- heading_to_qr:{self.heading_to_qr} -- kamikaze_dive_state:{self.kamikaze_dive_state} -- kamikaze_recover_state:{self.kamikaze_recover_state}")
-                        self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1750)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
-                        self.heading_to_qr = False
-                        self.kamikaze_recover_state = True
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.aileron_roll_channel, 1650)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.left_rudder_channel, 1400)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.right_rudder_channel, 1600)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.throttle_channel, 1600)
+                        self.heading_to_qr=True
+                        self.kamikaze_dive_state=True
+                        self.kamikaze_recover_state=False
 
-                    if self.kamikaze_recover_state and self.TUYGUN_PIXHAWK.pos_alt_rel < 80:
+                    elif self.TUYGUN_PIXHAWK.pos_alt_rel >= 80 and self.TUYGUN_PIXHAWK.pos_alt_rel < 100 and self.heading_to_qr and self.kamikaze_dive_state :
                         print(f"Qr_distance:{qr_mesafe} -- heading_to_qr:{self.heading_to_qr} -- kamikaze_dive_state:{self.kamikaze_dive_state} -- kamikaze_recover_state:{self.kamikaze_recover_state}")
-                        self.TUYGUN_PIXHAWK.set_rc_channel(1, 1500)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(2, 1700)
-                        self.TUYGUN_PIXHAWK.set_rc_channel(3, 1600)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.aileron_roll_channel, 1650)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.left_rudder_channel, 1500)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.right_rudder_channel, 1500)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.throttle_channel, 1600)
+                        self.heading_to_qr=True
+                        self.kamikaze_dive_state=False
+                        self.kamikaze_recover_state=True
 
-                    if self.kamikaze_recover_state and self.TUYGUN_PIXHAWK.pos_alt_rel > 40:
+                        #!Toparlama(Recovery)
+                    elif self.TUYGUN_PIXHAWK.pos_alt_rel >= 60 and self.TUYGUN_PIXHAWK.pos_alt_rel < 80 and self.heading_to_qr and self.kamikaze_recover_state:
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.aileron_roll_channel, 1650)
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.left_rudder_channel, 1700)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.right_rudder_channel, 1300)  # Channel 2 is for Pitch Input,
+                        self.TUYGUN_PIXHAWK.set_rc_channel(self.throttle_channel, 1600)
+                        self.heading_to_qr=True
+                        self.kamikaze_dive_state=False
+                        self.kamikaze_recover_state=True
+
+                    elif self.kamikaze_recover_state and self.TUYGUN_PIXHAWK.pos_alt_rel > 40 and self.heading_to_qr and self.kamikaze_recover_state:
                         print("Recovery Done")
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                             self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
-                        self.kamikaze_recover_state = False
+                        self.heading_to_qr=True
+                        self.kamikaze_dive_state=False
+                        self.kamikaze_recover_state=True
                 
                 else:
                     print("YKI_ONAYI BEKLENIYOR...")
@@ -346,6 +372,7 @@ class autopilot:
 
     def AUTOPILOT_STATE_CONTROL(self):
         while True:
+            print("AUTOPILOT STATE CONTROL")
             if (not self.FAILSAFE_TAKEOVER) and self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS:
 
                 if self.current_mode == "AUTO":
@@ -510,8 +537,8 @@ class Iha():
         self.start_system_autopilot()
 
         while True:
-            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.servo6
-            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7
+            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.ch_6
+            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.ch_8
             print("SERVO:8", selected_servo_ch_8)
             print("SERVO:6", selected_servo_ch_6)
             time.sleep(0.1)
@@ -549,10 +576,10 @@ class Iha():
 
 if __name__ == '__main__':
 
-    TUYGUN = Iha(
+    TUYGUN = Iha( 
             connect_type = "PLANNER" , # PLANNER / PIXHAWK
-            yazilim_ip = "10.80.1.59", #Yazılım:10.0.0.236
-            yonelim_ip = "10.80.1.59", #Yönelim:10.0.0.23x -Belirsiz
+            yazilim_ip = "127.0.0.1", #Yazılım:10.0.0.236
+            yonelim_ip = "127.0.0.1", #Yönelim:10.0.0.239 -Belirsiz
                   )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)
