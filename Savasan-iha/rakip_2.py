@@ -3,12 +3,12 @@ from Modules import ana_sunucu_islemleri
 import argparse
 import time
 
-ana_sunucu=ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
+ana_sunucu=ana_sunucu_islemleri.sunucuApi("http://10.0.0.239:5000")
 
 ana_sunucu.sunucuya_giris("rakip2","rakip2")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--connect', default=f'tcp:127.0.0.1:5772')
+parser.add_argument('--connect', default=f'tcp:127.0.0.1:5762')
 args = parser.parse_args()
 connection_string = args.connect
 rakip=path.Plane(connection_string)

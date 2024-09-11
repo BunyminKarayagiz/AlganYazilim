@@ -3,7 +3,7 @@
 # from path import Plane
 #from Modules import mavproxy2
 
-from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy,SimplifiedTelemetry,Server_Tcp,Server_Udp
+from Modules import ana_sunucu_islemleri,hesaplamalar,YOLOv8_deploy,SimplifiedTelemetry,Server_Tcp,Client_Udp,Server_Udp
 from Modules.qr_detection import QR_Detection
 from Modules.Cprint import cp
 from Modules.yki_arayuz import App
@@ -22,23 +22,25 @@ from Modules.prediction_algorithm_try import KalmanFilter
 #?Telemetri verilerinin alınması :     Kusurlu(Çözüldü)
 #TODOYonelim modunda rakip seçimi:     Eksik(GÖREVLERE EKLENDİ)
 #!Aşırı yönelim(pwm):                  Eksik(iptal)
-#TODO Hava savunma sistemi:            Eksik(GÖREVLERE EKLENDI.)
+#TODO Hava savunma sistemi:            Eksik(GÖREVLERE EKLENDI)
 #!Pwm veri doğruluğu:                  Test edilecek
 #?Telemetri gönderim sıklığı:           Kusurlu(Çözüldü)
 #!Logger                                Kusurlu/Eksik(iptal)
 #!Qr için timeout                       Eksik(İptal edildi)
-#TODO Kalman ile rota tahmin            Eksik(görevlere eklendi.)
+#TODO Kalman ile rota tahmin            Eksik(görevlere eklendi)
 #?Kalman array için gecikmesi           Kusurlu(Çözüldü)
 
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 
-class YerIstasyonu():
+class YerIstasyonu:
 
-    def __init__(self,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"):
+    def __init__(self,yonelim_ip,ana_sunucu_ip,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"):
 
         self.mavlink_ip = mavlink_ip
         self.mavlink_port = mavlink_port
         self.takim_no = takimNo
+
+        self.yonelim_ip=yonelim_ip
 
 
         self.frame_debug_mode = frame_debug_mode
@@ -58,7 +60,6 @@ class YerIstasyonu():
         self.secilen_görev_modu="kilitlenme"
         self.önceki_mod = ""
         self.sunucu_saati:str = ""
-
         # Telemetri paketi için PWM'den veriler alınmalı
         self.x_center=0
         self.y_center=0
@@ -68,10 +69,7 @@ class YerIstasyonu():
 
         self.kullanici_adi = "algan"
         self.sifre = "53SnwjQ2sQ"
-        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
-        self.mavlink_ip = mavlink_ip
-        self.mavlink_port = mavlink_port
-        self.takim_no = takimNo
+        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi(f"http://{ana_sunucu_ip}:5000")
 
         #* Servers # 
         #* < Yazılım_PC-IHA :8000 >  <Yazılım_PC-Yonelim_PC :9000 >   <Yonelim_PC-IHA :11000 >
@@ -81,7 +79,7 @@ class YerIstasyonu():
         self.Server_KAMIKAZE = Server_Tcp.Server(PORT=8003,name="KAMIKAZE")
         self.Server_CONFIRMATION = Server_Tcp.Server(PORT=8004,name="CONFIRMATION")
         #* YonelimPC -- YazılımPC
-        self.Server_UI_Telem = Server_Tcp.Server(PORT=11000,name="UI_TELEM")
+        self.Server_UI_Telem = Client_Udp.data_Client(server_ip=self.yonelim_ip, server_port=11000 ,name="UI_TELEM")
         self.Server_UI_Control = Server_Tcp.Server(PORT=11001,name="UI-CONTROL")
 
         #* Server State
@@ -93,7 +91,7 @@ class YerIstasyonu():
 
         self.MAVPROXY_SERVER_STATUS=False
 
-        self.UI_TELEM_SERVER_STATUS=False
+        self.UI_TELEM_SERVER_STATUS=True
         self.UI_VIDEO_SERVER_STATUS=False
         cp.ok("Server Manager initialized ✓✓✓")
     
@@ -122,12 +120,13 @@ class YerIstasyonu():
                 if int(durum_kodu) == 200:
                     cp.ok(f"Ana Sunucuya Bağlanıldı:{durum_kodu}")  # Ana sunucuya girerkenki durum kodu.
                     connection_status = True
-                    self.ana_sunucu_status = connection_status
+                    self.ANA_SUNUCU_DURUMU = connection_status
                 else:
                     raise Exception("DURUM KODU '200' DEGIL")
             except Exception as e:
                 cp.err(f"ANA SUNUCU : BAGLANTI HATASI -> {e}")
 
+    def CREATE_PWM_SERVER(self):
         connection_status=False
         while not connection_status:
             try:
@@ -138,7 +137,7 @@ class YerIstasyonu():
                 cp.warn(f"PWM SERVER: oluştururken hata :{e} \nPWM SERVER: yeniden bağlanılıyor... ")
                 self.Server_PWM.reconnect()
                 cp.ok("PWM : SERVER OLUŞTURULDU...RETRY..")
-        self.PWM_sunucusu=connection_status
+        self.KALMAN_PWM_SERVER_STATUS=connection_status
         return connection_status
 
     def CREATE_MOD_SERVER(self):
@@ -197,19 +196,20 @@ class YerIstasyonu():
         self.MAVPROXY_SERVER_STATUS=connection_status
         return connection_status,mavlink_obj
 
-    def CREATE_UI_TELEM_SERVER(self):
-        connection_status=False
-        while not connection_status:
-            try:
-                self.Server_UI_Telem.creat_server()
-                connection_status=True
-                cp.ok("UI_TELEM : SERVER OLUSTURULDU..")
-            except (ConnectionError, Exception) as e:
-                cp.warn(f"UI_TELEM : SERVER OLUSTURURKEN HATA -> {e}\nUI_TELEM : SERVER YENIDEN BAGLANIYOR..")
-                self.Server_UI_telem.reconnect()
-                cp.ok("UI_TELEM : SERVER OLUSTURULDU..")
-        self.UI_TELEM_SERVER_STATUS = connection_status
-        return connection_status
+    #! Arayüze telemetri verisi sağlayan kısım TCP'den UDP'ye geçirildiği için bu fonksiyon işlevsiz kaldı...
+    # def CREATE_UI_TELEM_SERVER(self):
+    #     connection_status=False
+    #     while not connection_status:
+    #         try:
+    #             self.Server_UI_Telem.create_server()
+    #             connection_status=True
+    #             cp.ok("UI_TELEM : SERVER OLUSTURULDU..")
+    #         except (ConnectionError, Exception) as e:
+    #             cp.warn(f"UI_TELEM : SERVER OLUSTURURKEN HATA -> {e}\nUI_TELEM : SERVER YENIDEN BAGLANIYOR..")
+    #             # self.Server_UI_telem.reconnect()
+    #             # cp.ok("UI_TELEM : SERVER OLUSTURULDU..")
+    #     self.UI_TELEM_SERVER_STATUS = connection_status
+    #     return connection_status
 
     def SEND_PWM(self,pwm_data):
         try:
@@ -223,19 +223,21 @@ class YerIstasyonu():
 
         cp.info("Sunucular bekleniyor...")
         t0 = threading.Thread(target=self.anasunucuya_baglan)
+        t1=threading.Thread(target=self.CREATE_PWM_SERVER)
         t3 = threading.Thread(target=self.CREATE_MOD_SERVER)
         t4 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
         t5 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
-        t8= threading.Thread(target=self.CREATE_UI_TELEM_SERVER)
+        #t8= threading.Thread(target=self.CREATE_UI_TELEM_SERVER) #! İPTAL
 
         t0.start()
+        t1.start()
         t3.start()
         t4.start()
         t5.start()
-        t8.start()
+        #t8.start()
 
         t0.join()
-        return t0,t3,t4,t5,t8 #t1,t6
+        return t0,t3,t4,t5 #t8 #t1,t6
 
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_id, message):
@@ -249,7 +251,7 @@ class YerIstasyonu():
         except Exception as e:
             print("TRIGGER ERROR -> ",e)
 
-    #! ANA FONKSİYONLAR     
+    #! ANA FONKSİYONLAR
     def yki_onay_ver(self):
         if self.CONFIRMATION_SERVER_STATUS:
             cp.ok(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
@@ -267,7 +269,6 @@ class YerIstasyonu():
     # def yki_onay_ver(self):
     #     print("'Onay Ver/Al' butonu kullanıldı")
 
-        
     def telemetri(self):
         timer_start=time.perf_counter()
         ret,mavlink_obj=self.CREATE_MAVPROXY_SERVER()
@@ -275,10 +276,9 @@ class YerIstasyonu():
         while True:
             try:
                 bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
+
                 # bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
-                #                    "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,
-                #                    "iha_kilitlenme": 1,"hedef_merkez_X": 300,"hedef_merkez_Y": 230,"hedef_genislik": 30,
-                #                    "hedef_yukseklik": 43,"gps_saati": {"saat": time.gmtime().tm_hour,
+                #                    "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,color
                 #                                                        "dakika": time.gmtime().tm_min,
                 #                                                        "saniye": time.gmtime().tm_sec,
                 #                                                        "milisaniye": int((time.time() % 1) * 1000)
@@ -286,13 +286,12 @@ class YerIstasyonu():
                 #                     }
 
                 if bizim_telemetri is not None:
-                    if time.perf_counter() - timer_start > 3:
+                    if time.perf_counter() - timer_start > 1:
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
-                        #print(json.dumps(rakip_telemetri))
-                        print(rakip_telemetri)
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
-                                self.Server_UI_Telem.send_data_to_client(rakip_telemetri.encode()) #json.dumps(rakip_telemetri).encode('utf-8'))
+                                print("RAKİPTELEMETRI",rakip_telemetri)
+                                self.Server_UI_Telem.send_data(data=rakip_telemetri) #json.dumps(rakip_telemetri).encode('utf-8'))
                             else:
                                 cp.warn("UI-TELEM SERVER OFFLINE")
                         except Exception as e:
@@ -345,53 +344,57 @@ class YerIstasyonu():
             if self.MODE_SERVER_STATUS:
                 try:
                     self.secilen_görev_modu = self.Server_MOD.recv_tcp_message()
+                    try:
+                        if self.SHUTDOWN_KEY == "ALGAN":
+                            cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
+                            break
+
+                        if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
+                            self.trigger_event("Frame_1","kilitlenme")
+                            self.trigger_event("Frame_2","kilitlenme")
+                            self.önceki_mod = "kilitlenme"
+                            cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+
+                        elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
+                            self.trigger_event("Frame_1","kamikaze")
+                            self.trigger_event("Frame_2","kamikaze")
+                            self.önceki_mod = "kamikaze"
+                            cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+
+                        elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
+                            self.trigger_event("Frame_1","AUTO")
+                            self.trigger_event("Frame_2","AUTO")
+                            self.önceki_mod = "AUTO"
+                            cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+
+                        elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
+                            self.trigger_event("Frame_1","FBWA")
+                            self.trigger_event("Frame_2","FBWA")
+                            self.önceki_mod = "FBWA"
+                            cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+
+                        elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
+                            self.trigger_event("Frame_1","RTL")
+                            self.trigger_event("Frame_2","RTL")
+                            self.önceki_mod = "RTL"
+                            cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
+
+                        else:
+                            cp.info(f'GOREV MODU :{self.önceki_mod}')
+
+                    except Exception as e:
+                        print("ANA_GOREV_KONTROL HATA: ",e)
                 except Exception as e:
                     cp.err(f"MOD : Secilen modu alirken hata -> {e}") #TODO EKLENECEK...
+                    cp.err(" 'MODE_SERVER_STATUS' set to: <FALSE>")
+                    self.MODE_SERVER_STATUS=False
 
-                try:
-                    if self.SHUTDOWN_KEY == "ALGAN":
-                        cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
-                        break
-
-                    if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
-                        self.trigger_event("Frame_1","kilitlenme")
-                        self.trigger_event("Frame_2","kilitlenme")
-                        self.önceki_mod = "kilitlenme"
-                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
-
-                    elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
-                        self.trigger_event("Frame_1","kamikaze")
-                        self.trigger_event("Frame_2","kamikaze")
-                        self.önceki_mod = "kamikaze"
-                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
-
-                    elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
-                        self.trigger_event("Frame_1","AUTO")
-                        self.trigger_event("Frame_2","AUTO")
-                        self.önceki_mod = "AUTO"
-                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
-
-                    elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
-                        self.trigger_event("Frame_1","FBWA")
-                        self.trigger_event("Frame_2","FBWA")
-                        self.önceki_mod = "FBWA"
-                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
-
-                    elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
-                        self.trigger_event("Frame_1","RTL")
-                        self.trigger_event("Frame_2","RTL")
-                        self.önceki_mod = "RTL"
-                        cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
-
-                    else:
-                        cp.info(f'GOREV MODU :{self.önceki_mod}')
-
-                except Exception as e:
-                    print("ANA_GOREV_KONTROL HATA: ",e)
             else:
                 cp.fatal("MOD SERVER OFFLINE")
-                time.sleep(2)
-
+                self.MODE_SERVER_STATUS=False
+                self.Server_MOD.reconnect()
+                time.sleep(1)
+            
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
 class Frame_processing:
@@ -411,7 +414,7 @@ class Frame_processing:
         self.detection_queues=[0,frame_process_1,frame_process_2]
         self.display_queue=mp.Queue()
         
-        #* Kalman Filter 
+        #* Kalman Filter
         self.datas = []
         #self.kalman = KalmanFilter()
 
@@ -485,7 +488,8 @@ class Frame_processing:
                                 try:
                                     img = frame.to_image()
                                     frame = np.array(img)
-                                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                    frame=cv2.flip(frame,-1)
+                                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                                     if not self.capture_queue.full():
                                         self.capture_queue.put((frame,frame_id))
                                         frame_id += 1
@@ -804,16 +808,26 @@ def check_picklability(obj):
         cp.warn("All attributes are picklable.")
 
 if __name__ == '__main__':
-    
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
-    Frame_processing_obj=Frame_processing(frame_debug_mode="LOCAL",event_map=event_map)
-    yer_istasyonu_obj = YerIstasyonu(mavlink_ip="10.80.1.59",mavlink_port=14550,takimNo=1, #! IHA / LOCAL  #! mission planner ip(str) -> 10.0.0.240
-                                      event_map=event_map,
-                                      SHUTDOWN_KEY=SHUTDOWN_KEY,
-                                      queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
+
+    Frame_processing_obj=Frame_processing(frame_debug_mode="IHA",
+                                          event_map=event_map) #! IHA / LOCAL
+    
+    yer_istasyonu_obj = YerIstasyonu(
+                                    yonelim_ip="127.0.0.1", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
+                                    ana_sunucu_ip="127.0.0.1", #! Teknofest Sunucu ip(str) -> Belirsiz
+                                    mavlink_ip="127.0.0.1", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
+                                    takimNo=1,
+                                    event_map=event_map,
+                                    SHUTDOWN_KEY=SHUTDOWN_KEY,
+                                    queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
                                       )
-    Gui_obj=Graphical_User_Interface(Yer_istasyonu_obj=yer_istasyonu_obj)
+    
+    Gui_obj=Graphical_User_Interface(
+                                    Yer_istasyonu_obj=yer_istasyonu_obj
+                                       )
+
     t1=threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
 
     Frame_processing_obj.run_processes()
