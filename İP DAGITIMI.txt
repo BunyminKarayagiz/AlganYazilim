@@ -1,0 +1,20 @@
+GÜN-1
+#Ana bilgisayar IP
+Yazılım -> 10.0.0.123 #Ana bilgisayar IP
+
+#Yardımcı Cihaz IP
+Yönelim -> 10.0.0.180
+M.planner -> 10.0.0.181
+Access_point YER-> 10.0.0.182
+Raspberry pi-> 10.0.0.183
+Access_point HAVA-> 10.0.0.184
+
+NTI HATASI -> invalid literal for int() with base 10: '{"type":"https://tools.ietf.org/html/rfc7231#section-6.5.1","title":"Bad Request","status":400,"traceId":"0HN6J7BDJONNC:0000B376"}'
+ANA SUNUCU : BAGLANTI HATASI -> invalid literal for int() with base 10: '{"type":"https://tools.ietf.org/html/rfc7231#section-6.5.1","title":"Bad Request","status":400,"traceId":"0HN6J7BDJONNC:0000B377"}'
+
+nPool(host='10.0.0.10', port=10001): Max retries exceeded with url: /api/giris (Caused by SSLError(SSLError(1, '[SSL: WRONG_VERSION_NUMBER] wrong version number (_ssl.c:1122)')))
+ANA SUNUCU : BAGLANTI HATASI -> HTTPSConnectionPool(host='10.0.0.10', port=10001): Max retries exceeded with url: /api/giris (Caused by SSLError(SSLError(1, '[SSL: WRONG_VERSION_NUMBER] wrong version number (_ssl.c:1122)')))
+ANA SUNUCU : BAGLANTI HATASI -> HTTPSConnectionPool(host='10.0.0.10', port=10001): Max retries exceeded with url: /api/giris (Caused by SSLError(SSLError(1, '[SSL: WRONG_VERSION_NUMBER] wrong version number (_ssl.c:1122)')))
+ANA SUNUCU : BAGLANTI HATASI -> HTTPSConnectionPool(host='10.0.0.10', port=10001): Max retries exceeded with url: /api/giris (Caused by SSLError(SSLError(1, '[SSL: WRONG_VERSION_NUMBER] wrong version number (_ssl.c:1122)')))
+
+GÜN-2

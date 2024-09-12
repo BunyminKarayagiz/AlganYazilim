@@ -74,8 +74,8 @@ qr_koordinati = {
     "qrEnlem": -35.3549662,
     "qrBoylam": 149.1613770
 }
-
-girisveri = [{"kadi": "algan", "sifre": "53SnwjQ2sQ"},{"kadi": "rakip2", "sifre": "rakip2"},{"kadi": "rakip3", "sifre": "rakip3"},
+#girisveri = [{"kadi": "algan", "sifre": "53SnwjQ2sQ"}
+girisveri = [{"kadi": "algan", "sifre": "Ea5ngUqWYV"},{"kadi": "rakip2", "sifre": "rakip2"},{"kadi": "rakip3", "sifre": "rakip3"},
              {"kadi": "rakip4", "sifre": "rakip4"},{"kadi": "rakip5", "sifre": "rakip5"}]
 veri1=[{
     "takim_numarasi": 1,
