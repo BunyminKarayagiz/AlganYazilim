@@ -94,8 +94,8 @@ veri2=[{
     "iha_boylam": 0,
     "iha_irtifa": 0,
     "iha_dikilme": 0,
-    "iha_yonelme": 0,
-    "iha_yatis": 0,
+    "iha_yonelme": 100,
+    "iha_yatis": 100,
     "iha_hiz":0,
     "zaman_farki": 0
 }]
@@ -106,20 +106,20 @@ veri3=[{
     "iha_boylam": 0.0,
     "iha_irtifa": 0,
     "iha_dikilme": 0,
-    "iha_yonelme": 0,
-    "iha_yatis": 0,
+    "iha_yonelme": 200,
+    "iha_yatis": 200,
     "iha_hiz":0,
     "zaman_farki": 0
 }]
 
 veri4=[{
     "takim_numarasi": 4,
-    "iha_enlem": 0.0,
-    "iha_boylam": 0.0,
+    "iha_enlem": -35.1913461,
+    "iha_boylam": 149.1680717,
     "iha_irtifa": 0,
     "iha_dikilme": 0,
-    "iha_yonelme": 0,
-    "iha_yatis": 0,
+    "iha_yonelme": 300,
+    "iha_yatis": 300,
     "iha_hiz":0,
     "zaman_farki": 0
 }]
