@@ -2,6 +2,7 @@ import time
 from pymavlink import mavutil
 import datetime
 import pytz
+import math
 
 class Telemetry:
     def __init__(self, Mp_Ip,Mp_Port, takimNo):
@@ -110,10 +111,10 @@ class Telemetry:
                 "iha_enlem": self.telemetry_data['GPS_RAW_INT']['lat'] / 1e7 if self.telemetry_data['GPS_RAW_INT'] and 'lat' in self.telemetry_data['GPS_RAW_INT'] else None,
                 "iha_boylam": self.telemetry_data['GPS_RAW_INT']['lon'] / 1e7 if self.telemetry_data['GPS_RAW_INT'] and 'lon' in self.telemetry_data['GPS_RAW_INT'] else None,
                 "iha_irtifa": self.telemetry_data['GLOBAL_POSITION_INT']['relative_alt'] / 1000 if self.telemetry_data['GLOBAL_POSITION_INT'] and 'relative_alt' in self.telemetry_data['GLOBAL_POSITION_INT'] else None,
-                "iha_dikilme": self.telemetry_data['ATTITUDE']['pitch'] if self.telemetry_data['ATTITUDE'] and 'pitch' in self.telemetry_data['ATTITUDE'] else None,
-                "iha_yonelme": self.telemetry_data['ATTITUDE']['yaw'] if self.telemetry_data['ATTITUDE'] and 'yaw' in self.telemetry_data['ATTITUDE'] else None,
-                "iha_yatis": self.telemetry_data['ATTITUDE']['roll'] if self.telemetry_data['ATTITUDE'] and 'roll' in self.telemetry_data['ATTITUDE'] else None,
-                "iha_hiz": self.telemetry_data['VFR_HUD']['airspeed'] if self.telemetry_data['VFR_HUD'] and 'airspeed' in self.telemetry_data['VFR_HUD'] else None,
+                "iha_dikilme": self.telemetry_data['ATTITUDE']['pitch'] * (180 / math.pi) if self.telemetry_data['ATTITUDE'] and 'pitch' in self.telemetry_data['ATTITUDE'] else None,
+                "iha_yonelme": (self.telemetry_data['ATTITUDE']['yaw'] * (180 / math.pi) + 360) % 360 if self.telemetry_data['ATTITUDE'] and 'yaw' in self.telemetry_data['ATTITUDE'] else None,
+                "iha_yatis": self.telemetry_data['ATTITUDE']['roll'] * (180 / math.pi)if self.telemetry_data['ATTITUDE'] and 'roll' in self.telemetry_data['ATTITUDE'] else None,
+                "iha_hiz": self.telemetry_data['VFR_HUD']['groundspeed'] if self.telemetry_data['VFR_HUD'] and 'groundspeed' in self.telemetry_data['VFR_HUD'] else None,
                 "iha_batarya": self.telemetry_data['SYS_STATUS']['battery_remaining'] if self.telemetry_data['SYS_STATUS'] and 'battery_remaining' in self.telemetry_data['SYS_STATUS'] else None,
                 "iha_otonom": 999,
                 "iha_kilitlenme": 999,
