@@ -169,18 +169,59 @@ class FlightTracker:
             self.TCP_TRACK.send_data_to_client(coord_data)
         except Exception as e:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
-
+    def fark_hesapla(self,ac1, ac2):
+        fark = abs(ac1 - ac2)
+        if fark > 180:
+            fark = 360 - fark
+        return fark
     def process_data_stream(self, data_stream):
+        max_uzaklik=0
         try:
+            data_stream =json.loads(data_stream)
             for entry in data_stream["konumBilgileri"]:
                 takim_numarasi = entry["takim_numarasi"]
                 if takim_numarasi not in self.planes:
                     self.add_plane(takim_numarasi)
                     print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)
                 a,b,c,d = self.planes[takim_numarasi].append_data(entry)
-            return (a,b,c,d)
+            #return (a,b,c,d)
+            for i in data_stream["konumBilgileri"]:
+                fark = abs(i["iha_yonelme"] - data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_yonelme"])
+                if fark > 180:
+                    aradaki_fark = 360 - fark
+                else:
+                    aradaki_fark = fark
+                if aradaki_fark <= self.yonelim_deg_value:
+                        benEnlem_rad = math.radians(data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_enlem"])
+                        rakipEnlem_rad = math.radians(i["iha_enlem"])
+                        deltaBoylam = math.radians(i["iha_boylam"] - data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_boylam"])
+                    
+                        # Azimut hesaplama.
+                        y = math.sin(deltaBoylam) * math.cos(rakipEnlem_rad)
+                        x = math.cos(benEnlem_rad) * math.sin(rakipEnlem_rad) - math.sin(benEnlem_rad) * math.cos(rakipEnlem_rad) * math.cos(deltaBoylam)
+                        azimut = math.degrees(math.atan2(y, x))
+                        azimut = (azimut + 360) % 360
+                        # Azimut ve yön farkı  kontrolü
+                        yon_farki = self.fark_hesapla(data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_yonelme"], azimut)
+                        print(data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_yonelme"])
+                        print("YÖN",yon_farki)
+                        # Geliştirilmiş kontrol ve çıktı
+                        if yon_farki <= 50:  # Burada önümüzdeki rakipler arasındaki en uzaktaki rakibi seçiyoruz. Ve bu bizim yöneleceğimiz rakip olmuş oluyor
+                            rakip_konum=(i["iha_enlem"],i["iha_boylam"])
+                            uzaklık = vincenty((rakip_konum),(data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_enlem"],data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_boylam"]))
+                            if max_uzaklik < uzaklık:
+                                max_uzaklik=uzaklık
+                                self.secilen_rakip=i # rakibin seçimi burada yapılıyor. for dışında secilen_rakip değişkeni kullanılabilir.
+                        else:
+                            # Bu kısmı, yön farkı kontrolünden önce sağlayan test kodunu kaldırdık
+                            self.yonelim_deg_value += 5
+                            yon_farki += 5
+
+            print("SEÇİLEN RAKİP",self.secilen_rakip)
+            return (a,b,c,d) , self.secilen_rakip
         except Exception as e:
            cp.fatal(f"Process data_stream_err: {e}")
+           
 
     def add_plane(self, takim_numarasi: int):
         new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,data_limit=5,marker_limit=5,shadow=5)
@@ -258,7 +299,7 @@ class FlightTracker:
             self.Telemetri_sunucusuna_baglan()
             #time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
-
+            
             while not mainloop:
                 while self.Telem_client_status:
                     message_type,hssXtelem = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str

@@ -336,6 +336,14 @@ class YerIstasyonu:
 
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 1:
+                        telemetri_queue,telem_trigger=self.event_map["Telem1"]
+                        if telem_trigger.is_set():
+                            telemetri_verileri= telemetri_queue.get()
+                            bizim_telemetri["iha_kilitlenme"]=telemetri_verileri[1]
+                            bizim_telemetri["hedef_merkez_X"]=telemetri_verileri[2]
+                            bizim_telemetri["hedef_merkez_Y"]=telemetri_verileri[3]
+                            bizim_telemetri["hedef_genislik"]=telemetri_verileri[4]
+                            bizim_telemetri["hedef_yukseklik"]=telemetri_verileri[5]
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
