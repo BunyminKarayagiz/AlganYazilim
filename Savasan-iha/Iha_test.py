@@ -538,7 +538,7 @@ class Iha():
         th1_2=threading.Thread(target=self.autopilot.wait_for_pwm)
         th1_3=threading.Thread(target=self.autopilot.wait_for_qr_konum)
 
-        th2=threading.Thread(target=self.autopilot.trigger_failsafe())
+        th2=threading.Thread(target=self.autopilot.trigger_failsafe)
         
         th1.start()
         print("AUTOPILOT_STATE_CONTROL ... STARTED")
@@ -566,7 +566,7 @@ class Iha():
             selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7 #ch_8 servo7
             print("SERVO:8", selected_servo_ch_8)
             print("SERVO:6", selected_servo_ch_6)
-            time.sleep(0.01)
+            time.sleep(0.3)
 
             if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # ch6: High, ch8: High
                 self.autopilot.current_mode = "AUTO"

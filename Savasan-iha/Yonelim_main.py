@@ -306,8 +306,15 @@ class FlightTracker:
                         self.process_data_stream(hssXtelem)
                     #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerekirse açılabilir..
                     elif message_type == "HSS":
-                        for hss in hssXtelem:
-                            self.hss_areas[hss["id"]] =self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
+                        print(type(hssXtelem))
+                        print(hssXtelem)
+                        # for hss in hssXtelem:
+                        #     print(type(hss))
+                        #     print(hss)
+                            
+                            #self.hss_areas[hss["id"]] = self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
+                        self.hss_areas[1] = self.UI.draw_circle(center_lat=37.7749,center_lon=-122.4194,radius_meters=1000)
+                        self.hss_areas[1] = self.UI.draw_circle(center_lat=37.7749,center_lon=-122.4194,radius_meters=1000)
 
     #                             },
     # {
