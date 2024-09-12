@@ -61,6 +61,7 @@ class YerIstasyonu:
         self.önceki_mod = ""
         self.sunucu_saati:str = ""
         # Telemetri paketi için PWM'den veriler alınmalı
+        self.iha_mod = 0
         self.x_center=0
         self.y_center=0
         self.width=0
@@ -394,6 +395,7 @@ class YerIstasyonu:
                             bizim_telemetri["hedef_genislik"]=telemetri_verileri[4]
                             bizim_telemetri["hedef_yukseklik"]=telemetri_verileri[5]
                             telem_trigger.clear()
+                        bizim_telemetri["iha_otonom"] = self.iha_mod
                         cp.ok(bizim_telemetri)
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         cp.warn(rakip_telemetri)
@@ -458,34 +460,39 @@ class YerIstasyonu:
                             cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
                             break
 
-                        if self.secilen_görev_modu == "kilitlenme" and not (self.önceki_mod=="kilitlenme"):
+                        if self.secilen_görev_modu == "KILITLENME" and not (self.önceki_mod=="KILITLENME"):
                             self.trigger_event("Frame_1","kilitlenme")
                             self.trigger_event("Frame_2","kilitlenme")
-                            self.önceki_mod = "kilitlenme"
+                            self.önceki_mod = "KILITLENME"
+                            self.iha_mod = 1
                             cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
-                        elif self.secilen_görev_modu == "kamikaze" and not (self.önceki_mod=="kamikaze"):
+                        elif self.secilen_görev_modu == "KAMIKAZE" and not (self.önceki_mod=="KAMIKAZE"):
                             self.trigger_event("Frame_1","kamikaze")
                             self.trigger_event("Frame_2","kamikaze")
-                            self.önceki_mod = "kamikaze"
+                            self.önceki_mod = "KAMIKAZE"
+                            self.iha_mod = 1
                             cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
                         elif self.secilen_görev_modu == "AUTO" and not (self.önceki_mod=="AUTO"):
                             self.trigger_event("Frame_1","AUTO")
                             self.trigger_event("Frame_2","AUTO")
                             self.önceki_mod = "AUTO"
+                            self.iha_mod = 1
                             cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
                         elif self.secilen_görev_modu == "FBWA" and not (self.önceki_mod=="FBWA"):
                             self.trigger_event("Frame_1","FBWA")
                             self.trigger_event("Frame_2","FBWA")
                             self.önceki_mod = "FBWA"
+                            self.iha_mod = 0
                             cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
                         elif self.secilen_görev_modu == "RTL" and not (self.önceki_mod=="RTL"):
                             self.trigger_event("Frame_1","RTL")
                             self.trigger_event("Frame_2","RTL")
                             self.önceki_mod = "RTL"
+                            self.iha_mod = 1
                             cp.info(f"GOREV MODU : Degisim -> {self.secilen_görev_modu}")
 
                         else:
