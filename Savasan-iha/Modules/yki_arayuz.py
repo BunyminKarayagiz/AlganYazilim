@@ -151,11 +151,19 @@ class MAIN_GUI_FRAME(customtkinter.CTkFrame):
         self.right_main_frame.grid(row=0,column=1,padx=10,pady=10,sticky="nsew")
 
     #? LAYER-3
-        try:
-            self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="Onay VER/AL",command=Yer_istasyonu_obj.yki_onay_ver)
-            self.Confirmation_button.grid(row=0,column=0,padx=10,pady=10,sticky="nwe")
-        except:
-            pass
+
+        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="Onay VER/AL",command=Yer_istasyonu_obj.yki_onay_ver)
+        self.Confirmation_button.grid(row=0,rowspan=2,column=0,padx=10,pady=10,sticky="nwe")
+        
+        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="HSS-TEST",command=Yer_istasyonu_obj.HSS_TEST)
+        self.Confirmation_button.grid(row=2,column=0,padx=10,pady=10,sticky="nwe")
+
+        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="KILITLENME-TEST",command=Yer_istasyonu_obj.KILITLENME_TEST)
+        self.Confirmation_button.grid(row=3,column=0,padx=10,pady=10,sticky="nwe")
+
+        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="QR-TEST",command=Yer_istasyonu_obj.QR_TEST)
+        self.Confirmation_button.grid(row=4,column=0,padx=10,pady=10,sticky="nwe")
+
 
 #?  LAYER-1
 class COMPANION_FRAMES(customtkinter.CTkFrame):
@@ -168,9 +176,9 @@ class COMPANION_FRAMES(customtkinter.CTkFrame):
         #? LAYER-2
         self.tabview = customtkinter.CTkTabview(self,corner_radius=5,border_width=1)
         self.tabview.grid(row=0,rowspan=2,column=0, padx=(5, 5), pady=(5, 5), sticky="nsew")
+        self.tabview.add("MONITOR")
         self.tabview.add("LIST")
         self.tabview.add("DATA")
-        self.tabview.add("MONITOR")
         # self.tabview.tab("TAB-1").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
         # self.tabview.tab("TAB-2").grid_columnconfigure(0, weight=1)
         #? LAYER-3
@@ -250,7 +258,6 @@ class COMPANION_FRAMES(customtkinter.CTkFrame):
         cp.warn("SERVER-CHECK")
         self.after(2000, self.check_server_status)
 
-
 #?  LAYER-1
 class MENU_FRAME(customtkinter.CTkFrame):
     def __init__(self, master,**kwargs):
@@ -279,6 +286,14 @@ class TERMINAL_FRAME(customtkinter.CTkFrame):
         self.tabview = customtkinter.CTkTabview(self,corner_radius=5,border_width=1)
         self.tabview.grid(row=0,column=0, padx=5, pady=0, sticky="nsew")
         self.tabview.add("TERMINAL")
+
+        self.tabview.tab("TERMINAL").columnconfigure(0,weight=1)
+        self.tabview.tab("TERMINAL").rowconfigure(0,weight=1)
+
+        self.textbox = customtkinter.CTkTextbox(master=self.tabview.tab("TERMINAL"), width=400, corner_radius=0)
+        self.textbox.grid(row=0, column=0, sticky="nsew")
+        self.textbox.insert("0.0", "TERMINAL START")
+
 
 #? MAIN-LAYER
 class App(customtkinter.CTk):

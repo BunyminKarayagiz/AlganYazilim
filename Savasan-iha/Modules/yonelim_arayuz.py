@@ -3,6 +3,7 @@ from tkintermapview import TkinterMapView
 from PIL import Image, ImageTk,ImageOps
 import PIL
 import os
+import math
 
 DARK_MODE = "dark"
 customtkinter.set_appearance_mode(DARK_MODE)
@@ -152,6 +153,36 @@ class App(customtkinter.CTk):
         colored_image.putalpha(rotated_image.split()[-1])
         rotated_colored_icon = ImageTk.PhotoImage(colored_image)
         return self.map_widget.set_marker(lat,lon,text=f'ID:{plane_id}',icon=rotated_colored_icon)
+
+    def calculate_circle_points(center_lat, center_lon, radius_meters, num_points=360):
+        """
+        Calculate the latitude and longitude points for a circle.
+        """
+        R = 6378.1 * 1000  # Earth's radius in meters
+        
+        # Conversion factor for degrees to radians
+        lat_radian = math.radians(center_lat)
+        
+        circle_points = []
+        for angle in range(0, 360, int(360 / num_points)):
+            angle_rad = math.radians(angle)
+            
+            delta_lat = (radius_meters / R) * math.sin(angle_rad)
+            delta_lon = (radius_meters / (R * math.cos(lat_radian))) * math.cos(angle_rad)
+            
+            point_lat = center_lat + math.degrees(delta_lat)
+            point_lon = center_lon + math.degrees(delta_lon)
+            
+            circle_points.append((point_lat, point_lon))
+        
+        return circle_points
+    
+    def draw_circle(self, center_lat, center_lon, radius_meters):
+        # Get the points for the circle's perimeter
+        circle_points = self.calculate_circle_points(center_lat, center_lon, radius_meters)
+
+        # Draw the path (polygon-like approximation of a circle)
+        return self.map_widget.set_path(circle_points)
 
     def init_plane_path(self,position_list,color_palette):
         return self.map_widget.set_path(position_list=position_list,

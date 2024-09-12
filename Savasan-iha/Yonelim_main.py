@@ -117,6 +117,7 @@ class FlightTracker:
         
         self.planes = {}
         self.plane_dict = {}
+        self.hss_areas = {}
         self.plane_show_limit = 3
         self.secilen_rakip=""
         self.yonelim_deg_value=50
@@ -163,12 +164,6 @@ class FlightTracker:
                 cp.ok("IHA_YONELIM : SERVER OLUŞTURULDU..ON_RETRY..")
         return connection_status
 
-    def receive_telem(self):
-        try:
-            self.ID_Client.client_recv_message()
-        except Exception as e:
-            print("TELEM SERVER : Telemetri Receive Error ->",e)
-
     def send_coord_to_uav(self,coord_data):
         try:
             self.TCP_TRACK.send_data_to_client(coord_data)
@@ -176,7 +171,6 @@ class FlightTracker:
             print("IHA Yonelim : Veri Gönderilirken HATA -> ",e)
 
     def process_data_stream(self, data_stream):
-
         try:
             for entry in data_stream["konumBilgileri"]:
                 takim_numarasi = entry["takim_numarasi"]
@@ -193,6 +187,7 @@ class FlightTracker:
         self.planes[takim_numarasi] = new_plane
 
 #! UI-OPERATIONS
+
     def add_plane_marker(self,lat,lon,rotation,plane_id):
         self.UI.set_plane(lat=lat,lon=lon,rotation=rotation,plane_id=plane_id,)
         print(f"ID:{plane_id} -> [lat:{lat} , lon:{lon} , rotation:{rotation} ]")
@@ -266,10 +261,22 @@ class FlightTracker:
 
             while not mainloop:
                 while self.Telem_client_status:
-                    telemetri_cevabı = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
-                    self.process_data_stream(json.loads(telemetri_cevabı))
+                    message_type,hssXtelem = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
+                    if message_type == "TELEM":
+                        self.process_data_stream(json.loads(hssXtelem))
                     #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerekirse açılabilir..
+                    elif message_type == "HSS":
+                        for hss in hssXtelem:
+                            self.hss_areas[hss["id"]] =self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
 
+    #                             },
+    # {
+    #   "hssBoylam": 29.00221109,
+    #   "hssEnlem": 40.23090554,
+    #   "hssYaricap": 150,
+    #   "id": 3
+    # }
+        
         if mode == "Monitor":
         #!Testing
             self.anasunucuya_baglan()
@@ -289,10 +296,10 @@ class FlightTracker:
             self.add_plane_for_testing(start_lat=52.5164,start_lon=13.3734,limit=20,rotation=10,plane_id="TEST")
 
 if __name__ == "__main__":
-
     Mode = "IHA" #Monitor / IHA / UI_TEST
-
     tracker=FlightTracker(Yazılım_ip="127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0.236
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()
+
+    

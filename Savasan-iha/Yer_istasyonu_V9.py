@@ -252,6 +252,57 @@ class YerIstasyonu:
             print("TRIGGER ERROR -> ",e)
 
     #! ANA FONKSİYONLAR
+    def HSS_TEST(self):
+        print("HSS")
+        status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
+        message_type = "HSS"
+        self.Server_UI_Telem.send_data([message_type,hss_coord])
+        print(hss_coord)
+
+    def KILITLENME_TEST(self):
+        print("KILITLENME-TEST")
+        start_now =datetime.datetime.now()
+        mission_data = {
+                        "kilitlenmeBaslangicZamani": {
+                            "saat": start_now.hour,
+                            "dakika": start_now.minute,
+                            "saniye": start_now.second,
+                            "milisaniye": start_now.microsecond #TODO düzeltilecek
+                        },
+                        "kilitlenmeBitisZamani": {
+                            "saat": start_now.hour,
+                            "dakika": start_now.minute,
+                            "saniye": start_now.second+4,
+                            "milisaniye": start_now.microsecond #TODO düzeltilecek
+                        },
+                        "otonom_kilitlenme": 1
+                            }
+        
+
+        self.ana_sunucu.kilitlenme_postala(json.dumps(mission_data))
+
+    def QR_TEST(self):
+        print("QR-TEST")
+        start_now =datetime.datetime.now()
+        mission_data = {
+                        "kamikazeBaslangicZamani" : {
+                            "saat": start_now.hour,
+                            "dakika": start_now.minute,
+                            "saniye": start_now.second,
+                            "milisaniye": start_now.microsecond #TODO düzeltilecek
+                        },
+                        "kamikazeBitisZamani": {
+                            "saat": start_now.hour,
+                            "dakika": start_now.minute,
+                            "saniye": start_now.second+4,
+                            "milisaniye": start_now.microsecond #TODO düzeltilecek
+                        },
+                        "qrMetni ": "teknofest2024"
+                                }
+        self.ana_sunucu.kamikaze_gonder(json.dumps(mission_data))
+
+
+
     def yki_onay_ver(self):
         if self.CONFIRMATION_SERVER_STATUS:
             cp.ok(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
@@ -290,7 +341,8 @@ class YerIstasyonu:
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
-                                self.Server_UI_Telem.send_data(data=rakip_telemetri) #json.dumps(rakip_telemetri).encode('utf-8'))
+                                message_type="TELEM"
+                                self.Server_UI_Telem.send_data([message_type,rakip_telemetri]) #json.dumps(rakip_telemetri).encode('utf-8'))
                             else:
                                 cp.warn("UI-TELEM SERVER OFFLINE")
                         except Exception as e:
@@ -557,6 +609,7 @@ class Frame_processing:
                     if lockedOrNot == 1 and locked_prev == 0:
                             lock_start_time=time.perf_counter()
                             start_now =datetime.datetime.now()
+                            
                             cv2.putText(img=processed_frame,text="HEDEF GORULDU",org=(50,400),fontFace=1,fontScale=2,color=(0,255,0),thickness=2)
                             locked_prev=1
                             kalman_pwm_queue.put(kalman_data)
@@ -815,7 +868,7 @@ if __name__ == '__main__':
     
     yer_istasyonu_obj = YerIstasyonu(
                                     yonelim_ip="10.0.0.239", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
-                                    ana_sunucu_ip="10.0.0.250", #! Teknofest Sunucu ip(str) -> Belirsiz
+                                    ana_sunucu_ip="127.0.0.1", #! Teknofest Sunucu ip(str) -> Belirsiz
                                     mavlink_ip="10.0.0.237", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
                                     takimNo=1,
                                     event_map=event_map,
