@@ -40,9 +40,19 @@ class Telemetry:
         self.master.wait_heartbeat()
         return self.master
 
+    # def unix_to_datetime(self, unix_time):
+    #     dt = datetime.datetime.fromtimestamp(unix_time, pytz.timezone('UTC'))
+    #     print("datetime : ",dt)
+    #     return dt.strftime("%H")[:-3] , dt.strftime("%M")[:-3] , dt.strftime("%S")[:-3] , dt.strftime("%f")[:-3]
+    
     def unix_to_datetime(self, unix_time):
-        dt = datetime.datetime.fromtimestamp(unix_time, pytz.timezone('Europe/Istanbul'))
-        return dt.strftime("%d-%m-%Y %H:%M:%S.%f")[:-3]
+        dt = datetime.datetime.fromtimestamp(unix_time, pytz.timezone('UTC'))
+        hour = dt.hour
+        minute = dt.minute
+        second = dt.second
+        millisecond = dt.microsecond // 1000
+        return hour,minute,second,millisecond
+
 
     def update_simplified_data(self, msg, msg_type):
         try:
@@ -91,7 +101,6 @@ class Telemetry:
 
     def telemetry_packet(self):
         try:
-
             msg = self.master.recv_match(blocking=True)
             if msg is None:
                 print("No message received")
@@ -104,7 +113,7 @@ class Telemetry:
 
             # gps_saati verisini çekme ve formatlama
             gps_saati_unix = self.telemetry_data['SYSTEM_TIME']['time_unix_usec'] / 1e6 if self.telemetry_data['SYSTEM_TIME'] and 'time_unix_usec' in self.telemetry_data['SYSTEM_TIME'] else None
-            gps_saati_formatted = self.unix_to_datetime(gps_saati_unix) if gps_saati_unix else None
+            saat,dakika,saniye,milisaniye = self.unix_to_datetime(gps_saati_unix) if gps_saati_unix else None
 
             telemetry_output = {
                 "takim_numarasi": self.takimNo,
@@ -116,14 +125,20 @@ class Telemetry:
                 "iha_yatis": self.telemetry_data['ATTITUDE']['roll'] * (180 / math.pi)if self.telemetry_data['ATTITUDE'] and 'roll' in self.telemetry_data['ATTITUDE'] else None,
                 "iha_hiz": self.telemetry_data['VFR_HUD']['groundspeed'] if self.telemetry_data['VFR_HUD'] and 'groundspeed' in self.telemetry_data['VFR_HUD'] else None,
                 "iha_batarya": self.telemetry_data['SYS_STATUS']['battery_remaining'] if self.telemetry_data['SYS_STATUS'] and 'battery_remaining' in self.telemetry_data['SYS_STATUS'] else None,
-                "iha_otonom": 999,
-                "iha_kilitlenme": 999,
-                "hedef_merkez_X": 999,
-                "hedef_merkez_Y": 999,
-                "hedef_genislik": 999,
-                "hedef_yukseklik": 999,
-                "gps_saati": gps_saati_formatted
-            }
+                "iha_otonom": 0,
+                "iha_kilitlenme": 0,
+                "hedef_merkez_X": 0,
+                "hedef_merkez_Y": 0,
+                "hedef_genislik": 0,
+                "hedef_yukseklik": 0,
+                "gps_saati":{
+                    "saat": saat,
+                    "dakika": dakika,
+                    "saniye": saniye,
+                    "milisaniye": milisaniye
+                            }
+                    }
+            #gps_saati_formatted
             return [telemetry_output, self.simplified_telemetry_data]
 
         except Exception as e:

@@ -67,9 +67,9 @@ class YerIstasyonu:
         self.height=0
         self.rakip=0
 
-        self.kullanici_adi = "algan"
-        self.sifre = "53SnwjQ2sQ"
-        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi(f"http://{ana_sunucu_ip}:5000")
+        self.kullanici_adi = "algan" #ID-23
+        self.sifre = "Ea5ngUqWYV"
+        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi(f"http://10.0.0.10:10001")
 
         #* Servers # 
         #* < Yazılım_PC-IHA :8000 >  <Yazılım_PC-Yonelim_PC :9000 >   <Yonelim_PC-IHA :11000 >
@@ -117,10 +117,12 @@ class YerIstasyonu:
             try:
                 "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
                 ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(str(self.kullanici_adi),str(self.sifre))
-                if int(durum_kodu) == 200:
+                if (durum_kodu):
                     cp.ok(f"Ana Sunucuya Bağlanıldı:{durum_kodu}")  # Ana sunucuya girerkenki durum kodu.
                     connection_status = True
                     self.ANA_SUNUCU_DURUMU = connection_status
+                elif(int(durum_kodu)==400):
+                    raise Exception("DURUM KODU 400 :")
                 else:
                     raise Exception("DURUM KODU '200' DEGIL")
             except Exception as e:
@@ -305,13 +307,13 @@ class YerIstasyonu:
         start_now =datetime.datetime.now()
         mission_data = {
                         "kilitlenmeBaslangicZamani": {
-                            "saat": start_now.hour,
+                            "saat": start_now.hour-3,
                             "dakika": start_now.minute,
                             "saniye": start_now.second,
                             "milisaniye": start_now.microsecond #TODO düzeltilecek
                         },
                         "kilitlenmeBitisZamani": {
-                            "saat": start_now.hour,
+                            "saat": start_now.hour-3,
                             "dakika": start_now.minute,
                             "saniye": start_now.second+4,
                             "milisaniye": start_now.microsecond #TODO düzeltilecek
@@ -320,27 +322,35 @@ class YerIstasyonu:
                             }
         
 
-        self.ana_sunucu.kilitlenme_postala(json.dumps(mission_data))
+        status = self.ana_sunucu.kilitlenme_postala(mission_data)
+        cp.err(status)
+        #cp.warn(ret)
 
     def QR_TEST(self):
         print("QR-TEST")
         start_now =datetime.datetime.now()
         mission_data = {
                         "kamikazeBaslangicZamani" : {
-                            "saat": start_now.hour,
+                            "saat": start_now.hour-3,
                             "dakika": start_now.minute,
                             "saniye": start_now.second,
                             "milisaniye": start_now.microsecond #TODO düzeltilecek
                         },
                         "kamikazeBitisZamani": {
-                            "saat": start_now.hour,
+                            "saat": start_now.hour-3,
                             "dakika": start_now.minute,
                             "saniye": start_now.second+4,
                             "milisaniye": start_now.microsecond #TODO düzeltilecek
                         },
-                        "qrMetni ": "teknofest2024"
+                        "qrMetni": "teknofest2024"
                                 }
-        self.ana_sunucu.kamikaze_gonder(json.dumps(mission_data))
+        
+
+
+        
+        status=self.ana_sunucu.kamikaze_gonder(mission_data)
+        cp.err(status)
+        # cp.warn(ret)
 
     def yki_onay_ver(self):
         if self.CONFIRMATION_SERVER_STATUS:
@@ -356,8 +366,6 @@ class YerIstasyonu:
         else:
             cp.err(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
             return False
-
-
 
     def telemetri(self):
         timer_start=time.perf_counter()
@@ -386,7 +394,9 @@ class YerIstasyonu:
                             bizim_telemetri["hedef_genislik"]=telemetri_verileri[4]
                             bizim_telemetri["hedef_yukseklik"]=telemetri_verileri[5]
                             telem_trigger.clear()
+                        cp.ok(bizim_telemetri)
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
+                        cp.warn(rakip_telemetri)
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
                                 message_type="TELEM"
@@ -920,10 +930,10 @@ if __name__ == '__main__':
                                           event_map=event_map) #! IHA / LOCAL
     
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="10.0.0.236", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
-                                    ana_sunucu_ip="10.0.0.236", #! Teknofest Sunucu ip(str) -> Belirsiz
-                                    mavlink_ip="10.0.0.236", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
-                                    takimNo=1,
+                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
+                                    ana_sunucu_ip="10.0.0.10", #! Teknofest Sunucu ip(str) -> Belirsiz
+                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
+                                    takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,
                                     queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...

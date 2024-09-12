@@ -222,4 +222,4 @@ def cikis():
     return "200"
 
 
-app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+app.run(host='10.0.0.123', port=5000, debug=True, threaded=True)
