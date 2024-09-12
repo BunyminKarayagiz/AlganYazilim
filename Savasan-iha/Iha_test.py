@@ -44,7 +44,7 @@ class client_manager:
                 print("PWM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("PWM SERVER: baglanırken hata: ", e)
-            time.sleep(0.01)
+            time.sleep(1)
         self.PWM_SERVER_STATUS=connection
 
     def CONNECT_TRACK_CLIENT(self):
@@ -56,7 +56,7 @@ class client_manager:
                 print("YONELIM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("YONELIM SERVER: baglanırken hata: ", e)
-            time.sleep(0.01)
+            time.sleep(1)
         self.TRACK_SERVER_STATUS=connection
         
     def CONNECT_MODE_CLIENT(self):
@@ -68,7 +68,7 @@ class client_manager:
                 print("MOD SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("MOD SERVER: baglanırken hata: ", e)
-            time.sleep(0.01)
+            time.sleep(1)
         self.MODE_SERVER_STATUS=connection
 
     def CONNECT_KAMIKAZE_CLIENT(self):
@@ -80,7 +80,7 @@ class client_manager:
                 print("KAMIKAZE SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("KAMIKAZE SERVER: baglanırken hata: ", e)
-            time.sleep(0.01)
+            time.sleep(1)
         self.KAMIKAZE_SERVER_STATUS=connection
 
     def CONNECT_CONFIRMATION_CLIENT(self):
@@ -92,24 +92,27 @@ class client_manager:
                 print("CONFIRMATION SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("CONFIRMATION SERVER: baglanırken hata: ", e)
-            time.sleep(0.01)
+            time.sleep(1)
         self.CONFIRMATION_SERVER_STATUS=connection
         
     def wait_for_confirmation(self):
         while True:
             try:
-                ONAY=self.TCP_CONFIRMATION.client_recv_message().decode()
-                print("YKI ONAY -> ",ONAY)
-                if ONAY == "ALGAN":
-                    self.YKI_CONFIRMATION_STATUS = True
-                    print("YKI ONAYI ALINDI..")
+                if self.CONFIRMATION_SERVER_STATUS:
+                    ONAY=self.TCP_CONFIRMATION.client_recv_message().decode()
+                    print("YKI ONAY -> ",ONAY)
+                    if ONAY == "ALGAN":
+                        self.YKI_CONFIRMATION_STATUS = True
+                        print("YKI ONAYI ALINDI..")
+                    else:
+                        self.YKI_CONFIRMATION_STATUS = False
+                        print("YKI ONAYI REDDEDILDI..")
                 else:
-                    self.YKI_CONFIRMATION_STATUS = False
-                    print("YKI ONAYI REDDEDILDI..")
+                    print(f"CONFIRMATION_SERVER OFFLINE...")
             except Exception as e:
                 print("YKI ONAYI BEKLERKEN HATA : ",e)
                 self.YKI_CONFIRMATION_STATUS = False
-            time.sleep(0.001)
+            time.sleep(1)
     
     def connect_to_servers(self):
         th1=threading.Thread(target=self.CONNECT_MODE_CLIENT)
@@ -126,6 +129,9 @@ class client_manager:
 
         print("WAITING FOR 'MODE' OR 'CONFIRM' ....  ")
         th1.join()
+        th2.join()
+        th3.join()
+        th4.join()
         th5.join()
 
 class autopilot:
@@ -253,7 +259,7 @@ class autopilot:
                 self.enemy_track_location = self.CLIENT_MANAGER.TCP_TRACK.client_recv_message()
             except Exception as e:
                 print(f"YONELİM : VERİ ALIRKEN HATA -> {e}")
-            time.sleep(0.001)
+            time.sleep(1)
     def wait_for_qr_konum(self):
         while True:
             try:
@@ -551,8 +557,8 @@ class Iha():
         self.start_system_dataLines()
         print("system_dataLines DONE...")
 
-        print("system_dataLines STARTING...")
-        self.start_system_autopilot()
+        print("system_Autopilot STARTING...")
+        #self.start_system_autopilot()
         print("system_autopilot DONE...")
 
         while True:
@@ -595,11 +601,11 @@ class Iha():
 
 if __name__ == '__main__':
 
-    TUYGUN = Iha( 
+    TUYGUN = Iha(
             connect_type = "PLANNER" , # PLANNER / PIXHAWK
-            yazilim_ip = "127.0.0.1", #Yazılım:10.0.0.236
-            yonelim_ip = "127.0.0.1", #Yönelim:10.0.0.239 -Belirsiz
-                  )
+            yazilim_ip = "10.0.0.236", #Yazılım:10.0.0.236
+            yonelim_ip = "10.0.0.236", #Yönelim:10.0.0.239 -Belirsiz
+                )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)
     

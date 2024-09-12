@@ -258,7 +258,7 @@ class YerIstasyonu:
         print("HSS")
         status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
         message_type = "HSS"
-        self.Server_UI_Telem.send_data(json.dumps[message_type,hss_coord])
+        self.Server_UI_Telem.send_data(json.dumps([message_type,hss_coord]))
         print(hss_coord)
 
     def KILITLENME_TEST(self):
@@ -349,7 +349,7 @@ class YerIstasyonu:
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
                                 message_type="TELEM"
-                                self.Server_UI_Telem.send_data(json.dumps[message_type,rakip_telemetri]) #json.dumps(rakip_telemetri).encode('utf-8'))
+                                self.Server_UI_Telem.send_data(json.dumps([message_type,rakip_telemetri])) #json.dumps(rakip_telemetri).encode('utf-8'))
                             else:
                                 cp.warn("UI-TELEM SERVER OFFLINE")
                         except Exception as e:
@@ -879,9 +879,9 @@ if __name__ == '__main__':
                                           event_map=event_map) #! IHA / LOCAL
     
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="127.0.0.1", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
-                                    ana_sunucu_ip="127.0.0.1", #! Teknofest Sunucu ip(str) -> Belirsiz
-                                    mavlink_ip="127.0.0.1", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
+                                    yonelim_ip="10.0.0.236", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
+                                    ana_sunucu_ip="10.0.0.236", #! Teknofest Sunucu ip(str) -> Belirsiz
+                                    mavlink_ip="10.0.0.236", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
                                     takimNo=1,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,

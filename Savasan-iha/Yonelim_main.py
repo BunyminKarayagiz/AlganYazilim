@@ -203,8 +203,7 @@ class FlightTracker:
                         azimut = (azimut + 360) % 360
                         # Azimut ve yön farkı  kontrolü
                         yon_farki = self.fark_hesapla(data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_yonelme"], azimut)
-                        print(data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_yonelme"])
-                        print("YÖN",yon_farki)
+                        print(data_stream["konumBilgileri"][int(self.Algan_ID)-1]["iha_yonelme"],"--> YON FARKI:",{yon_farki})
                         # Geliştirilmiş kontrol ve çıktı
                         if yon_farki <= 50:  # Burada önümüzdeki rakipler arasındaki en uzaktaki rakibi seçiyoruz. Ve bu bizim yöneleceğimiz rakip olmuş oluyor
                             rakip_konum=(i["iha_enlem"],i["iha_boylam"])
@@ -217,7 +216,7 @@ class FlightTracker:
                             self.yonelim_deg_value += 5
                             yon_farki += 5
 
-            print("SEÇİLEN RAKİP",self.secilen_rakip)
+            print(f"Seçilen Rakip -> {self.secilen_rakip}")
             return (a,b,c,d) , self.secilen_rakip
         except Exception as e:
            cp.fatal(f"Process data_stream_err: {e}")
@@ -300,9 +299,11 @@ class FlightTracker:
             
             while not mainloop:
                 while self.Telem_client_status:
-                    message_type,hssXtelem = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
+                    UI_DATA = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
+                    message_type,hssXtelem = json.loads(UI_DATA)
+                    print("message_type: ",message_type)
                     if message_type == "TELEM":
-                        self.process_data_stream(json.loads(hssXtelem))
+                        self.process_data_stream(hssXtelem)
                     #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerekirse açılabilir..
                     elif message_type == "HSS":
                         for hss in hssXtelem:
