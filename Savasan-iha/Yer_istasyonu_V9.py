@@ -258,7 +258,7 @@ class YerIstasyonu:
         print("HSS")
         status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
         message_type = "HSS"
-        self.Server_UI_Telem.send_data([message_type,hss_coord])
+        self.Server_UI_Telem.send_data(json.dumps[message_type,hss_coord])
         print(hss_coord)
 
     def KILITLENME_TEST(self):
@@ -321,7 +321,7 @@ class YerIstasyonu:
     def telemetri(self):
         timer_start=time.perf_counter()
         ret,mavlink_obj=self.CREATE_MAVPROXY_SERVER()
-
+        telemetri_queue,telem_trigger=self.event_map["Telem1"]
         while True:
             try:
                 bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
@@ -336,7 +336,7 @@ class YerIstasyonu:
 
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 1:
-                        telemetri_queue,telem_trigger=self.event_map["Telem1"]
+                        
                         if telem_trigger.is_set():
                             telemetri_verileri= telemetri_queue.get()
                             bizim_telemetri["iha_kilitlenme"]=telemetri_verileri[1]
@@ -344,11 +344,12 @@ class YerIstasyonu:
                             bizim_telemetri["hedef_merkez_Y"]=telemetri_verileri[3]
                             bizim_telemetri["hedef_genislik"]=telemetri_verileri[4]
                             bizim_telemetri["hedef_yukseklik"]=telemetri_verileri[5]
+                            telem_trigger.clear()
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
                                 message_type="TELEM"
-                                self.Server_UI_Telem.send_data([message_type,rakip_telemetri]) #json.dumps(rakip_telemetri).encode('utf-8'))
+                                self.Server_UI_Telem.send_data(json.dumps[message_type,rakip_telemetri]) #json.dumps(rakip_telemetri).encode('utf-8'))
                             else:
                                 cp.warn("UI-TELEM SERVER OFFLINE")
                         except Exception as e:
@@ -613,6 +614,7 @@ class Frame_processing:
                 if message == "kilitlenme":
                     telemetri_verileri, kalman_data, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
                     telem_queue.put(telemetri_verileri)
+                    telem_trigger.set()
 
                     #* 4 SANIYE-KILITLENME
                     #Hedef Görüldü.

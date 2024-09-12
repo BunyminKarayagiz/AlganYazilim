@@ -44,6 +44,7 @@ class client_manager:
                 print("PWM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("PWM SERVER: baglanırken hata: ", e)
+            time.sleep(0.01)
         self.PWM_SERVER_STATUS=connection
 
     def CONNECT_TRACK_CLIENT(self):
@@ -55,6 +56,7 @@ class client_manager:
                 print("YONELIM SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("YONELIM SERVER: baglanırken hata: ", e)
+            time.sleep(0.01)
         self.TRACK_SERVER_STATUS=connection
         
     def CONNECT_MODE_CLIENT(self):
@@ -66,6 +68,7 @@ class client_manager:
                 print("MOD SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("MOD SERVER: baglanırken hata: ", e)
+            time.sleep(0.01)
         self.MODE_SERVER_STATUS=connection
 
     def CONNECT_KAMIKAZE_CLIENT(self):
@@ -77,6 +80,7 @@ class client_manager:
                 print("KAMIKAZE SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("KAMIKAZE SERVER: baglanırken hata: ", e)
+            time.sleep(0.01)
         self.KAMIKAZE_SERVER_STATUS=connection
 
     def CONNECT_CONFIRMATION_CLIENT(self):
@@ -88,6 +92,7 @@ class client_manager:
                 print("CONFIRMATION SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("CONFIRMATION SERVER: baglanırken hata: ", e)
+            time.sleep(0.01)
         self.CONFIRMATION_SERVER_STATUS=connection
         
     def wait_for_confirmation(self):
@@ -105,6 +110,7 @@ class client_manager:
                 print("YKI ONAYI BEKLERKEN HATA : ",e)
                 self.YKI_CONFIRMATION_STATUS = False
             time.sleep(0.001)
+    
     def connect_to_servers(self):
         th1=threading.Thread(target=self.CONNECT_MODE_CLIENT)
         th2=threading.Thread(target=self.CONNECT_PWM_CLIENT)
@@ -119,7 +125,7 @@ class client_manager:
         th5.start()
 
         print("WAITING FOR 'MODE' OR 'CONFIRM' ....  ")
-        #th1.join()
+        th1.join()
         th5.join()
 
 class autopilot:
@@ -237,9 +243,10 @@ class autopilot:
                         print("PWM ICIN YKI ONAYI GEREKLI...")
                 except Exception as e :
                     print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
+                    time.sleep(0.2)
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
-            time.sleep(0.001)
+            time.sleep(2)
     def wait_for_track(self):
         while True:
             try:
@@ -255,6 +262,7 @@ class autopilot:
                 self.is_qr_available=True
             except Exception as e:
                 print(f"KAMIKAZE : QR-KONUM ALIRKEN HATA -> {e}")
+                time.sleep(3)
                 self.is_qr_available=False
 
     def TRACK_BY_LOCATION(self): #!KONUMA BAĞLI TAKİP/YÖNELİM

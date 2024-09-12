@@ -222,13 +222,11 @@ class FlightTracker:
         except Exception as e:
            cp.fatal(f"Process data_stream_err: {e}")
            
-
     def add_plane(self, takim_numarasi: int):
         new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,data_limit=5,marker_limit=5,shadow=5)
         self.planes[takim_numarasi] = new_plane
 
 #! UI-OPERATIONS
-
     def add_plane_marker(self,lat,lon,rotation,plane_id):
         self.UI.set_plane(lat=lat,lon=lon,rotation=rotation,plane_id=plane_id,)
         print(f"ID:{plane_id} -> [lat:{lat} , lon:{lon} , rotation:{rotation} ]")
@@ -338,7 +336,7 @@ class FlightTracker:
 
 if __name__ == "__main__":
     Mode = "IHA" #Monitor / IHA / UI_TEST
-    tracker=FlightTracker(Yazılım_ip="127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0.236
+    tracker=FlightTracker(Yazılım_ip="127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0."236"
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()
