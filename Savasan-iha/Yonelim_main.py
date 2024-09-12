@@ -301,20 +301,19 @@ class FlightTracker:
                 while self.Telem_client_status:
                     UI_DATA = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
                     message_type,hssXtelem = json.loads(UI_DATA)
-                    print("message_type: ",message_type)
+                    #print("message_type: ",message_type)
                     if message_type == "TELEM":
                         self.process_data_stream(hssXtelem)
                     #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerekirse açılabilir..
                     elif message_type == "HSS":
-                        print(type(hssXtelem))
-                        print(hssXtelem)
-                        # for hss in hssXtelem:
-                        #     print(type(hss))
-                        #     print(hss)
-                            
+                        hss_all =json.loads(hssXtelem)
+                        for hss in hss_all:
+                            print(type(hss) , "DATA -> ",hss)
+                        
+                            #circle_obj = self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
                             #self.hss_areas[hss["id"]] = self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
-                        self.hss_areas[1] = self.UI.draw_circle(center_lat=37.7749,center_lon=-122.4194,radius_meters=1000)
-                        self.hss_areas[1] = self.UI.draw_circle(center_lat=37.7749,center_lon=-122.4194,radius_meters=1000)
+                            #self.hss_areas[1] = self.UI.draw_circle(center_lat=37.7749,center_lon=-122.4194,radius_meters=1000)
+
 
     #                             },
     # {

@@ -1,0 +1,8 @@
+import shutil
+
+try:
+    shutil.copy2(dosya, hedef_dosya)
+except PermissionError as e:
+    print(f"PermissionError: {e}")
+except Exception as e:
+    print(f"Error: {e}")

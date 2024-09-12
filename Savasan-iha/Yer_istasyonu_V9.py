@@ -11,7 +11,7 @@ from Modules.yki_arayuz import App
 import multiprocessing as mp
 import numpy as np
 
-import threading,cv2,pyvirtualcam,os,json,time,datetime,av, pickle
+import threading,cv2,pyvirtualcam,os,json,time,datetime,av, pickle , shutil
 
 from Modules.prediction_algorithm_try import KalmanFilter
 
@@ -261,6 +261,45 @@ class YerIstasyonu:
         self.Server_UI_Telem.send_data(json.dumps([message_type,hss_coord]))
         print(hss_coord)
 
+    def HSS_2_TEST(self):
+        print("HSS")
+        status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
+        hss_coord = json.loads(hss_coord)
+        if status_code == 200:
+            ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873)]
+            fence_konumları = []
+            dosya_adi = "hss.waypoints"
+            for i in hss_coord["hss_koordinat_bilgileri"]:
+                enlem = float(i["hssEnlem"])
+                boylam = float(i["hssBoylam"])
+                yarıçap = float(i["hssYaricap"])
+                fence_konumları.append((enlem, boylam, yarıçap))
+
+                            
+                ucus_alanı_miktarı = len(ucus_alanı)
+                fence_konumları_miktarı = len(fence_konumları)
+
+                with open(dosya_adi, 'w') as dosya:
+                    dosya.truncate(0)
+                    dosya.write("QGC WPL 110\n")
+                    dosya.write("0\t1\t0\t16\t0\t0\t0\t0\t40.2320505\t29.0042872\t100.220000\t1\n")
+                    for i, konum in enumerate(ucus_alanı, start=1):
+                        dosya.write(
+                            f"{i}\t0\t0\t5001\t5.00000000\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
+                    for j, konum in enumerate(fence_konumları, start=ucus_alanı_miktarı + 1):
+                        dosya.write(
+                            f"{j}\t0\t0\t5004\t{float(konum[2]):.8f}\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
+
+        dosya=r'C:\Users\asus\OneDrive - Pamukkale University\Masaüstü\AlganYazilim-1-YEDEK-HAZIR-CALISIYOR\hss.waypoints'
+        print(dosya)
+        hedef_klasor=r'\\SEVINÇ\123'
+        hedef_dosya = os.path.join(hedef_klasor, os.path.basename(dosya))
+        print(hedef_dosya)
+
+        #bu kısım dosya paylaşır.
+        shutil.copy2(dosya, hedef_dosya)
+        print(f"Dosya başarıyla kopyalandı: {hedef_dosya}")
+
     def KILITLENME_TEST(self):
         print("KILITLENME-TEST")
         start_now =datetime.datetime.now()
@@ -317,6 +356,8 @@ class YerIstasyonu:
         else:
             cp.err(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
             return False
+
+
 
     def telemetri(self):
         timer_start=time.perf_counter()

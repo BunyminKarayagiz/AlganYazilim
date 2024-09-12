@@ -155,14 +155,17 @@ class MAIN_GUI_FRAME(customtkinter.CTkFrame):
         self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="Onay VER/AL",command=Yer_istasyonu_obj.yki_onay_ver)
         self.Confirmation_button.grid(row=0,rowspan=2,column=0,padx=10,pady=10,sticky="nwe")
         
-        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="HSS-TEST",command=Yer_istasyonu_obj.HSS_TEST)
-        self.Confirmation_button.grid(row=2,column=0,padx=10,pady=10,sticky="nwe")
+        self.HSS_BUTTON=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="HSS-TEST",command=Yer_istasyonu_obj.HSS_TEST)
+        self.HSS_BUTTON.grid(row=2,column=0,padx=10,pady=10,sticky="nwe")
+        
+        self.HSS2_BUTTON=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="HSS-2-TEST",command=Yer_istasyonu_obj.HSS_2_TEST)
+        self.HSS2_BUTTON.grid(row=2,column=1,padx=10,pady=10,sticky="nwe")
 
-        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="KILITLENME-TEST",command=Yer_istasyonu_obj.KILITLENME_TEST)
-        self.Confirmation_button.grid(row=3,column=0,padx=10,pady=10,sticky="nwe")
+        self.LOCK_BUTTON=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="KILITLENME-TEST",command=Yer_istasyonu_obj.KILITLENME_TEST)
+        self.LOCK_BUTTON.grid(row=3,column=0,padx=10,pady=10,sticky="nwe")
 
-        self.Confirmation_button=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="QR-TEST",command=Yer_istasyonu_obj.QR_TEST)
-        self.Confirmation_button.grid(row=4,column=0,padx=10,pady=10,sticky="nwe")
+        self.QRTEST_BUTTON=customtkinter.CTkButton(master=self.left_main_frame.tab("CONTROL"),text="QR-TEST",command=Yer_istasyonu_obj.QR_TEST)
+        self.QRTEST_BUTTON.grid(row=4,column=0,padx=10,pady=10,sticky="nwe")
 
 
 #?  LAYER-1
