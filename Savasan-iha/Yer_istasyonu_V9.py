@@ -252,6 +252,8 @@ class YerIstasyonu:
             print("TRIGGER ERROR -> ",e)
 
     #! ANA FONKSİYONLAR
+
+    #? UI-TESTING
     def HSS_TEST(self):
         print("HSS")
         status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
@@ -301,8 +303,6 @@ class YerIstasyonu:
                                 }
         self.ana_sunucu.kamikaze_gonder(json.dumps(mission_data))
 
-
-
     def yki_onay_ver(self):
         if self.CONFIRMATION_SERVER_STATUS:
             cp.ok(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
@@ -317,8 +317,6 @@ class YerIstasyonu:
         else:
             cp.err(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
             return False
-    # def yki_onay_ver(self):
-    #     print("'Onay Ver/Al' butonu kullanıldı")
 
     def telemetri(self):
         timer_start=time.perf_counter()
@@ -511,6 +509,10 @@ class Frame_processing:
         kalmanPWMx, KalmanPWMy = kalman_obj.add_measurements(self.datas)
         return kalmanPWMx, KalmanPWMy
 
+    # def qr_oku(self, frame):
+    #     qr_result = self.qr.file_operations(frame=frame)
+    #     return qr_result ,frame
+    
     def qr_oku(self, frame):
         qr_result = self.qr.file_operations(frame=frame)
         return qr_result ,frame

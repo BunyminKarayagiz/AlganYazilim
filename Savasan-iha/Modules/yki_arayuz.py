@@ -4,7 +4,7 @@ from typing import Union,Callable
 from Modules.Cprint import cp
 #from Cprint import cp
 
-customtkinter.set_appearance_mode("light")  # Modes: system (default), light, dark
+customtkinter.set_appearance_mode("dark")  # Modes: system (default), light, dark
 customtkinter.set_default_color_theme("green")  # Themes: blue (default), dark-blue, green
 
 class MyCheckboxFrame(customtkinter.CTkFrame):
