@@ -102,9 +102,9 @@ class App(customtkinter.CTk):
         self.frame_mid.grid_columnconfigure(1, weight=0)
         self.frame_mid.grid_columnconfigure(2, weight=1)
 
-        database_path = "C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Modules\\PoligonDenizli_tiles.db"
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        database_path = os.path.join(script_directory, "PoligonDenizli_tiles.db")
+        database_path = "C:\\Users\\asus\\OneDrive - Pamukkale University\\Masaüstü\\AlganYazilim-1-YEDEK-HAZIR-CALISIYOR\\Savasan-iha\\Resources\\adana_havacılık_2_zoom_19.db"
+        # script_directory = os.path.dirname(os.path.abspath(__file__))
+        # database_path = os.path.join(script_directory, "adana_havacılık_1.db")
 
         self.map_widget = TkinterMapView(self.frame_mid, corner_radius=0,database_path=database_path)
         self.map_widget.grid(row=1, rowspan=1, column=0, columnspan=3, sticky="nswe", padx=(0, 0), pady=(0, 0))

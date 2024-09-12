@@ -104,7 +104,7 @@ class client_manager:
             except Exception as e:
                 print("YKI ONAYI BEKLERKEN HATA : ",e)
                 self.YKI_CONFIRMATION_STATUS = False
-
+            time.sleep(0.001)
     def connect_to_servers(self):
         th1=threading.Thread(target=self.CONNECT_MODE_CLIENT)
         th2=threading.Thread(target=self.CONNECT_PWM_CLIENT)
@@ -235,20 +235,18 @@ class autopilot:
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                             self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
                         print("PWM ICIN YKI ONAYI GEREKLI...")
-
                 except Exception as e :
                     print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
-
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
-            
+            time.sleep(0.001)
     def wait_for_track(self):
         while True:
             try:
                 self.enemy_track_location = self.CLIENT_MANAGER.TCP_TRACK.client_recv_message()
             except Exception as e:
                 print(f"YONELİM : VERİ ALIRKEN HATA -> {e}")
-
+            time.sleep(0.001)
     def wait_for_qr_konum(self):
         while True:
             try:
@@ -554,7 +552,7 @@ class Iha():
             selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7 #ch_8 servo7
             print("SERVO:8", selected_servo_ch_8)
             print("SERVO:6", selected_servo_ch_6)
-            time.sleep(0.1)
+            time.sleep(0.01)
 
             if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # ch6: High, ch8: High
                 self.autopilot.current_mode = "AUTO"
@@ -591,8 +589,8 @@ if __name__ == '__main__':
 
     TUYGUN = Iha( 
             connect_type = "PLANNER" , # PLANNER / PIXHAWK
-            yazilim_ip = "10.0.0.236", #Yazılım:10.0.0.236
-            yonelim_ip = "10.0.0.239", #Yönelim:10.0.0.239 -Belirsiz
+            yazilim_ip = "127.0.0.1", #Yazılım:10.0.0.236
+            yonelim_ip = "127.0.0.1", #Yönelim:10.0.0.239 -Belirsiz
                   )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)
