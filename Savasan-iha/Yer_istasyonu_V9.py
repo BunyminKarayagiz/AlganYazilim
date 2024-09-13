@@ -50,6 +50,7 @@ class YerIstasyonu:
         self.fark = 0
         self.is_qrAvailable = False
         self.is_qr_transmitted = "False"
+        self.qr_konumu=(0,0)
         self.YKI_CONFIRMATION_STATUS = False
         
         self.qr_coordinat = ""
@@ -332,6 +333,14 @@ class YerIstasyonu:
 
     def QR_TEST(self):
         print("QR-TEST")
+        try:
+            qr_status, coordinat = self.ana_sunucu.qr_koordinat_al()
+            if qr_status == 200:
+                self.qr_coordinat= coordinat
+                self.Server_KAMIKAZE.send_data_to_client(pickle.dumps(self.qr_coordinat))
+                print("QR GÖNDERİLDİ")
+        except Exception as e:
+            print(f"QR KONUMU ALINIRKEN HATA: {e}")
         start_now =datetime.datetime.now()
         mission_data = {
                         "kamikazeBaslangicZamani" : {
@@ -518,7 +527,7 @@ class YerIstasyonu:
 class Frame_processing:
 
     def __init__(self,event_map,frame_debug_mode="IHA",):
-        self.yolo_model = YOLOv8_deploy.Detection2("C:\\Users\\asus\\AlganYazilim-1\\Savasan-iha\\Models\\Model_2024_V6_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection2("C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Models\\Model_2024_V6_best.pt")
         self.qr = QR_Detection()
         self.frame_debug_mode = frame_debug_mode
 
