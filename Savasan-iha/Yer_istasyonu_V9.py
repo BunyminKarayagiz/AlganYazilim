@@ -278,7 +278,7 @@ class YerIstasyonu:
         status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
         hss_coord = json.loads(hss_coord)
         if status_code == 200:
-            ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873)]
+            ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873),(36.9404083,35.5631948)]
             fence_konumları = []
             dosya_adi = "hss.waypoints"
             try:

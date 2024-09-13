@@ -143,7 +143,7 @@ def final_estimation(lat,lon,height,speed,roll_degree,pitch_degree,rotation_yaw,
         # a b c d e noktaları olarak isimlendirilecektir.
         #æ noktası için
         a_x=(hiz-4)*np.cos(np.deg2rad(0))
-        a_y=(hiz-3)*np.sin(np.deg2rad(0))
+        a_y=(hiz-3)*np.sin(np.deg2rad(0))   
 
         a=(a_x,a_y)
         #b noktası için
