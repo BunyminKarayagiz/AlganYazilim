@@ -20,7 +20,7 @@ from Modules.prediction_algorithm_try import KalmanFilter
 #?Yonelim-PWM Değişimi :               Eksik(Çözüldü)
 #?Ana_sunucuya veri gönderimi :        Kusurlu(Çözüldü)
 #?Telemetri verilerinin alınması :     Kusurlu(Çözüldü)
-#TODOYonelim modunda rakip seçimi:     Eksik(GÖREVLERE EKLENDİ)
+#TODO Yonelim modunda rakip seçimi:     Eksik(GÖREVLERE EKLENDİ)
 #!Aşırı yönelim(pwm):                  Eksik(iptal)
 #TODO Hava savunma sistemi:            Eksik(GÖREVLERE EKLENDI)
 #!Pwm veri doğruluğu:                  Test edilecek
@@ -273,6 +273,12 @@ class YerIstasyonu:
         print("HSS")
         status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
         hss_coord = json.loads(hss_coord)
+
+        try:
+            cp.ok(hss_coord)
+        except:
+            cp.warn("HSS PRINT ERROR")
+
         if status_code == 200:
             ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873),(36.9404083,35.5631948)]
             fence_konumları = []
@@ -960,14 +966,14 @@ if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
 
-    Frame_processing_obj=Frame_processing(frame_debug_mode="IHA",
+    Frame_processing_obj=Frame_processing(frame_debug_mode="IHA", #! IHA / LOCAL
                                           event_map=event_map
-                                            ) #! IHA / LOCAL
+                                            )
     
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="10.0.0.123", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
-                                    ana_sunucu_ip="10.0.0.123", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(str)-> 10001
-                                    mavlink_ip="10.0.0.123", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
+                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="10.0.0.10", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(str)-> 10001
+                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,
