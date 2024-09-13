@@ -264,7 +264,12 @@ class autopilot:
         while True:
             try:
                 self.CLIENT_MANAGER.TCP_KAMIKAZE.send_message_to_server("QR-KONUM")
-                self.qr_location = self.CLIENT_MANAGER.TCP_KAMIKAZE.client_recv_message()
+                self.qr_location = pickle.loads(self.CLIENT_MANAGER.TCP_KAMIKAZE.client_recv_message())
+                self.qr_location = json.loads(self.qr_location)
+                print("QR KONUMU: ", self.qr_location)
+                print("TYPE: ",type(self.qr_location))
+                self.qr_location = (self.qr_location["qrEnlem"],self.qr_location["qrBoylam"])
+                print("QR LOCATİON: ", self.qr_location)
                 self.is_qr_available=True
             except Exception as e:
                 print(f"KAMIKAZE : QR-KONUM ALIRKEN HATA -> {e}")
@@ -273,6 +278,22 @@ class autopilot:
 
     def TRACK_BY_LOCATION(self): #!KONUMA BAĞLI TAKİP/YÖNELİM
         try:
+            if self.enemy_track_location != None:
+                rakip_enlem,rakip_boylam = self.enemy_track_location
+                print(self.enemy_track_location)
+                if self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS == True:
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "GUIDED":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("GUIDED")
+                        
+                    qr_git = LocationGlobalRelative(rakip_enlem, rakip_boylam, 100)
+                    #iha_path.set_rc_channel(self.throttle_channel, 1500)
+                    self.TUYGUN_PIXHAWK.goto(qr_git)
+                else:
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
+                    print("YKI_ONAYI BEKLENIYOR...")
+            else:
+                print("NO ENEMY TO TRACK...")
             if self.enemy_track_location != None:
                 rakip_enlem,rakip_boylam = self.enemy_track_location
                 print(self.enemy_track_location)
@@ -298,7 +319,7 @@ class autopilot:
     def KAMIKAZE(self): #!KONUM VE KAMIKAZE   KRITIK, Dalış anında modu değişimi sorun olabilir..
         print(f"is_qr_available:{self.is_qr_available} , qr_location:{self.qr_location}")
         try:
-            if not self.is_qr_available:
+            if self.is_qr_available:  # Burada Qr konumu gelince True oluyor ondan dolayı not silinmeli
 
                 if self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS == True:
                     print(f"KAMIKAZE- YKI_ONAYI :{self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS}")
