@@ -599,8 +599,8 @@ class Iha():
         print("system_autopilot DONE...")
 
         while True:
-            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.servo6 #ch6 servo6
-            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7 #ch8 servo7
+            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.ch6 #ch6 servo6
+            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.ch8 #ch8 servo7
             print("SERVO:8", selected_servo_ch_8)
             print("SERVO:6", selected_servo_ch_6)
             time.sleep(0.3)
@@ -632,16 +632,16 @@ class Iha():
                 self.CLIENT_MANAGER.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
                 self.autopilot.previous_mode = "KILITLENME"
 
-            # #TODO ÇOK KRİTİK SWİTCH DÜZENLEMESİ
-            if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 < 1400):  # ch6: Low, ch8: Low
-                self.autopilot.current_mode = "TESTING_MODE"
-                self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
-                self.autopilot.previous_mode = "TESTING_MODE"
+            # # #TODO ÇOK KRİTİK SWİTCH DÜZENLEMESİ
+            # if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 < 1400):  # ch6: Low, ch8: Low
+            #     self.autopilot.current_mode = "TESTING_MODE"
+            #     self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+            #     self.autopilot.previous_mode = "TESTING_MODE"
 
 if __name__ == '__main__':
 
     TUYGUN = Iha(
-            connect_type = "PLANNER", # PLANNER / PIXHAWK
+            connect_type = "PIXHAWK", # PLANNER / PIXHAWK
             yazilim_ip = "10.0.0.123", #Yazılım:10.0.0.123
             yonelim_ip = "10.0.0.180", #Yönelim:10.0.0.180 -Belirsiz
                 )
