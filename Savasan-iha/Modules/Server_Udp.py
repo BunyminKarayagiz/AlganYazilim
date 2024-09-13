@@ -26,9 +26,9 @@ class Server():
     def recv_frame_from_client(self):
         frame , sender_adress = self.udp_socket.recvfrom(self.BUFF_SIZE)
         #! SADECE LOCALDE ÇALIŞTIRMAK İÇİN
-        # frame = base64.b64decode(frame, ' /')
-        # npdata = np.fromstring(frame, dtype=np.uint8)
-        # frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
+        frame = base64.b64decode(frame, ' /')
+        npdata = np.fromstring(frame, dtype=np.uint8)
+        frame = cv2.imdecode(npdata, 1)  # datayı çözümleyerek veri frame çevirir
         return frame
 
     def send_frame_to_client(self,frame): #! Denenmedi. Düzeltilmesi gerekebilir...

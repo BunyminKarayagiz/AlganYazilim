@@ -34,14 +34,13 @@ from Modules.prediction_algorithm_try import KalmanFilter
 
 class YerIstasyonu:
 
-    def __init__(self,yonelim_ip,ana_sunucu_ip,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"):
+    def __init__(self,yonelim_ip,ana_sunucu_ip,ana_sunucu_port,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"):
 
         self.mavlink_ip = mavlink_ip
         self.mavlink_port = mavlink_port
         self.takim_no = takimNo
 
         self.yonelim_ip=yonelim_ip
-
 
         self.frame_debug_mode = frame_debug_mode
         self.SHUTDOWN_KEY = SHUTDOWN_KEY
@@ -61,6 +60,7 @@ class YerIstasyonu:
         self.önceki_mod = ""
         self.sunucu_saati:str = ""
         # Telemetri paketi için PWM'den veriler alınmalı
+        self.iha_otonom=0
         self.x_center=0
         self.y_center=0
         self.width=0
@@ -69,7 +69,7 @@ class YerIstasyonu:
 
         self.kullanici_adi = "algan" #ID-23
         self.sifre = "Ea5ngUqWYV"
-        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi(f"http://10.0.0.10:10001")
+        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi(f"http://{ana_sunucu_ip}:{ana_sunucu_port}")
 
         #* Servers # 
         #* < Yazılım_PC-IHA :8000 >  <Yazılım_PC-Yonelim_PC :9000 >   <Yonelim_PC-IHA :11000 >
@@ -226,20 +226,20 @@ class YerIstasyonu:
         cp.info("Sunucular bekleniyor...")
         t0 = threading.Thread(target=self.anasunucuya_baglan)
         t1=threading.Thread(target=self.CREATE_PWM_SERVER)
-        t3 = threading.Thread(target=self.CREATE_MOD_SERVER)
-        t4 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
-        t5 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
+        t2 = threading.Thread(target=self.CREATE_MOD_SERVER)
+        t3 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
+        t4 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
         #t8= threading.Thread(target=self.CREATE_UI_TELEM_SERVER) #! İPTAL
 
         t0.start()
         t1.start()
+        t2.start()
         t3.start()
         t4.start()
-        t5.start()
         #t8.start()
 
         t0.join()
-        return t0,t3,t4,t5 #t8 #t1,t6
+        return t0,t1,t2,t3,t4 #t8 #t1,t6
 
     #! KONTROL FONKSİYONU
     def trigger_event(self, event_id, message):
@@ -385,7 +385,6 @@ class YerIstasyonu:
 
                 if bizim_telemetri is not None:
                     if time.perf_counter() - timer_start > 1:
-                        
                         if telem_trigger.is_set():
                             telemetri_verileri= telemetri_queue.get()
                             bizim_telemetri["iha_kilitlenme"]=telemetri_verileri[1]
@@ -394,9 +393,9 @@ class YerIstasyonu:
                             bizim_telemetri["hedef_genislik"]=telemetri_verileri[4]
                             bizim_telemetri["hedef_yukseklik"]=telemetri_verileri[5]
                             telem_trigger.clear()
-                        cp.ok(bizim_telemetri)
+                        #cp.ok(bizim_telemetri)
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
-                        cp.warn(rakip_telemetri)
+                        #cp.warn(rakip_telemetri)
                         try:
                             if self.UI_TELEM_SERVER_STATUS:
                                 message_type="TELEM"
@@ -926,22 +925,23 @@ if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
 
-    Frame_processing_obj=Frame_processing(frame_debug_mode="IHA",
-                                          event_map=event_map) #! IHA / LOCAL
+    Frame_processing_obj=Frame_processing(frame_debug_mode="LOCAL",
+                                          event_map=event_map
+                                            ) #! IHA / LOCAL
     
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.239
-                                    ana_sunucu_ip="10.0.0.10", #! Teknofest Sunucu ip(str) -> Belirsiz
-                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str) -> 10.0.0.240
+                                    yonelim_ip="127.0.0.1", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="127.0.0.1", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str),port(str) -> Belirsiz
+                                    mavlink_ip="127.0.0.1", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.240 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,
                                     queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
-                                      )
+                                        )
     
     Gui_obj=Graphical_User_Interface(
                                     Yer_istasyonu_obj=yer_istasyonu_obj
-                                       )
+                                    )
 
     t1=threading.Thread(target=yer_istasyonu_obj.ANA_GOREV_KONTROL)
 

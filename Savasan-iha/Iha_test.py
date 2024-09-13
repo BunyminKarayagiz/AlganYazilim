@@ -273,18 +273,22 @@ class autopilot:
 
     def TRACK_BY_LOCATION(self): #!KONUMA BAĞLI TAKİP/YÖNELİM
         try:
-            rakip_enlem,rakip_boylam = self.enemy_track_location
-            if self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS == True:
-                if self.TUYGUN_PIXHAWK.get_ap_mode() != "GUIDED":
-                    self.TUYGUN_PIXHAWK.set_ap_mode("GUIDED")
-                    
-                qr_git = LocationGlobalRelative(rakip_enlem, rakip_boylam, 100)
-                #iha_path.set_rc_channel(self.throttle_channel, 1500)
-                self.TUYGUN_PIXHAWK.goto(qr_git)
+            if self.enemy_track_location != None:
+                rakip_enlem,rakip_boylam = self.enemy_track_location
+                print(self.enemy_track_location)
+                if self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS == True:
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "GUIDED":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("GUIDED")
+                        
+                    qr_git = LocationGlobalRelative(rakip_enlem, rakip_boylam, 100)
+                    #iha_path.set_rc_channel(self.throttle_channel, 1500)
+                    self.TUYGUN_PIXHAWK.goto(qr_git)
+                else:
+                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
+                        self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
+                    print("YKI_ONAYI BEKLENIYOR...")
             else:
-                if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
-                    self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
-                print("YKI_ONAYI BEKLENIYOR...")
+                print("NO ENEMY TO TRACK...")
 
         except Exception as e:
             print(f"TRACK : ERROR WHILE TRACKING -> {e}")
@@ -384,7 +388,7 @@ class autopilot:
 
     def AUTOPILOT_STATE_CONTROL(self):
         while True:
-            #print("AUTOPILOT STATE CONTROL")
+            print("AUTOPILOT STATE CONTROL")
             if (not self.FAILSAFE_TAKEOVER) and self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS:
 
                 if self.current_mode == "AUTO":
@@ -457,28 +461,38 @@ class autopilot:
 
 
             elif (not self.FAILSAFE_TAKEOVER) and (not self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS):
-                print("NEED GCS CONFIRMATION..")
+                    print("NEED GCS CONFIRMATION..")
 
-                if self.current_mode == "AUTO":
-                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
-                        self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
+                    if self.current_mode == "AUTO":
+                        print(f"SELECTED MODE : {self.current_mode}")
+                        if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
+                            self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
 
-                elif self.current_mode == "FBWA":
-                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
-                        self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
+                    elif self.current_mode == "FBWA":
+                        print(f"SELECTED MODE : {self.current_mode}")
+                        if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
+                            self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
-                elif self.current_mode == "RTL":
-                    if self.TUYGUN_PIXHAWK.get_ap_mode() != "RTL":
-                        self.TUYGUN_PIXHAWK.set_ap_mode("RTL")
+                    elif self.current_mode == "RTL":
+                        print(f"SELECTED MODE : {self.current_mode}")
+                        if self.TUYGUN_PIXHAWK.get_ap_mode() != "RTL":
+                            self.TUYGUN_PIXHAWK.set_ap_mode("RTL")
 
+                    elif self.current_mode == "KAMIKAZE":
+                        print(f"SELECTED MODE : {self.current_mode} - WITHOUT AUTHORIZATION.... NO ACTIONS TAKEN" )
+                        # if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
+                        #     self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
-
+                    elif self.current_mode == "KILITLENME":
+                        print(f"SELECTED MODE : {self.current_mode} - WITHOUT AUTHORIZATION.... NO ACTIONS TAKEN")
+                        # if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
+                        #     self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
             elif (self.FAILSAFE_TAKEOVER) and (not self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS):
-                print("AUTOPILOT-FAILSAFE TRYING TO TAKE CONTROL..")
-                
+                    print("AUTOPILOT-FAILSAFE TRYING TO TAKE CONTROL..")
+                    
             elif self.FAILSAFE_TAKEOVER and self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS:
-                print("AUTOPILOT-FAILSAFE TOOK OVER..")
+                    print("AUTOPILOT-FAILSAFE TOOK OVER..")
 
 
             time.sleep(0.1)
@@ -558,14 +572,14 @@ class Iha():
         print("system_dataLines DONE...")
 
         print("system_Autopilot STARTING...")
-        #self.start_system_autopilot()
+        self.start_system_autopilot()
         print("system_autopilot DONE...")
 
         while True:
             selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.servo6 #ch6 servo6
             selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7 #ch8 servo7
-            print("SERVO:8", selected_servo_ch_8)
-            print("SERVO:6", selected_servo_ch_6)
+            # print("SERVO:8", selected_servo_ch_8)
+            # print("SERVO:6", selected_servo_ch_6)
             time.sleep(0.3)
 
             if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # ch6: High, ch8: High
@@ -603,8 +617,8 @@ if __name__ == '__main__':
 
     TUYGUN = Iha(
             connect_type = "PLANNER", # PLANNER / PIXHAWK
-            yazilim_ip = "10.0.0.236", #Yazılım:10.0.0.236
-            yonelim_ip = "10.0.0.236", #Yönelim:10.0.0.239 -Belirsiz
+            yazilim_ip = "127.0.0.1", #Yazılım:10.0.0.236
+            yonelim_ip = "127.0.0.1", #Yönelim:10.0.0.239 -Belirsiz
                 )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)

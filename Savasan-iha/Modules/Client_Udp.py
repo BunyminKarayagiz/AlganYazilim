@@ -13,7 +13,7 @@ class Client():
         
         self.host = host
         self.port = port #9999
-        #self.vid = cv2.VideoCapture(0)
+        self.vid = cv2.VideoCapture(0)
         self.WIDTH = 640
         self.HEIGHT = 480
 
