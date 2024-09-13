@@ -24,26 +24,26 @@ def get_hss_coord():
                 "id": 0,
                 "hssEnlem": 40.23260922,
                 "hssBoylam": 29.00573015,
-                "hssYaricap": 50
-            },
-            {
-                "id": 1,
-                "hssEnlem": 40.23351019,
-                "hssBoylam": 28.99976492,
-                "hssYaricap": 50
-            },
-            {
-                "id": 2,
-                "hssEnlem": 40.23105297,
-                "hssBoylam": 29.00744677,
-                "hssYaricap": 75
-            },
-            {
-                "id": 3,
-                "hssEnlem": 40.23090554,
-                "hssBoylam": 29.00221109,
-                "hssYaricap": 150
+                "hssYaricap": 300
             }
+            # {
+            #     "id": 1,
+            #     "hssEnlem": 40.23351019,
+            #     "hssBoylam": 28.99976492,
+            #     "hssYaricap": 50
+            # },
+            # {
+            #     "id": 2,
+            #     "hssEnlem": 40.23105297,
+            #     "hssBoylam": 29.00744677,
+            #     "hssYaricap": 75
+            # },
+            # {
+            #     "id": 3,
+            #     "hssEnlem": 40.23090554,
+            #     "hssBoylam": 29.00221109,
+            #     "hssYaricap": 150
+            # }
         ]
     }
     

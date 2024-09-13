@@ -118,11 +118,15 @@ class YerIstasyonu:
             try:
                 "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
                 ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(str(self.kullanici_adi),str(self.sifre))
+                print(ana_sunucuya_giris_kodu)
+                print(type(ana_sunucuya_giris_kodu))
+                print(durum_kodu)
+                print(type(durum_kodu))
                 if (durum_kodu):
                     cp.ok(f"Ana Sunucuya Bağlanıldı:{durum_kodu}")  # Ana sunucuya girerkenki durum kodu.
                     connection_status = True
                     self.ANA_SUNUCU_DURUMU = connection_status
-                elif(int(durum_kodu)==400):
+                elif(durum_kodu==400):
                     raise Exception("DURUM KODU 400 :")
                 else:
                     raise Exception("DURUM KODU '200' DEGIL")
@@ -279,6 +283,7 @@ class YerIstasyonu:
             dosya_adi = "hss.waypoints"
             try:
                 for i in hss_coord["hss_koordinat_bilgileri"]:
+                    cp.fatal(i)
                     enlem = float(i["hssEnlem"])
                     boylam = float(i["hssBoylam"])
                     yarıçap = float(i["hssYaricap"])
@@ -288,10 +293,10 @@ class YerIstasyonu:
                 
             
                             
-                ucus_alanı_miktarı = len(ucus_alanı)
-                fence_konumları_miktarı = len(fence_konumları)
+            ucus_alanı_miktarı = len(ucus_alanı)
+            fence_konumları_miktarı = len(fence_konumları)
 
-                with open(dosya_adi, 'w') as dosya:
+            with open(dosya_adi, 'w') as dosya:
                     dosya.truncate(0)
                     dosya.write("QGC WPL 110\n")
                     dosya.write("0\t1\t0\t16\t0\t0\t0\t0\t40.2320505\t29.0042872\t100.220000\t1\n")
@@ -342,6 +347,7 @@ class YerIstasyonu:
             qr_status, coordinat = self.ana_sunucu.qr_koordinat_al()
             if qr_status == 200:
                 self.qr_coordinat= coordinat
+                cp.fatal(self.qr_coordinat)
                 self.Server_KAMIKAZE.send_data_to_client(pickle.dumps(self.qr_coordinat))
                 print("QR GÖNDERİLDİ")
         except Exception as e:
@@ -362,10 +368,7 @@ class YerIstasyonu:
                         },
                         "qrMetni": "teknofest2024"
                                 }
-        
-
-
-        
+                
         status=self.ana_sunucu.kamikaze_gonder(mission_data)
         cp.err(status)
         # cp.warn(ret)
@@ -386,13 +389,13 @@ class YerIstasyonu:
             return False
 
     def telemetri(self):
+        cp.fatal("TELEM START TELEM START TELEM START TELEM START TELEM START TELEM START TELEM START")
         timer_start=time.perf_counter()
         ret,mavlink_obj=self.CREATE_MAVPROXY_SERVER()
         telemetri_queue,telem_trigger=self.event_map["Telem1"]
         while True:
             try:
                 bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
-
                 # bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
                 #                    "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,color
                 #                                                        "dakika": time.gmtime().tm_min,
@@ -466,7 +469,6 @@ class YerIstasyonu:
         # th1,th2 = self.process_flow_manager()
 
         self.SV_MAIN()
-        cp.fatal("SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE")
         th1 = threading.Thread(target=self.telemetri)
         th2 = threading.Thread(target=self.ana_sunucu_manager)
 
@@ -596,7 +598,7 @@ class Frame_processing:
         self.MODE_SERVER_STATUS=connection_status
         return connection_status
 
-    #!Calculations
+    #!CalculationsR
     def kalman_predict(self,kalman_obj, x_center, y_center):
         data = [x_center, y_center]
         self.datas.append(data)
@@ -804,14 +806,14 @@ class Frame_processing:
 
                     frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                     now = datetime.datetime.now()
-                    #virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                     cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     videoKayit.write(frame)    
                     if not Arayuz_Frame_queue.full():
                         Arayuz_Frame_queue.put(frame)
-                    #cam.send(frame= virtual_frame)
+                    cam.send(frame= virtual_frame)
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
@@ -962,7 +964,7 @@ if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
 
-    Frame_processing_obj=Frame_processing(frame_debug_mode="LOCAL",
+    Frame_processing_obj=Frame_processing(frame_debug_mode="IHA",
                                           event_map=event_map
                                             ) #! IHA / LOCAL
     
