@@ -226,7 +226,7 @@ class YerIstasyonu:
 
         cp.info("Sunucular bekleniyor...")
         t0 = threading.Thread(target=self.anasunucuya_baglan)
-        t1=threading.Thread(target=self.CREATE_PWM_SERVER)
+        t1= threading.Thread(target=self.CREATE_PWM_SERVER)
         t2 = threading.Thread(target=self.CREATE_MOD_SERVER)
         t3 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
         t4 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
@@ -240,6 +240,11 @@ class YerIstasyonu:
         #t8.start()
 
         t0.join()
+        t1.join()
+        t2.join()
+        t3.join()
+        t4.join()
+
         return t0,t1,t2,t3,t4 #t8 #t1,t6
 
     #! KONTROL FONKSİYONU
@@ -407,6 +412,7 @@ class YerIstasyonu:
                             bizim_telemetri["hedef_yukseklik"]=telemetri_verileri[5]
                             telem_trigger.clear()
                         bizim_telemetri["iha_otonom"] = self.iha_mod
+                        cp.fatal(f"iha_mod :{self.iha_mod}")
                         cp.ok(bizim_telemetri)
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         #cp.warn(rakip_telemetri)
@@ -425,7 +431,6 @@ class YerIstasyonu:
 
     def ana_sunucu_manager(self):
         mission_queue,mission_event=self.event_map["Gorev_verisi"]
-
         while True:
             if mission_event.is_set():
                 time.sleep(0.01)
@@ -443,7 +448,7 @@ class YerIstasyonu:
 
     def process_flow_manager(self):
         self.SV_MAIN()
-
+        cp.fatal("SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE")
         th1 = threading.Thread(target=self.telemetri)
         th2 = threading.Thread(target=self.ana_sunucu_manager)
 
@@ -453,25 +458,38 @@ class YerIstasyonu:
         th1.start()
         th2.start()
 
-        time.sleep(5)
+        time.sleep(1)
 
         return th1,th2
 
     def ANA_GOREV_KONTROL(self):
-        th1,th2 = self.process_flow_manager()
+        # th1,th2 = self.process_flow_manager()
 
-        time.sleep(2)
+        self.SV_MAIN()
+        cp.fatal("SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE")
+        th1 = threading.Thread(target=self.telemetri)
+        th2 = threading.Thread(target=self.ana_sunucu_manager)
+
+        th1.daemon = True
+        th2.daemon = True
+
+        th1.start()
+        th2.start()
+
+        time.sleep(1)
 
         while True:
+            cp.warn(f"MODE SERVER STAT : {self.MODE_SERVER_STATUS}")
             if self.MODE_SERVER_STATUS:
                 try:
                     self.secilen_görev_modu = self.Server_MOD.recv_tcp_message()
+                    print(self.secilen_görev_modu)
                     try:
                         if self.SHUTDOWN_KEY == "ALGAN":
                             cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
                             break
 
-                        if self.secilen_görev_modu == "KILITLENME" and not (self.önceki_mod=="KILITLENME"):
+                        if self.secilen_görev_modu == "KILITLENME" and ( not self.önceki_mod=="KILITLENME"):
                             self.trigger_event("Frame_1","kilitlenme")
                             self.trigger_event("Frame_2","kilitlenme")
                             self.önceki_mod = "KILITLENME"
@@ -527,7 +545,7 @@ class YerIstasyonu:
 class Frame_processing:
 
     def __init__(self,event_map,frame_debug_mode="IHA",):
-        self.yolo_model = YOLOv8_deploy.Detection2("C:\\Users\\bunya\\Desktop\\Algan son\\AlganYazilim\\Savasan-iha\\Models\\Model_2024_V6_best.pt")
+        self.yolo_model = YOLOv8_deploy.Detection2("C:\\Users\\asus\\OneDrive - Pamukkale University\\Masaüstü\\AlganYazilim-1-YEDEK-HAZIR-CALISIYOR\\Savasan-iha\\Models\\Model_2024_V6_best.pt")
         self.qr = QR_Detection()
         self.frame_debug_mode = frame_debug_mode
 

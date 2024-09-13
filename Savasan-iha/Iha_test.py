@@ -229,53 +229,65 @@ class autopilot:
     def wait_for_pwm(self):
         while True:
             try:
-                pwm_data=pickle.loads(self.CLIENT_MANAGER.TCP_PWM.client_recv_message())
-                print("PWM RECEIVED : ",pwm_data)
-                try:
-                    if self.YKI_CONFIRMATION_STATUS == True:
-                        print("")
-                    
-                    #     if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA" :
-                    #             print("AP MODE SET TO FBWA...")
-                    #             self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
+                if self.CLIENT_MANAGER.PWM_SERVER_STATUS:
+                    pwm_data=pickle.loads(self.CLIENT_MANAGER.TCP_PWM.client_recv_message())
+                    print("PWM RECEIVED : ",pwm_data)
+                    try:
+                        if self.YKI_CONFIRMATION_STATUS == True:
+                            print("")
+                        
+                        #     if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA" :
+                        #             print("AP MODE SET TO FBWA...")
+                        #             self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
-                        # if self.YKI_CONFIRMATION_STATUS == True:
-                        #     self.TUYGUN_PIXHAWK.set_rc_channel(1, pwm_data[0]) #pwmX
-                        #     self.TUYGUN_PIXHAWK.set_rc_channel(2, pwm_data[1]) #pwmY
-                        #     self.TUYGUN_PIXHAWK.set_rc_channel(3, 1500)
-                    else:
-                        if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
-                            self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
-                        print("PWM ICIN YKI ONAYI GEREKLI...")
-                except Exception as e :
-                    print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
+                            # if self.YKI_CONFIRMATION_STATUS == True:
+                            #     self.TUYGUN_PIXHAWK.set_rc_channel(1, pwm_data[0]) #pwmX
+                            #     self.TUYGUN_PIXHAWK.set_rc_channel(2, pwm_data[1]) #pwmY
+                            #     self.TUYGUN_PIXHAWK.set_rc_channel(3, 1500)
+                        else:
+                            if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
+                                self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
+                            print("PWM ICIN YKI ONAYI GEREKLI...")
+                    except Exception as e :
+                        print("KONTROL(PWM) : YÖNELİRKEN HATA ->",e)
                     time.sleep(0.2)
+                else:
+                    print("PWM SERVER OFFLINE")
             except Exception as e:
                 print("PWM SERVER: Veri çekilirken hata :",e)
             time.sleep(2)
+
     def wait_for_track(self):
         while True:
             try:
-                self.enemy_track_location = self.CLIENT_MANAGER.TCP_TRACK.client_recv_message()
+                if self.CLIENT_MANAGER.TRACK_SERVER_STATUS:
+                    self.enemy_track_location = self.CLIENT_MANAGER.TCP_TRACK.client_recv_message()
+                else:
+                    print("YONELIM SERVER OFFLINE")
             except Exception as e:
                 print(f"YONELİM : VERİ ALIRKEN HATA -> {e}")
             time.sleep(1)
+
     def wait_for_qr_konum(self):
         while True:
             try:
-                self.CLIENT_MANAGER.TCP_KAMIKAZE.send_message_to_server("QR-KONUM")
-                self.qr_location = pickle.loads(self.CLIENT_MANAGER.TCP_KAMIKAZE.client_recv_message())
-                self.qr_location = json.loads(self.qr_location)
-                print("QR KONUMU: ", self.qr_location)
-                print("TYPE: ",type(self.qr_location))
-                self.qr_location = (self.qr_location["qrEnlem"],self.qr_location["qrBoylam"])
-                print("QR LOCATİON: ", self.qr_location)
-                self.is_qr_available=True
+                if self.CLIENT_MANAGER.KAMIKAZE_SERVER_STATUS:
+                    self.CLIENT_MANAGER.TCP_KAMIKAZE.send_message_to_server("QR-KONUM")
+                    self.qr_location = pickle.loads(self.CLIENT_MANAGER.TCP_KAMIKAZE.client_recv_message())
+                    self.qr_location = json.loads(self.qr_location)
+                    print("QR KONUMU: ", self.qr_location)
+                    print("TYPE: ",type(self.qr_location))
+                    self.qr_location = (self.qr_location["qrEnlem"],self.qr_location["qrBoylam"])
+                    print("QR LOCATİON: ", self.qr_location)
+                    self.is_qr_available=True
+                else:
+                    print("KAMIKAZE SERVER OFFLINE")
+                    
             except Exception as e:
                 print(f"KAMIKAZE : QR-KONUM ALIRKEN HATA -> {e}")
-                time.sleep(3)
+                time.sleep(2)
                 self.is_qr_available=False
-
+            time.sleep(0.1)
     def TRACK_BY_LOCATION(self): #!KONUMA BAĞLI TAKİP/YÖNELİM
         try:
             if self.enemy_track_location != None:
@@ -315,7 +327,7 @@ class autopilot:
             print(f"TRACK : ERROR WHILE TRACKING -> {e}")
             if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                 self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
-            
+
     def KAMIKAZE(self): #!KONUM VE KAMIKAZE   KRITIK, Dalış anında modu değişimi sorun olabilir..
         print(f"is_qr_available:{self.is_qr_available} , qr_location:{self.qr_location}")
         try:
@@ -473,30 +485,29 @@ class autopilot:
                         time.sleep(1)
             
             elif (not self.FAILSAFE_TAKEOVER) and (not self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS):
-                    print("NEED GCS CONFIRMATION..")
 
                     if self.current_mode == "AUTO":
-                        print(f"SELECTED MODE : {self.current_mode}")
+                        print(f"SELECTED MODE : {self.current_mode} -- NEED GCS CONFIRMATION..")
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                             self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
 
                     elif self.current_mode == "FBWA":
-                        print(f"SELECTED MODE : {self.current_mode}")
+                        print(f"SELECTED MODE : {self.current_mode} -- NEED GCS CONFIRMATION..")
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                             self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
                     elif self.current_mode == "RTL":
-                        print(f"SELECTED MODE : {self.current_mode}")
+                        print(f"SELECTED MODE : {self.current_mode} -- NEED GCS CONFIRMATION..")
                         if self.TUYGUN_PIXHAWK.get_ap_mode() != "RTL":
                             self.TUYGUN_PIXHAWK.set_ap_mode("RTL")
 
                     elif self.current_mode == "KAMIKAZE":
-                        print(f"SELECTED MODE : {self.current_mode} - WITHOUT AUTHORIZATION.... NO ACTIONS TAKEN" )
+                        print(f"SELECTED MODE : {self.current_mode} - WITHOUT AUTHORIZATION.... NO ACTIONS TAKEN  -- NEED GCS CONFIRMATION.." )
                         # if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                         #     self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
                     elif self.current_mode == "KILITLENME":
-                        print(f"SELECTED MODE : {self.current_mode} - WITHOUT AUTHORIZATION.... NO ACTIONS TAKEN")
+                        print(f"SELECTED MODE : {self.current_mode} - WITHOUT AUTHORIZATION.... NO ACTIONS TAKEN  -- NEED GCS CONFIRMATION..")
                         # if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                         #     self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
@@ -511,14 +522,14 @@ class autopilot:
 
 class Iha():
     def __init__(self,yazilim_ip,yonelim_ip,connect_type="PIXHAWK"):
-        self.client_manager = client_manager(yazilim_ip=yazilim_ip,yonelim_ip=yonelim_ip)
+        self.CLIENT_MANAGER = client_manager(yazilim_ip=yazilim_ip,yonelim_ip=yonelim_ip)
         
         if connect_type=="PIXHAWK":
             TUYGUN = self.PIXHAWK_connect()
-            self.autopilot = autopilot(iha_path=TUYGUN,client_manager=self.client_manager)
+            self.autopilot = autopilot(iha_path=TUYGUN,client_manager=self.CLIENT_MANAGER)
         elif connect_type=="PLANNER":
             TUYGUN = self.Planner_connect()
-            self.autopilot = autopilot(iha_path=TUYGUN,client_manager=self.client_manager)
+            self.autopilot = autopilot(iha_path=TUYGUN,client_manager=self.CLIENT_MANAGER)
 
     def Planner_connect(self):
         MissionPlanner_OR_PIXHAWK_Connection = False  #UÇAK İÇİN VERİLEN FONKSİYON RASPBERRY_CONNECT OLACAK
@@ -553,8 +564,8 @@ class Iha():
         return path_drone.Plane(connection_string)
 
     def start_system_dataLines(self):
-        th1=threading.Thread(target=self.client_manager.connect_to_servers)
-        th2=threading.Thread(target=self.client_manager.wait_for_confirmation)
+        th1=threading.Thread(target=self.CLIENT_MANAGER.connect_to_servers)
+        th2=threading.Thread(target=self.CLIENT_MANAGER.wait_for_confirmation)
         th1.start()
         th2.start()
 
@@ -590,33 +601,35 @@ class Iha():
         while True:
             selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.servo6 #ch6 servo6
             selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7 #ch8 servo7
-            # print("SERVO:8", selected_servo_ch_8)
-            # print("SERVO:6", selected_servo_ch_6)
+            print("SERVO:8", selected_servo_ch_8)
+            print("SERVO:6", selected_servo_ch_6)
             time.sleep(0.3)
 
             if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # ch6: High, ch8: High
                 self.autopilot.current_mode = "AUTO"
-                self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+                print(self.CLIENT_MANAGER.MODE_SERVER_STATUS,self.CLIENT_MANAGER.MODE_SERVER_STATUS,self.CLIENT_MANAGER.MODE_SERVER_STATUS)
+                self.CLIENT_MANAGER.TCP_MOD.send_message_to_server("AUTO")
                 self.autopilot.previous_mode = "AUTO"
 
             if ((selected_servo_ch_6 >= 1400 and selected_servo_ch_6 <= 1600) and selected_servo_ch_8 > 1600):  # ch6: Mid, ch8: High
                 self.autopilot.current_mode = "FBWA"
-                self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+                print(self.CLIENT_MANAGER.MODE_SERVER_STATUS)
+                self.CLIENT_MANAGER.TCP_MOD.send_message_to_server("FBWA")
                 self.autopilot.previous_mode = "FBWA"
                 
             if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 > 1600):  # ch6: LOW, ch8: High
                 self.autopilot.current_mode = "RTL"
-                self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+                self.CLIENT_MANAGER.TCP_MOD.send_message_to_server("RTL")
                 self.autopilot.previous_mode = "RTL"                
 
             if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 < 1400):  # ch6: High, ch8: LOW
                 self.autopilot.current_mode = "KAMIKAZE"
-                self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+                self.CLIENT_MANAGER.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
                 self.autopilot.previous_mode = "KAMIKAZE"
 
             if (selected_servo_ch_6 >= 1600 and (selected_servo_ch_8 > 1400 and selected_servo_ch_8 < 1600)):  # ch6: High, ch8: Mid
                 self.autopilot.current_mode = "KILITLENME"
-                self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+                self.CLIENT_MANAGER.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
                 self.autopilot.previous_mode = "KILITLENME"
 
             # #TODO ÇOK KRİTİK SWİTCH DÜZENLEMESİ
@@ -630,11 +643,11 @@ if __name__ == '__main__':
     TUYGUN = Iha(
             connect_type = "PLANNER", # PLANNER / PIXHAWK
             yazilim_ip = "10.0.0.123", #Yazılım:10.0.0.123
-            yonelim_ip = "10.0.0.180", #Yönelim:10.0.0.180 -Belirsiz
+            yonelim_ip = "10.0.0.123", #Yönelim:10.0.0.180 -Belirsiz
                 )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)
     
     print("2 Sn bekleniyor...")
-    time.sleep(2) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
+    time.sleep(1) #Tüm Bağlantıların Yerine Oturması için 2 sn bekleniyor
     main_thread.run()

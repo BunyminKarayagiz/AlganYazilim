@@ -41,7 +41,8 @@ class QR_Detection:
 
         # Barkodları tespit etmek için decode_data_matrix fonksiyonunu çağırın
         qr_bilgisi = self.decode_data_matrix()
-        print(qr_bilgisi)
+        if qr_bilgisi != None:
+            print(qr_bilgisi)
         # Geçici dosyayı silin
         os.remove(self.image_path)
         return qr_bilgisi

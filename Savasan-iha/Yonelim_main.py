@@ -347,5 +347,3 @@ if __name__ == "__main__":
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()
-
-    
