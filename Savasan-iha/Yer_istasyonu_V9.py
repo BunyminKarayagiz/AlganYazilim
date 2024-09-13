@@ -967,9 +967,9 @@ if __name__ == '__main__':
                                             ) #! IHA / LOCAL
     
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="10.0.0.123", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
-                                    ana_sunucu_ip="10.0.0.123", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(str)-> 10001
-                                    mavlink_ip="10.0.0.123", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.180 , mavlink_port(int) -> 14550
+                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="10.0.0.10", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(str)-> 10001
+                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,
