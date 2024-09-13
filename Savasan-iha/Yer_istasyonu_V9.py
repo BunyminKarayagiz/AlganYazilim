@@ -271,12 +271,16 @@ class YerIstasyonu:
             ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873)]
             fence_konumları = []
             dosya_adi = "hss.waypoints"
-            for i in hss_coord["hss_koordinat_bilgileri"]:
-                enlem = float(i["hssEnlem"])
-                boylam = float(i["hssBoylam"])
-                yarıçap = float(i["hssYaricap"])
-                fence_konumları.append((enlem, boylam, yarıçap))
-
+            try:
+                for i in hss_coord["hss_koordinat_bilgileri"]:
+                    enlem = float(i["hssEnlem"])
+                    boylam = float(i["hssBoylam"])
+                    yarıçap = float(i["hssYaricap"])
+                    fence_konumları.append((enlem, boylam, yarıçap))
+            except:
+                print("HSS listesi boş")
+                
+            
                             
                 ucus_alanı_miktarı = len(ucus_alanı)
                 fence_konumları_miktarı = len(fence_konumları)
