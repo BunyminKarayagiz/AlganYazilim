@@ -118,10 +118,6 @@ class YerIstasyonu:
             try:
                 "Burada durum kodu işlemin başarı kodunu vermektedir örn:200"
                 ana_sunucuya_giris_kodu, durum_kodu = self.ana_sunucu.sunucuya_giris(str(self.kullanici_adi),str(self.sifre))
-                print(ana_sunucuya_giris_kodu)
-                print(type(ana_sunucuya_giris_kodu))
-                print(durum_kodu)
-                print(type(durum_kodu))
                 if (durum_kodu):
                     cp.ok(f"Ana Sunucuya Bağlanıldı:{durum_kodu}")  # Ana sunucuya girerkenki durum kodu.
                     connection_status = True
@@ -969,9 +965,9 @@ if __name__ == '__main__':
                                             ) #! IHA / LOCAL
     
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
-                                    ana_sunucu_ip="10.0.0.10", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(str)-> 10001
-                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
+                                    yonelim_ip="10.0.0.123", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="10.0.0.123", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(str)-> 10001
+                                    mavlink_ip="10.0.0.123", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,

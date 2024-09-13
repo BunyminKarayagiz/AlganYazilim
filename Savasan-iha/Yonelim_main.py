@@ -180,6 +180,7 @@ class FlightTracker:
             data_stream =json.loads(data_stream)
             for entry in data_stream["konumBilgileri"]:
                 takim_numarasi = entry["takim_numarasi"]
+                cp.warn(f"RAKIP TELEMETRI DATA [{takim_numarasi}] :{data_stream}")
                 if takim_numarasi not in self.planes:
                     self.add_plane(takim_numarasi)
                     print("YENI UÇAK TESPIT EDILDI -> ",takim_numarasi," ",self.planes)

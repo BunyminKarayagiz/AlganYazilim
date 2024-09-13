@@ -167,7 +167,7 @@ def getqrData():
 @app.route('/api/telemetri_gonder', methods=["POST"])
 def tele():
     gelen = json.loads(request.data)
-    if gelen["takim_numarasi"] == 1:
+    if gelen["takim_numarasi"] == 23:
         veri1.append(gelen)
     elif gelen["takim_numarasi"] == 2:
         veri2.append(gelen)
