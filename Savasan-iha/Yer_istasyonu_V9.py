@@ -959,7 +959,7 @@ def check_picklability(obj):
             cp.warn(f"Attribute: {attr_name}, Type: {attr_type}, Error: {error}")
     else:
         cp.warn("All attributes are picklable.")
-
+    
 if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
