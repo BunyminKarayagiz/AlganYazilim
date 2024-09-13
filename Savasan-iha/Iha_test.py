@@ -388,7 +388,6 @@ class autopilot:
 
     def AUTOPILOT_STATE_CONTROL(self):
         while True:
-            print("AUTOPILOT STATE CONTROL")
             if (not self.FAILSAFE_TAKEOVER) and self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS:
 
                 if self.current_mode == "AUTO":
@@ -396,21 +395,15 @@ class autopilot:
                     if self.TUYGUN_PIXHAWK.get_ap_mode() != "AUTO":
                         self.TUYGUN_PIXHAWK.set_ap_mode("AUTO")
 
-
-
                 elif self.current_mode == "FBWA":
                     print(f"SELECTED MODE : {self.current_mode}")
                     if self.TUYGUN_PIXHAWK.get_ap_mode() != "FBWA":
                         self.TUYGUN_PIXHAWK.set_ap_mode("FBWA")
 
-
-
                 elif self.current_mode == "RTL":
                     print(f"SELECTED MODE : {self.current_mode}")
                     if self.TUYGUN_PIXHAWK.get_ap_mode() != "RTL":
                         self.TUYGUN_PIXHAWK.set_ap_mode("RTL")
-
-
 
                 elif self.current_mode == "KAMIKAZE":
                     print(f"SELECTED MODE : {self.current_mode}")
@@ -457,9 +450,7 @@ class autopilot:
                         time.sleep(1)
                         self.test_throttle()
                         time.sleep(1)
-
-
-
+            
             elif (not self.FAILSAFE_TAKEOVER) and (not self.CLIENT_MANAGER.YKI_CONFIRMATION_STATUS):
                     print("NEED GCS CONFIRMATION..")
 
