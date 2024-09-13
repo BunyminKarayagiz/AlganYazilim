@@ -617,8 +617,8 @@ if __name__ == '__main__':
 
     TUYGUN = Iha(
             connect_type = "PLANNER", # PLANNER / PIXHAWK
-            yazilim_ip = "127.0.0.1", #Yazılım:10.0.0.236
-            yonelim_ip = "127.0.0.1", #Yönelim:10.0.0.239 -Belirsiz
+            yazilim_ip = "10.0.0.123", #Yazılım:10.0.0.123
+            yonelim_ip = "10.0.0.180", #Yönelim:10.0.0.180 -Belirsiz
                 )
     
     main_thread = threading.Thread(target=TUYGUN.main_operation)
