@@ -33,7 +33,6 @@ from Modules.prediction_algorithm_try import KalmanFilter
 #! KOD ÇALIŞTIRMA SIRASI: sunucuapi -> Yer_istasyonu_v6 -> Iha_test(PUTTY) -> Iha_haberlesme(PUTTY)
 
 class YerIstasyonu:
-
     def __init__(self,yonelim_ip,ana_sunucu_ip,ana_sunucu_port,mavlink_ip,mavlink_port,takimNo,event_map,SHUTDOWN_KEY,queue_size=1,frame_debug_mode="IHA"):
 
         self.mavlink_ip = mavlink_ip
@@ -95,7 +94,7 @@ class YerIstasyonu:
         self.UI_TELEM_SERVER_STATUS=True
         self.UI_VIDEO_SERVER_STATUS=False
         cp.ok("Server Manager initialized ✓✓✓")
-    
+
     def senkron_local_saat(self):
         status_code, sunuc_saati = self.ana_sunucu.sunucu_saati_al()
         local_saat = datetime.datetime.today()
@@ -198,7 +197,7 @@ class YerIstasyonu:
                 cp.ok("MAVLINK : SERVER OLUSTURULDU...RETRY..")
         self.MAVPROXY_SERVER_STATUS=connection_status
         return connection_status,mavlink_obj
-
+    
     #! Arayüze telemetri verisi sağlayan kısım TCP'den UDP'ye geçirildiği için bu fonksiyon işlevsiz kaldı...
     # def CREATE_UI_TELEM_SERVER(self):
     #     connection_status=False
@@ -260,24 +259,11 @@ class YerIstasyonu:
             print("TRIGGER ERROR -> ",e)
 
     #! ANA FONKSİYONLAR
-
-    #? UI-TESTING
-    def HSS_TEST(self):
-        print("HSS")
-        status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
-        message_type = "HSS"
-        self.Server_UI_Telem.send_data(json.dumps([message_type,hss_coord]))
-        print(hss_coord)
-
-    def HSS_2_TEST(self):
-        print("HSS")
+    #? UI-BUTTON
+    def HSS_MPLANNER(self):
+        cp.warn("HSS")
         status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
         hss_coord = json.loads(hss_coord)
-
-        try:
-            cp.ok(hss_coord)
-        except:
-            cp.warn("HSS PRINT ERROR")
 
         if status_code == 200:
             ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873),(36.9404083,35.5631948)]
@@ -291,10 +277,8 @@ class YerIstasyonu:
                     yarıçap = float(i["hssYaricap"])
                     fence_konumları.append((enlem, boylam, yarıçap))
             except:
-                print("HSS listesi boş")
+                cp.err("HSS listesi boş")
                 
-            
-                            
             ucus_alanı_miktarı = len(ucus_alanı)
             fence_konumları_miktarı = len(fence_konumları)
 
@@ -317,8 +301,44 @@ class YerIstasyonu:
 
         #bu kısım dosya paylaşır.
         shutil.copy2(dosya, hedef_dosya)
-        print(f"Dosya başarıyla kopyalandı: {hedef_dosya}")
+        cp.info(f"Dosya başarıyla kopyalandı: {hedef_dosya}")
 
+    def QR_UPDATE(self):
+            cp.fatal("QR-UPDATE")
+            try:
+                qr_status, coordinat = self.ana_sunucu.qr_koordinat_al()
+                if qr_status == 200:
+                    self.qr_coordinat= coordinat
+                    self.qr_coordinat = json.loads(self.qr_coordinat)
+                    #enlem,boylam = self.qr_coordinat
+                    cp.fatal(f"QR-LOCATION {self.qr_coordinat} type:{type(self.qr_coordinat)}")
+                    if self.KAMIKAZE_SERVER_STATUS:
+                        cp.warn("KAMIKAZE ONLINE -- SENDING...")
+                        try:
+                            #self.Server_KAMIKAZE.send_data_to_client("abc".encode())
+                            self.Server_KAMIKAZE.send_data_to_client(json.dumps(self.qr_coordinat).encode())
+                            cp.fatal("KAMIKAZE ONLINE -- MESSAGE SENT...")
+                        except Exception as e:
+                            cp.fatal(f"KAMIKAZE ONLINE -- ERROR ON SENDING : {e}")
+            except Exception as e:
+                cp.fatal(f"QR-UPDATE ERROR: {e}")
+
+    def yki_onay_ver(self):
+        if self.CONFIRMATION_SERVER_STATUS:
+            cp.ok(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
+            if self.YKI_CONFIRMATION_STATUS == False:
+                self.Server_CONFIRMATION.send_data_to_client("ALGAN".encode())
+                self.YKI_CONFIRMATION_STATUS = True
+                cp.warn(f"ONAY VERILDI ---> {self.YKI_CONFIRMATION_STATUS}")
+            else:
+                self.Server_CONFIRMATION.send_data_to_client("RED".encode())
+                self.YKI_CONFIRMATION_STATUS = False
+                cp.warn(f"ONAY REDDEDILDI ---> {self.YKI_CONFIRMATION_STATUS}")
+        else:
+            cp.err(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
+            return False
+    
+    #?Test
     def KILITLENME_TEST(self):
         print("KILITLENME-TEST")
         start_now =datetime.datetime.now()
@@ -335,7 +355,7 @@ class YerIstasyonu:
                             "saniye": start_now.second+4,
                             "milisaniye": start_now.microsecond #TODO düzeltilecek
                         },
-                        "otonom_kilitlenme": 1
+                        "otonom_kilitlenme": 0
                             }
         
 
@@ -343,17 +363,24 @@ class YerIstasyonu:
         cp.err(status)
         #cp.warn(ret)
 
+    def HSS_TEST(self):
+        print("HSS")
+        status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
+        message_type = "HSS"
+        self.Server_UI_Telem.send_data(json.dumps([message_type,hss_coord]))
+        print(hss_coord)
+
     def QR_TEST(self):
-        print("QR-TEST")
+        cp.fatal("QR-TEST")
         try:
             qr_status, coordinat = self.ana_sunucu.qr_koordinat_al()
             if qr_status == 200:
                 self.qr_coordinat= coordinat
-                cp.fatal(self.qr_coordinat)
+                cp.info(self.qr_coordinat)
                 self.Server_KAMIKAZE.send_data_to_client(pickle.dumps(self.qr_coordinat))
-                print("QR GÖNDERİLDİ")
+                cp.ok("QR GÖNDERİLDİ")
         except Exception as e:
-            print(f"QR KONUMU ALINIRKEN HATA: {e}")
+            cp.fatal(f"QR KONUMU ALINIRKEN HATA: {e}")
         start_now =datetime.datetime.now()
         mission_data = {
                         "kamikazeBaslangicZamani" : {
@@ -368,28 +395,14 @@ class YerIstasyonu:
                             "saniye": start_now.second+4,
                             "milisaniye": start_now.microsecond #TODO düzeltilecek
                         },
-                        "qrMetni": "teknofest2024"
+                        "qrMetni": "teknofest2024-14:09"
                                 }
                 
         status=self.ana_sunucu.kamikaze_gonder(mission_data)
         cp.err(status)
         # cp.warn(ret)
 
-    def yki_onay_ver(self):
-        if self.CONFIRMATION_SERVER_STATUS:
-            cp.ok(f"YKI ONAY : Server ONLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
-            if self.YKI_CONFIRMATION_STATUS == False:
-                self.Server_CONFIRMATION.send_data_to_client("ALGAN".encode())
-                self.YKI_CONFIRMATION_STATUS = True
-                cp.warn(f"ONAY VERILDI ---> {self.YKI_CONFIRMATION_STATUS}")
-            else:
-                self.Server_CONFIRMATION.send_data_to_client("RED".encode())
-                self.YKI_CONFIRMATION_STATUS = False
-                cp.warn(f"ONAY REDDEDILDI ---> {self.YKI_CONFIRMATION_STATUS}")
-        else:
-            cp.err(f"YKI ONAY : Server OFFLINE / MEVCUT ONAY DURUMU --> {self.YKI_CONFIRMATION_STATUS}")
-            return False
-
+    #? MAIN_threads
     def telemetri(self):
         cp.fatal("TELEM START TELEM START TELEM START TELEM START TELEM START TELEM START TELEM START")
         timer_start=time.perf_counter()
@@ -417,7 +430,7 @@ class YerIstasyonu:
                             bizim_telemetri["hedef_yukseklik"]=telemetri_verileri[5]
                             telem_trigger.clear()
                         bizim_telemetri["iha_otonom"] = self.iha_mod
-                        cp.fatal(f"iha_mod :{self.iha_mod}")
+                        cp.fatal(f"iha_otonom :{self.iha_mod}")
                         cp.ok(bizim_telemetri)
                         status_code,rakip_telemetri=self.ana_sunucu.sunucuya_postala(bizim_telemetri) #TODO Telemetri 1hz olmalı...
                         #cp.warn(rakip_telemetri)
@@ -812,6 +825,7 @@ class Frame_processing:
                     current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                     cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     videoKayit.write(frame)    
                     if not Arayuz_Frame_queue.full():
                         Arayuz_Frame_queue.put(frame)
@@ -961,7 +975,7 @@ def check_picklability(obj):
             cp.warn(f"Attribute: {attr_name}, Type: {attr_type}, Error: {error}")
     else:
         cp.warn("All attributes are picklable.")
-    
+
 if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
@@ -969,17 +983,17 @@ if __name__ == '__main__':
     Frame_processing_obj=Frame_processing(frame_debug_mode="IHA", #! IHA / LOCAL
                                           event_map=event_map
                                             )
-    
+
     yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
-                                    ana_sunucu_ip="10.0.0.10", ana_sunucu_port="10001", #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(str)-> 10001
-                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
+                                    yonelim_ip="10.0.0.123", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="10.0.0.123", ana_sunucu_port=10001, #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(int)-> 10001
+                                    mavlink_ip="10.0.0.123", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,
                                     queue_size=2 #TODO OPTIMAL DEĞER BULUNMALI...
                                         )
-    
+
     Gui_obj=Graphical_User_Interface(
                                     Yer_istasyonu_obj=yer_istasyonu_obj
                                     )

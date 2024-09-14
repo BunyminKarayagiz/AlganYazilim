@@ -77,11 +77,12 @@ class client_manager:
             try:
                 self.TCP_KAMIKAZE.connect_to_server()
                 connection=True
-                print("KAMIKAZE SERVER: BAĞLANDI.")
+                print("KAMIKAZE SERVER: BAĞLANDI. KAMIKAZE SERVER: BAĞLANDI. KAMIKAZE SERVER: BAĞLANDI. KAMIKAZE SERVER: BAĞLANDI. KAMIKAZE SERVER: BAĞLANDI.")
             except (ConnectionError , Exception) as e:
                 print("KAMIKAZE SERVER: baglanırken hata: ", e)
             time.sleep(1)
         self.KAMIKAZE_SERVER_STATUS=connection
+        return self.TCP_KAMIKAZE
 
     def CONNECT_CONFIRMATION_CLIENT(self):
         connection=False
@@ -124,14 +125,14 @@ class client_manager:
         th1.start()
         th2.start()
         th3.start()
-        th4.start()
+        #th4.start()
         th5.start()
 
         print("WAITING FOR 'MODE' OR 'CONFIRM' ....  ")
         th1.join()
         th2.join()
         th3.join()
-        th4.join()
+        #th4.join()
         th5.join()
 
 class autopilot:
@@ -157,6 +158,7 @@ class autopilot:
         self.YKI_CONFIRMATION_STATUS = False
 
         self.enemy_track_location = None
+        
         
         #Kamikaze_parametreleri
         self.is_qr_available=False
@@ -186,7 +188,7 @@ class autopilot:
 
     def roll_check(self):
         return self.TUYGUN_PIXHAWK.att_roll_deg
-    
+
     def pitch_check(self):
         return self.TUYGUN_PIXHAWK.att_pitch_deg
 
@@ -262,32 +264,33 @@ class autopilot:
             try:
                 if self.CLIENT_MANAGER.TRACK_SERVER_STATUS:
                     self.enemy_track_location = self.CLIENT_MANAGER.TCP_TRACK.client_recv_message()
+                    print("ENEMY LOCATION....",self.enemy_track_location)
                 else:
                     print("YONELIM SERVER OFFLINE")
             except Exception as e:
                 print(f"YONELİM : VERİ ALIRKEN HATA -> {e}")
-            time.sleep(1)
+                time.sleep(1)
+            time.sleep(0.1)
 
     def wait_for_qr_konum(self):
+        TCP_KAMIKAZE=self.CLIENT_MANAGER.CONNECT_KAMIKAZE_CLIENT()
         while True:
             try:
                 if self.CLIENT_MANAGER.KAMIKAZE_SERVER_STATUS:
-                    self.CLIENT_MANAGER.TCP_KAMIKAZE.send_message_to_server("QR-KONUM")
-                    self.qr_location = pickle.loads(self.CLIENT_MANAGER.TCP_KAMIKAZE.client_recv_message())
-                    self.qr_location = json.loads(self.qr_location)
-                    print("QR KONUMU: ", self.qr_location)
-                    print("TYPE: ",type(self.qr_location))
-                    self.qr_location = (self.qr_location["qrEnlem"],self.qr_location["qrBoylam"])
-                    print("QR LOCATİON: ", self.qr_location)
+                    raw_qr_data=TCP_KAMIKAZE.client_recv_message()
+                    self.qr_location = raw_qr_data.decode()
+                    #self.qr_location = json.loads(self.qr_location)
+                    print("QR KONUMU: ", self.qr_location,"   TYPE: ",type(self.qr_location))
+                    
                     self.is_qr_available=True
                 else:
                     print("KAMIKAZE SERVER OFFLINE")
-                    
             except Exception as e:
                 print(f"KAMIKAZE : QR-KONUM ALIRKEN HATA -> {e}")
-                time.sleep(2)
                 self.is_qr_available=False
+                time.sleep(2)
             time.sleep(0.1)
+    
     def TRACK_BY_LOCATION(self): #!KONUMA BAĞLI TAKİP/YÖNELİM
         try:
             if self.enemy_track_location != None:
@@ -599,21 +602,19 @@ class Iha():
         print("system_autopilot DONE...")
 
         while True:
-            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.ch6 #ch6 servo6
-            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.ch8 #ch8 servo7
+            selected_servo_ch_6 = self.autopilot.TUYGUN_PIXHAWK.servo6 #ch6 servo6
+            selected_servo_ch_8 = self.autopilot.TUYGUN_PIXHAWK.servo7 #ch8 servo7
             print("SERVO:8", selected_servo_ch_8)
             print("SERVO:6", selected_servo_ch_6)
             time.sleep(0.3)
 
             if (selected_servo_ch_6 > 1600 and selected_servo_ch_8 > 1600):  # ch6: High, ch8: High
                 self.autopilot.current_mode = "AUTO"
-                print(self.CLIENT_MANAGER.MODE_SERVER_STATUS,self.CLIENT_MANAGER.MODE_SERVER_STATUS,self.CLIENT_MANAGER.MODE_SERVER_STATUS)
                 self.CLIENT_MANAGER.TCP_MOD.send_message_to_server("AUTO")
                 self.autopilot.previous_mode = "AUTO"
 
             if ((selected_servo_ch_6 >= 1400 and selected_servo_ch_6 <= 1600) and selected_servo_ch_8 > 1600):  # ch6: Mid, ch8: High
                 self.autopilot.current_mode = "FBWA"
-                print(self.CLIENT_MANAGER.MODE_SERVER_STATUS)
                 self.CLIENT_MANAGER.TCP_MOD.send_message_to_server("FBWA")
                 self.autopilot.previous_mode = "FBWA"
                 
@@ -632,11 +633,11 @@ class Iha():
                 self.CLIENT_MANAGER.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
                 self.autopilot.previous_mode = "KILITLENME"
 
-            # # #TODO ÇOK KRİTİK SWİTCH DÜZENLEMESİ
-            # if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 < 1400):  # ch6: Low, ch8: Low
-            #     self.autopilot.current_mode = "TESTING_MODE"
-            #     self.client_manager.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
-            #     self.autopilot.previous_mode = "TESTING_MODE"
+            # #TODO ÇOK KRİTİK SWİTCH DÜZENLEMESİ
+            if (selected_servo_ch_6 < 1400 and selected_servo_ch_8 < 1400):  # ch6: Low, ch8: Low
+                self.autopilot.current_mode = "TESTING_MODE"
+                self.CLIENT_MANAGER.TCP_MOD.send_message_to_server(self.autopilot.current_mode)
+                self.autopilot.previous_mode = "TESTING_MODE"
 
 if __name__ == '__main__':
 

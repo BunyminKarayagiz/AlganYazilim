@@ -150,12 +150,13 @@ class FlightTracker:
                 cp.err(f"TELEM SERVER: baglanırken hata: {e}")
 
     def Yonelim_sunucusu_oluştur(self):
-        connection_status=False   
+        connection_status=False
         while not connection_status:
             try:
                 cp.info("Yonelim/TRACK Server_ON_WAIT")
                 self.TCP_TRACK.creat_server()
                 connection_status=True
+                self.TCP_TRACK_STATUS=connection_status   
                 cp.ok("IHA_YONELIM : SERVER OLUŞTURULDU\n")
             except (ConnectionError, Exception) as e:
                 cp.err(f"IHA_YONELIM SERVER: oluştururken hata : {e}")
@@ -217,11 +218,15 @@ class FlightTracker:
                             self.yonelim_deg_value += 5
                             yon_farki += 5
 
-            print(f"Seçilen Rakip -> {self.secilen_rakip}")
+            if self.TCP_TRACK_STATUS:
+                #self.TCP_TRACK.send_data_to_client(message=self.secilen_rakip)
+                cp.ok("ENEMY_LOCATION READY TO SEND -- ENEMY_LOCATION READY TO SEND -- ENEMY_LOCATION READY TO SEND --")
+
+            cp.info(f"Seçilen Rakip -> {self.secilen_rakip}")
             return (a,b,c,d) , self.secilen_rakip
         except Exception as e:
            cp.fatal(f"Process data_stream_err: {e}")
-           
+
     def add_plane(self, takim_numarasi: int):
         new_plane = Plane(takim_numarasi=takim_numarasi,UI=self.UI,data_limit=5,marker_limit=5,shadow=5)
         self.planes[takim_numarasi] = new_plane
