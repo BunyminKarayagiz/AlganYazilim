@@ -278,9 +278,7 @@ class YerIstasyonu:
             except:
                 print("HSS listesi boş")
                 
-            
-                            
-        ucus_alani_miktari = 0 #len(ucus_alanı)   
+        ucus_alani_miktari = 0 #len(ucus_alanı)
         fence_konumlari_miktari = len(fence_konumlari)
 
         with open(dosya_adi, 'w') as dosya:
