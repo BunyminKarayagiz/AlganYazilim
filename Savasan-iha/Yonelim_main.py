@@ -297,26 +297,30 @@ class FlightTracker:
             self.Telemetri_sunucusuna_baglan()
             #time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
-            
-            while not mainloop:
-                while self.Telem_client_status:
-                    UI_DATA = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
-                    message_type,hssXtelem = json.loads(UI_DATA)
-                    #print("message_type: ",message_type)
-                    if message_type == "TELEM":
-                        self.process_data_stream(hssXtelem)
-                    #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerekirse açılabilir..
-                    elif message_type == "HSS":
-                        hss_all =json.loads(hssXtelem)
-                        for hss in hss_all:
-                            print(type(hss) , "DATA -> ",hss)
-                        
-                            #circle_obj = self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
-                            #self.hss_areas[hss["id"]] = self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
-                            #self.hss_areas[1] = self.UI.draw_circle(center_lat=37.7749,center_lon=-122.4194,radius_meters=1000)
+            with open("takim_verileri.txt", "w", encoding="utf-8") as file:
+    
+                while not mainloop:
+                    while self.Telem_client_status:
+                        UI_DATA = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
+                        message_type,hssXtelem = json.loads(UI_DATA)
+                        file.write(f"{UI_DATA}\n")
+
+                        #print("message_type: ",message_t
+                        # ype)
+                        if message_type == "TELEM":
+                            self.process_data_stream(hssXtelem)
+                        #time.sleep(self.TK_INTERVAL_TIME_SEC) #!Gerekirse açılabilir..
+                        elif message_type == "HSS":
+                            hss_all =json.loads(hssXtelem)
+                            for hss in hss_all:
+                                print(type(hss) , "DATA -> ",hss)
+                            
+                                #circle_obj = self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
+                                #self.hss_areas[hss["id"]] = self.UI.draw_circle(center_lat=hss["hssEnlem"],center_lon=hss["hssBoylam"],radius_meters=["hssYaricap"])
+                                #self.hss_areas[1] = self.UI.draw_circle(center_lat=37.7749,center_lon=-122.4194,radius_meters=1000)
 
 
-    #                             },
+    #                             }, 
     # {
     #   "hssBoylam": 29.00221109,
     #   "hssEnlem": 40.23090554,

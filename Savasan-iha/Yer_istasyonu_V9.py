@@ -280,22 +280,22 @@ class YerIstasyonu:
             cp.warn("HSS PRINT ERROR")
 
         if status_code == 200:
-            ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873),(369404083,35.5631948)]
-            fence_konumları = []
+            ucus_alani=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873),(369404083,35.5631948)]
+            fence_konumlari = []
             dosya_adi = "hss.waypoints"
             try:
                 for i in hss_coord["hss_koordinat_bilgileri"]:
                     enlem = float(i["hssEnlem"])
                     boylam = float(i["hssBoylam"])
-                    yarıçap = float(i["hssYaricap"])
-                    fence_konumları.append((enlem, boylam, yarıçap))
+                    yariçap = float(i["hssYaricap"])
+                    fence_konumlari.append((enlem, boylam, yariçap))
             except:
                 print("HSS listesi boş")
                 
             
                             
-        ucus_alanı_miktarı = 0 #len(ucus_alanı)   
-        fence_konumları_miktarı = len(fence_konumları)
+        ucus_alani_miktari = 0 #len(ucus_alanı)   
+        fence_konumlari_miktari = len(fence_konumlari)
 
         with open(dosya_adi, 'w') as dosya:
             dosya.truncate(0)
@@ -304,7 +304,7 @@ class YerIstasyonu:
             #for i, konum in enumerate(ucus_alanı, start=1):
              #   dosya.write(
              #       f"{i}\t0\t0\t5001\t5.00000000\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
-            for j, konum in enumerate(fence_konumları, start=ucus_alanı_miktarı + 1):
+            for j, konum in enumerate(fence_konumlari, start=ucus_alani_miktari + 1):
                 dosya.write(
                     f"{j}\t0\t0\t5004\t{float(konum[2]):.8f}\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
 
@@ -316,7 +316,7 @@ class YerIstasyonu:
 
         #bu kısım dosya paylaşır.
         shutil.copy2(dosya, hedef_dosya)
-        print(f"Dosya başarıyla kopyalandı: {hedef_dosya}")
+        print(f"Dosya başariyla kopyalandi:{hedef_dosya}")
 
     def KILITLENME_TEST(self):
         print("KILITLENME-TEST")
