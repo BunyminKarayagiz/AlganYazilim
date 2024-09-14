@@ -1,3 +1,4 @@
+import datetime
 from Modules.yonelim_arayuz import App
 from Modules import Client_Tcp ,Server_Tcp,Trajectory_estimation,Server_Udp,Client_Udp
 from Modules.Cprint import cp
@@ -295,15 +296,17 @@ class FlightTracker:
 #! MAIN
     def main_op(self,mode):
         print("Current Working Mode : ",mode)
-
+        start_time=datetime.datetime.now()
+        hour=start_time.hour
+        min=start_time.minute
+        second=start_time.second
         if mode == "IHA":
             th1=threading.Thread(target=self.Yonelim_sunucusu_oluştur)
             th1.start()
             self.Telemetri_sunucusuna_baglan()
             #time.sleep(self.TK_INIT_TIME_SEC)
             mainloop=False
-            with open("takim_verileri.txt", "w", encoding="utf-8") as file:
-    
+            with open(f"takim_verileri__{hour}_{min}_{second}.txt", "w", encoding="utf-8") as file:
                 while not mainloop:
                     while self.Telem_client_status:
                         UI_DATA = self.TCP_UI_TELEM.receive_data() # telemetri_cevabı -> str
