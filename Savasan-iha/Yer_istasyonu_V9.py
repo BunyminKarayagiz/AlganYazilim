@@ -985,11 +985,7 @@ if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
 
-<<<<<<< HEAD
-    Frame_processing_obj=Frame_processing(frame_debug_mode="LOCAL",
-=======
     Frame_processing_obj=Frame_processing(frame_debug_mode="IHA", #! IHA / LOCAL
->>>>>>> 5764c5d5101eeb9df124af1c3b74236e7077b05e
                                           event_map=event_map
                                             )
 
