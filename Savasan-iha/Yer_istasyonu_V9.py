@@ -121,7 +121,7 @@ class YerIstasyonu:
                     cp.ok(f"Ana Sunucuya Bağlanıldı:{durum_kodu}")  # Ana sunucuya girerkenki durum kodu.
                     connection_status = True
                     self.ANA_SUNUCU_DURUMU = connection_status
-                elif(durum_kodu==400):
+                elif(int(durum_kodu)==400):
                     raise Exception("DURUM KODU 400 :")
                 else:
                     raise Exception("DURUM KODU '200' DEGIL")
@@ -266,32 +266,33 @@ class YerIstasyonu:
         hss_coord = json.loads(hss_coord)
 
         if status_code == 200:
-            ucus_alanı=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873),(36.9404083,35.5631948)]
-            fence_konumları = []
+            ucus_alani=[(36.942314,35.563323),(36.942673,35.553363),(36.937683,35.553324),(36.937864,35.562873),(369404083,35.5631948)]
+            fence_konumlari = []
             dosya_adi = "hss.waypoints"
             try:
                 for i in hss_coord["hss_koordinat_bilgileri"]:
-                    cp.fatal(i)
                     enlem = float(i["hssEnlem"])
                     boylam = float(i["hssBoylam"])
-                    yarıçap = float(i["hssYaricap"])
-                    fence_konumları.append((enlem, boylam, yarıçap))
+                    yariçap = float(i["hssYaricap"])
+                    fence_konumlari.append((enlem, boylam, yariçap))
             except:
-                cp.err("HSS listesi boş")
+                print("HSS listesi boş")
                 
-            ucus_alanı_miktarı = len(ucus_alanı)
-            fence_konumları_miktarı = len(fence_konumları)
+            
+                            
+        ucus_alani_miktari = 0 #len(ucus_alanı)   
+        fence_konumlari_miktari = len(fence_konumlari)
 
-            with open(dosya_adi, 'w') as dosya:
-                    dosya.truncate(0)
-                    dosya.write("QGC WPL 110\n")
-                    dosya.write("0\t1\t0\t16\t0\t0\t0\t0\t40.2320505\t29.0042872\t100.220000\t1\n")
-                    for i, konum in enumerate(ucus_alanı, start=1):
-                        dosya.write(
-                            f"{i}\t0\t0\t5001\t5.00000000\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
-                    for j, konum in enumerate(fence_konumları, start=ucus_alanı_miktarı + 1):
-                        dosya.write(
-                            f"{j}\t0\t0\t5004\t{float(konum[2]):.8f}\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
+        with open(dosya_adi, 'w') as dosya:
+            dosya.truncate(0)
+            dosya.write("QGC WPL 110\n")
+            dosya.write("0\t1\t0\t16\t0\t0\t0\t0\t36.9366523\t35.5509210\t100.220000\t1\n")
+            #for i, konum in enumerate(ucus_alanı, start=1):
+             #   dosya.write(
+             #       f"{i}\t0\t0\t5001\t5.00000000\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
+            for j, konum in enumerate(fence_konumlari, start=ucus_alani_miktari + 1):
+                dosya.write(
+                    f"{j}\t0\t0\t5004\t{float(konum[2]):.8f}\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
 
         dosya=r'C:\Users\asus\OneDrive - Pamukkale University\Masaüstü\AlganYazilim-1-YEDEK-HAZIR-CALISIYOR\hss.waypoints'
         print(dosya)
@@ -301,7 +302,7 @@ class YerIstasyonu:
 
         #bu kısım dosya paylaşır.
         shutil.copy2(dosya, hedef_dosya)
-        cp.info(f"Dosya başarıyla kopyalandı: {hedef_dosya}")
+        print(f"Dosya başariyla kopyalandi:{hedef_dosya}")
 
     def QR_UPDATE(self):
             cp.fatal("QR-UPDATE")
@@ -397,20 +398,23 @@ class YerIstasyonu:
                         },
                         "qrMetni": "teknofest2024-14:09"
                                 }
-                
+        
+
+
+        
         status=self.ana_sunucu.kamikaze_gonder(mission_data)
         cp.err(status)
         # cp.warn(ret)
 
     #? MAIN_threads
     def telemetri(self):
-        cp.fatal("TELEM START TELEM START TELEM START TELEM START TELEM START TELEM START TELEM START")
         timer_start=time.perf_counter()
         ret,mavlink_obj=self.CREATE_MAVPROXY_SERVER()
         telemetri_queue,telem_trigger=self.event_map["Telem1"]
         while True:
             try:
                 bizim_telemetri,ui_telemetri=mavlink_obj.telemetry_packet()
+
                 # bizim_telemetri = {"takim_numarasi": 1, "iha_enlem": 0,"iha_boylam":0,"iha_irtifa": 0,"iha_dikilme":0,
                 #                    "iha_yonelme":0,"iha_yatis":0,"iha_hiz":0,"iha_batarya":0,"iha_otonom": 1,color
                 #                                                        "dakika": time.gmtime().tm_min,
@@ -484,6 +488,7 @@ class YerIstasyonu:
         # th1,th2 = self.process_flow_manager()
 
         self.SV_MAIN()
+        cp.fatal("SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE")
         th1 = threading.Thread(target=self.telemetri)
         th2 = threading.Thread(target=self.ana_sunucu_manager)
 
@@ -613,7 +618,7 @@ class Frame_processing:
         self.MODE_SERVER_STATUS=connection_status
         return connection_status
 
-    #!CalculationsR
+    #!Calculations
     def kalman_predict(self,kalman_obj, x_center, y_center):
         data = [x_center, y_center]
         self.datas.append(data)
@@ -821,7 +826,7 @@ class Frame_processing:
 
                     frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                     now = datetime.datetime.now()
-                    virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    #virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                     cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
@@ -829,7 +834,7 @@ class Frame_processing:
                     videoKayit.write(frame)    
                     if not Arayuz_Frame_queue.full():
                         Arayuz_Frame_queue.put(frame)
-                    cam.send(frame= virtual_frame)
+                    #cam.send(frame= virtual_frame)
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
@@ -980,7 +985,11 @@ if __name__ == '__main__':
     SHUTDOWN_KEY = ""
     event_map = create_event_map()
 
+<<<<<<< HEAD
+    Frame_processing_obj=Frame_processing(frame_debug_mode="LOCAL",
+=======
     Frame_processing_obj=Frame_processing(frame_debug_mode="IHA", #! IHA / LOCAL
+>>>>>>> 5764c5d5101eeb9df124af1c3b74236e7077b05e
                                           event_map=event_map
                                             )
 
