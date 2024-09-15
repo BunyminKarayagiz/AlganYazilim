@@ -3,12 +3,12 @@ from Modules import ana_sunucu_islemleri
 import argparse
 import time
 
-ana_sunucu=ana_sunucu_islemleri.sunucuApi("http://10.0.0.239:5000")
+ana_sunucu=ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:10001")
 
-ana_sunucu.sunucuya_giris("rakip2","rakip2")
+ana_sunucu.sunucuya_giris("rakip3","rakip3")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--connect', default=f'tcp:127.0.0.1:5762')
+parser.add_argument('--connect', default=f'tcp:127.0.0.1:5782')
 args = parser.parse_args()
 connection_string = args.connect
 rakip=path.Plane(connection_string)
@@ -17,7 +17,7 @@ time.sleep(2)
 
 while True:
     rakip_veri = {
-                "takim_numarasi": 2,
+                "takim_numarasi": 3,
                 "iha_enlem": rakip.pos_lat,
                 "iha_boylam": rakip.pos_lon,
                 "iha_irtifa": rakip.pos_alt_rel,

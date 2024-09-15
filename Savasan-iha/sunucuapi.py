@@ -24,7 +24,7 @@ def get_hss_coord():
                 "id": 0,
                 "hssEnlem": 40.23260922,
                 "hssBoylam": 29.00573015,
-                "hssYaricap": 300
+                "hssYaricap": 250
             }
             # {
             #     "id": 1,
@@ -222,4 +222,4 @@ def cikis():
     return "200"
 
 
-app.run(host='10.0.0.123', port=10001, debug=True, threaded=True)
+app.run(host='127.0.0.1', port=10001, debug=True, threaded=True)

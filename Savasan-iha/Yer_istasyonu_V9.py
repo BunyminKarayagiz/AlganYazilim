@@ -10,9 +10,9 @@ from Modules.yki_arayuz import App
 
 import multiprocessing as mp
 import numpy as np
+import pytz
 
 import threading,cv2,pyvirtualcam,os,json,time,datetime,av, pickle , shutil
-
 from Modules.prediction_algorithm_try import KalmanFilter
 
 #!      SORUNLAR
@@ -256,7 +256,7 @@ class YerIstasyonu:
             else:
                 raise ValueError(f"Event_map do not contain '{event_id}'")
         except Exception as e:
-            print("TRIGGER ERROR -> ",e)
+            cp.warn(f"TRIGGER ERROR -> {e}")
 
     #! ANA FONKSİYONLAR
     #? UI-BUTTON
@@ -276,31 +276,31 @@ class YerIstasyonu:
                     yariçap = float(i["hssYaricap"])
                     fence_konumlari.append((enlem, boylam, yariçap))
             except:
-                print("HSS listesi boş")
+                cp.warn("HSS listesi boş")
                 
-        ucus_alani_miktari = 0 #len(ucus_alanı)
+        ucus_alani_miktari = len(ucus_alani)
         fence_konumlari_miktari = len(fence_konumlari)
 
         with open(dosya_adi, 'w') as dosya:
             dosya.truncate(0)
             dosya.write("QGC WPL 110\n")
             dosya.write("0\t1\t0\t16\t0\t0\t0\t0\t36.9366523\t35.5509210\t100.220000\t1\n")
-            #for i, konum in enumerate(ucus_alanı, start=1):
-             #   dosya.write(
-             #       f"{i}\t0\t0\t5001\t5.00000000\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
+            for i, konum in enumerate(ucus_alani, start=1):
+               dosya.write(
+                   f"{i}\t0\t0\t5001\t5.00000000\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
             for j, konum in enumerate(fence_konumlari, start=ucus_alani_miktari + 1):
                 dosya.write(
                     f"{j}\t0\t0\t5004\t{float(konum[2]):.8f}\t0.00000000\t0.00000000\t0.00000000\t{konum[0]}\t{konum[1]}\t100.000000\t1\n")
 
         dosya=r'C:\Users\asus\OneDrive - Pamukkale University\Masaüstü\AlganYazilim-1-YEDEK-HAZIR-CALISIYOR\hss.waypoints'
-        print(dosya)
+        cp.info(dosya)
         hedef_klasor=r'\\SEVINÇ\123'
         hedef_dosya = os.path.join(hedef_klasor, os.path.basename(dosya))
-        print(hedef_dosya)
+        cp.info(hedef_dosya)
 
         #bu kısım dosya paylaşır.
         shutil.copy2(dosya, hedef_dosya)
-        print(f"Dosya başariyla kopyalandi:{hedef_dosya}")
+        cp.ok(f"Dosya başariyla kopyalandi:{hedef_dosya}")
 
     def QR_UPDATE(self):
             cp.fatal("QR-UPDATE")
@@ -339,7 +339,7 @@ class YerIstasyonu:
     
     #?Test
     def KILITLENME_TEST(self):
-        print("KILITLENME-TEST")
+        cp.info("KILITLENME-TEST")
         start_now =datetime.datetime.now()
         mission_data = {
                         "kilitlenmeBaslangicZamani": {
@@ -363,11 +363,11 @@ class YerIstasyonu:
         #cp.warn(ret)
 
     def HSS_TEST(self):
-        print("HSS")
+        cp.fatal("HSS")
         status_code,hss_coord=self.ana_sunucu.get_hava_savunma_coord()
         message_type = "HSS"
         self.Server_UI_Telem.send_data(json.dumps([message_type,hss_coord]))
-        print(hss_coord)
+        cp.info(hss_coord)
 
     def QR_TEST(self):
         cp.fatal("QR-TEST")
@@ -422,7 +422,7 @@ class YerIstasyonu:
                 #                     }
 
                 if bizim_telemetri is not None:
-                    if time.perf_counter() - timer_start > 1:
+                    if time.perf_counter() - timer_start > 0.9:
                         if telem_trigger.is_set():
                             telemetri_verileri= telemetri_queue.get()
                             bizim_telemetri["iha_kilitlenme"]=telemetri_verileri[1]
@@ -503,7 +503,6 @@ class YerIstasyonu:
             if self.MODE_SERVER_STATUS:
                 try:
                     self.secilen_görev_modu = self.Server_MOD.recv_tcp_message()
-                    print(self.secilen_görev_modu)
                     try:
                         if self.SHUTDOWN_KEY == "ALGAN":
                             cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
@@ -548,7 +547,7 @@ class YerIstasyonu:
                             cp.info(f'GOREV MODU :{self.önceki_mod}')
 
                     except Exception as e:
-                        print("ANA_GOREV_KONTROL HATA: ",e)
+                        cp.fatal("ANA_GOREV_KONTROL HATA: ",e)
                 except Exception as e:
                     cp.err(f"MOD : Secilen modu alirken hata -> {e}") #TODO EKLENECEK...
                     cp.err(" 'MODE_SERVER_STATUS' set to: <FALSE>")
@@ -559,7 +558,8 @@ class YerIstasyonu:
                 self.MODE_SERVER_STATUS=False
                 self.Server_MOD.reconnect()
                 time.sleep(1)
-            
+            time.sleep(0.3)
+
             #? ISTENILEN BUTUN DURUMLAR EKLENEBILIR...
 
 class Frame_processing:
@@ -632,6 +632,7 @@ class Frame_processing:
     def qr_oku(self, frame):
         qr_result = self.qr.file_operations(frame=frame)
         return qr_result ,frame
+    
     #!Frames
     def capture(self):
         process_name = mp.current_process().name
@@ -662,9 +663,9 @@ class Frame_processing:
                                     if not self.capture_queue.full():
                                         self.capture_queue.put((frame,frame_id))
                                         frame_id += 1
-                                        #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
+                                        #cp.ok("FRAME :SAVED IN CAPTURE_QUEUE ...")
                                     else:
-                                        #print("FRAME : CAPTURE_QUEUE FULL...")
+                                        #cp.ok("FRAME : CAPTURE_QUEUE FULL...")
                                         pass
                                 except Exception as e:
                                     cp.err("FRAME : CAPTURE_QUEUE ERROR -> ",e)
@@ -680,9 +681,9 @@ class Frame_processing:
                                 if not self.capture_queue.full():
                                     self.capture_queue.put((frame,frame_id))
                                     frame_id += 1
-                                    #print("FRAME :SAVED IN CAPTURE_QUEUE ...")
+                                    #cp.ok("FRAME :SAVED IN CAPTURE_QUEUE ...")
                                 else:
-                                    #print("FRAME : CAPTURE_QUEUE FULL...")
+                                    #cp.ok("FRAME : CAPTURE_QUEUE FULL...")
                                     pass
                             except Exception as e:
                                 cp.err(f"FRAME : CAPTURE_QUEUE ERROR -> {e}")
@@ -718,7 +719,7 @@ class Frame_processing:
             if not self.capture_queue.empty():
                 (frame,frame_id) = self.capture_queue.get()
 
-                if message == "kilitlenme":
+                if message == "kilitlenme" or message == "AUTO":
                     telemetri_verileri, kalman_data, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
                     telem_queue.put(telemetri_verileri)
                     telem_trigger.set()
@@ -821,18 +822,18 @@ class Frame_processing:
                     if not is_stream_available:
                         fps_start_time = time.perf_counter()
                         is_stream_available = True
-
+                    saat,dakika,saniye,milisaniye= self.unix_to_datetime(time.time())
                     frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                     now = datetime.datetime.now()
                     #virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
-                    cv2.putText(frame,"SUNUCU : "+current_time , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
+                    cv2.putText(frame,"SUNUCU : "+saat+": "+dakika+": "+saniye+": "+milisaniye , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,128,0),2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    videoKayit.write(frame)    
+                    videoKayit.write(frame)
                     if not Arayuz_Frame_queue.full():
                         Arayuz_Frame_queue.put(frame)
-                    #cam.send(frame= virtual_frame)
+                    cam.send(frame= virtual_frame)
                     cv2.imshow('Camera', frame)
                     fps = frame_count / (time.perf_counter() - fps_start_time)
                     frame_count += 1.0
@@ -853,6 +854,14 @@ class Frame_processing:
 
         videoKayit.release()
         cv2.destroyAllWindows()
+
+    def unix_to_datetime(self, unix_time):
+            dt = datetime.datetime.fromtimestamp(unix_time, pytz.timezone('UTC'))
+            hour = dt.hour
+            minute = dt.minute
+            second = dt.second
+            millisecond = dt.microsecond // 1000
+            return str(hour),str(minute),str(second),str(millisecond)
 
     def PWM(self):
         kalman = KalmanFilter()
@@ -987,10 +996,10 @@ if __name__ == '__main__':
                                           event_map=event_map
                                             )
 
-    yer_istasyonu_obj = YerIstasyonu(
-                                    yonelim_ip="10.0.0.123", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
-                                    ana_sunucu_ip="10.0.0.123", ana_sunucu_port=10001, #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(int)-> 10001
-                                    mavlink_ip="10.0.0.123", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
+    yer_istasyonu_obj = YerIstasyonu( #LOCAL 127.0.0.1
+                                    yonelim_ip="127.0.0.1", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="127.0.0.1", ana_sunucu_port=10001, #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(int)-> 10001
+                                    mavlink_ip="127.0.0.1", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,
