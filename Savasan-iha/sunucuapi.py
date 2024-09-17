@@ -25,13 +25,13 @@ def get_hss_coord():
                 "hssEnlem": 40.23260922,
                 "hssBoylam": 29.00573015,
                 "hssYaricap": 250
-            }
-            # {
-            #     "id": 1,
-            #     "hssEnlem": 40.23351019,
-            #     "hssBoylam": 28.99976492,
-            #     "hssYaricap": 50
-            # },
+            },
+             {
+                 "id": 1,
+                 "hssEnlem": 40.23351019,
+                 "hssBoylam": 28.99976492,
+                 "hssYaricap": 50
+             }
             # {
             #     "id": 2,
             #     "hssEnlem": 40.23105297,
@@ -71,8 +71,8 @@ sunucusaati = {"saat": datetime.datetime.now().hour,
                }  # Test verileri
 
 qr_koordinati = {
-    "qrEnlem": -35.3549662,
-    "qrBoylam": 149.1613770
+    "qrEnlem": 36.6287539,
+    "qrBoylam": 35.1864624,
 }
 #girisveri = [{"kadi": "algan", "sifre": "53SnwjQ2sQ"}
 girisveri = [{"kadi": "algan", "sifre": "Ea5ngUqWYV"},{"kadi": "rakip2", "sifre": "rakip2"},{"kadi": "rakip3", "sifre": "rakip3"},
@@ -85,7 +85,7 @@ veri1=[{
     "iha_dikilme": 0,
     "iha_yonelme": 0,
     "iha_yatis": 0,
-    "iha_hiz":0,
+    "iha_hizi":0,
     "zaman_farki": 0
 }]
 
@@ -97,7 +97,7 @@ veri2=[{
     "iha_dikilme": 0,
     "iha_yonelme": 100,
     "iha_yatis": 100,
-    "iha_hiz":0,
+    "iha_hizi":0,
     "zaman_farki": 0
 }]
 
@@ -109,7 +109,7 @@ veri3=[{
     "iha_dikilme": 0,
     "iha_yonelme": 200,
     "iha_yatis": 200,
-    "iha_hiz":0,
+    "iha_hizi":0,
     "zaman_farki": 0
 }]
 
@@ -121,7 +121,7 @@ veri4=[{
     "iha_dikilme": 0,
     "iha_yonelme": 300,
     "iha_yatis": 300,
-    "iha_hiz":0,
+    "iha_hizi":0,
     "zaman_farki": 0
 }]
 
@@ -133,7 +133,7 @@ veri5=[{
     "iha_dikilme": 0,
     "iha_yonelme": 0,
     "iha_yatis": 0,
-    "iha_hiz":0,
+    "iha_hizi": 0,
     "zaman_farki": 0
 }]
 

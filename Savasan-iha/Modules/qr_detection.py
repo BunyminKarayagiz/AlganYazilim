@@ -12,6 +12,9 @@ class QR_Detection:
         #Yeni key
         self.license_key = "t0068lQAAAFWF98Si8vRizMjfFooxP2pjczQppvB8vFBzyK8Ulpm5GsOUsD0Gc0CajgRyZIYmshrCeO9dF8YYDTadnECfcus="
         
+        #Yeni key
+        self.license_key = "t0068lQAAAAzYzhtM08GjXD1IDdkoBS1AL26SQWkBMTJf/DF4JVGqn4F03bZeavHbhJqPtVDP74jzf1XxH/ftJJkJj1MSD1w=;t0068lQAAAG0gRleOv+5sArnEYUE7isKX55skRIPSOIWcTdGcZ7TuLOd73wSnQi8TS3zpMdky+1ppv+cgBo90wG74QYN44Is="
+
         BarcodeReader.init_license(self.license_key)
         mp.current_process().name
         self.image_path = f"temp_frame_{mp.current_process().name}.jpg"

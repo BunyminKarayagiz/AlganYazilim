@@ -60,7 +60,7 @@ class YerIstasyonu:
         self.önceki_mod = ""
         self.sunucu_saati:str = ""
         # Telemetri paketi için PWM'den veriler alınmalı
-        self.iha_mod = 1
+        self.iha_mod = 0
         self.x_center=0
         self.y_center=0
         self.width=0
@@ -78,6 +78,7 @@ class YerIstasyonu:
         self.Server_MOD = Server_Tcp.Server(PORT=8002,name="MODE")
         self.Server_KAMIKAZE = Server_Tcp.Server(PORT=8003,name="KAMIKAZE")
         self.Server_CONFIRMATION = Server_Tcp.Server(PORT=8004,name="CONFIRMATION")
+        self.Server_KAMIKAZE_TIME = Server_Tcp.Server(PORT=8005,name="KAMIKAZE_TIME")
         #* YonelimPC -- YazılımPC
         self.Server_UI_Telem = Client_Udp.data_Client(server_ip=self.yonelim_ip, server_port=11000 ,name="UI_TELEM")
         self.Server_UI_Control = Server_Tcp.Server(PORT=11001,name="UI-CONTROL")
@@ -88,6 +89,7 @@ class YerIstasyonu:
         self.MODE_SERVER_STATUS=False
         self.KAMIKAZE_SERVER_STATUS=False
         self.CONFIRMATION_SERVER_STATUS=False
+        self.KAMIKAZE_TIME_SERVER_STATUS=False
 
         self.MAVPROXY_SERVER_STATUS=False
 
@@ -169,6 +171,20 @@ class YerIstasyonu:
         self.KAMIKAZE_SERVER_STATUS = connection_status
         return connection_status
 
+    def CREATE_KAMIKAZE_TIME_SERVER(self):
+        connection_status=False
+        while not connection_status:
+            try:
+                self.Server_KAMIKAZE_TIME.creat_server()
+                connection_status=True
+                cp.ok("KAMIKAZE_TIME : SERVER OLUŞTURULDU..")
+            except (ConnectionError, Exception) as e:
+                cp.warn(f"KAMIKAZE_TIME SERVER: oluştururken hata :{e}\nKAMIKAZE_TIME SERVER: yeniden bağlanılıyor...")
+                self.Server_KAMIKAZE_TIME.reconnect()
+                cp.ok("KAMIKAZE_TIME : SERVER OLUŞTURULDU..RETRY..")
+        self.KAMIKAZE_TIME_SERVER_STATUS = connection_status
+        return connection_status
+
     def CREATE_CONFIRMATION_SERVER(self):
         connection_status=False
         while not connection_status:
@@ -229,6 +245,7 @@ class YerIstasyonu:
         t2 = threading.Thread(target=self.CREATE_MOD_SERVER)
         t3 = threading.Thread(target=self.CREATE_KAMIKAZE_SERVER)
         t4 = threading.Thread(target=self.CREATE_CONFIRMATION_SERVER)
+        t5 = threading.Thread(target=self.CREATE_KAMIKAZE_TIME_SERVER)
         #t8= threading.Thread(target=self.CREATE_UI_TELEM_SERVER) #! İPTAL
 
         t0.start()
@@ -236,6 +253,7 @@ class YerIstasyonu:
         t2.start()
         t3.start()
         t4.start()
+        t5.start()
         #t8.start()
 
         t0.join()
@@ -243,6 +261,7 @@ class YerIstasyonu:
         t2.join()
         t3.join()
         t4.join()
+        t5.join()
 
         return t0,t1,t2,t3,t4 #t8 #t1,t6
 
@@ -394,7 +413,7 @@ class YerIstasyonu:
                             "saniye": start_now.second+4,
                             "milisaniye": start_now.microsecond #TODO düzeltilecek
                         },
-                        "qrMetni": "teknofest2024"
+                        "qrMetni": "teknofest2024-14:09"
                                 }
         
 
@@ -466,6 +485,32 @@ class YerIstasyonu:
             else:
                 time.sleep(1)
 
+    def kamikaze_time_recv(self):
+        mission_queue,mission_event=self.event_map["Gorev_verisi"]
+        kamikaze_queue,kamikaze_time_event = self.event_map["Kamikaze_time"]
+        qr_metni = None
+        raw_kamikaze_time_packet=None
+        
+        while True:
+            try:
+                raw_kamikaze_time_packet=self.Server_KAMIKAZE_TIME.recv_tcp_message()
+                kamikaze_time_packet=json.dumps(raw_kamikaze_time_packet.decode())
+            except Exception as e:
+                cp.err(f"CANT RECEIVE KAMIKAZE_TIME_PACKET -> {e}")
+
+            if kamikaze_time_event.is_set():
+                time.sleep(0.01)
+                qr_metni = kamikaze_queue.get()
+                cp.fatal(f"QR OKUNDU... {qr_metni}")
+                kamikaze_time_event.clear()
+            if qr_metni != None:
+                if raw_kamikaze_time_packet != None:
+                    raw_kamikaze_time_packet["qrMetni"] = qr_metni
+                    cp.ok(type(kamikaze_time_packet))
+                    cp.info(kamikaze_time_packet)
+                cp.fatal(f"qr_metni : {qr_metni}")
+            
+            time.sleep(1)
     def process_flow_manager(self):
         self.SV_MAIN()
         cp.fatal("SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE")
@@ -489,6 +534,7 @@ class YerIstasyonu:
         cp.fatal("SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE")
         th1 = threading.Thread(target=self.telemetri)
         th2 = threading.Thread(target=self.ana_sunucu_manager)
+        th3 = threading.Thread(target=self.kamikaze_time_recv)
 
         th1.daemon = True
         th2.daemon = True
@@ -503,7 +549,7 @@ class YerIstasyonu:
             if self.MODE_SERVER_STATUS:
                 try:
                     self.secilen_görev_modu = self.Server_MOD.recv_tcp_message()
-                    print("SEÇİLEN MODDDD:  ", self.secilen_görev_modu)
+                    #print(self.secilen_görev_modu)
                     try:
                         if self.SHUTDOWN_KEY == "ALGAN":
                             cp.fatal("FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..FINAL SHUTDOWN..")
@@ -703,12 +749,15 @@ class Frame_processing:
         telem_queue , telem_trigger=self.event_map["Telem1"]
         kalman_pwm_queue , kalman_pwm_event=self.event_map["Kalman"]
         mission_queue,mission_event=self.event_map["Gorev_verisi"]
+        kamikaze_time_queue,kamikaze_time_event = self.event_map["Kamikaze_time"]
 
         lockedOrNot = 0
         locked_prev = 0
         message = "AUTO"
         is_locked = 0
         sent_once = 0
+
+        kamikaze_okundu=False
 
         while True:
             if message_trigger.is_set():
@@ -779,7 +828,7 @@ class Frame_processing:
                         self.display_queue.put(processed_frame)
 
                 elif message == "kamikaze":
-                    qr_text,processed_frame = self.qr_oku(frame)
+                    qr_metni,processed_frame = self.qr_oku(frame)
                     
                     # if qr_text != None :
                     #     qr_once_event.set()
@@ -789,9 +838,10 @@ class Frame_processing:
                     #if qr_once_event.is_set() and (not qr_outer_event.is_set()):
                     # if qr_once_event.is_set():
                     #     self.trigger_event(6,(qr_text,"qr"))
-                    if qr_text != None :
-                        mission_queue.put([qr_text,"qr_data"])
-                        mission_event.set()
+                    if qr_metni != None and not kamikaze_okundu:
+                        kamikaze_time_queue.put([qr_metni,"qr_data"])
+                        kamikaze_time_event.set()
+                        kamikaze_okundu = True
 
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
@@ -827,7 +877,7 @@ class Frame_processing:
                     frame = self.display_queue.get() #TODO EMPTY Queue blocking test?
                     now = datetime.datetime.now()
                     #virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    #current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
+                    current_time = now.strftime("%H:%M:%S") + f".{now.microsecond//1000:03d}"
                     cv2.putText(frame,"SUNUCU : "+saat+": "+dakika+": "+saniye+": "+milisaniye , (420, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,128,0),2)
                     cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 0), 2)
                     virtual_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -926,7 +976,8 @@ def create_event_map():
     Arayuz_Frame_trigger=mp.Event()
     mission_queue=mp.Queue()
     mission_event=mp.Event()
-    
+    kamikaze_queue=mp.Queue()
+    kamikaze_time_event=mp.Event()
     
     display_record_queue=mp.Queue()
     display_record_trigger=mp.Event()
@@ -960,7 +1011,8 @@ def create_event_map():
     "Kalman" : (kalman_pwm_queue,kalman_pwm_event),
     "UI-FRAME": (Arayuz_Frame_queue,Arayuz_Frame_trigger),
     "Display-Record":(display_process_queue,display_process_event),
-    "Gorev_verisi" : (mission_queue,mission_event)
+    "Gorev_verisi" : (mission_queue,mission_event),
+    "Kamikaze_time" : (kamikaze_queue,kamikaze_time_event)
     #TODO EKLENECEK
     }
     return event_map
@@ -998,9 +1050,9 @@ if __name__ == '__main__':
                                             )
 
     yer_istasyonu_obj = YerIstasyonu( #LOCAL 127.0.0.1
-                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
-                                    ana_sunucu_ip="10.0.0.10", ana_sunucu_port=10001, #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(int)-> 10001
-                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
+                                    yonelim_ip="127.0.0.1", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="127.0.0.1", ana_sunucu_port=10001, #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(int)-> 10001
+                                    mavlink_ip="127.0.0.1", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,
