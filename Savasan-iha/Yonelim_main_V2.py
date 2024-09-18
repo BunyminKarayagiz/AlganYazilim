@@ -48,7 +48,7 @@ class Plane:
         if len(self.marker_list) > self.marker_limit:
                 #self.path_obj.remove_position(self.marker_list[0])
                 (self.marker_list.pop(0)).delete()
-        if len(self.path_list) > self.path_limit: 
+        if len(self.path_list) > self.path_limit:
                 self.path_obj.remove_position(*self.path_list[0])
                 self.path_list.pop(0)
         
@@ -71,7 +71,7 @@ class Plane:
         a,b,c,d=self.predict_next_position(lat=new_data['iha_enlem'],lon=new_data['iha_boylam'],height=new_data['iha_irtifa'],
                                                           speed=new_data['iha_hiz'],roll_degree=new_data['iha_yatis'],
                                                           pitch_degree=new_data["iha_dikilme"],rotation_yaw=new_data['iha_yonelme'])
-        
+
         self.data.append(new_data)
         return a,b,c,d
 
@@ -356,7 +356,7 @@ class FlightTracker:
 
 if __name__ == "__main__":
     Mode = "IHA" #Monitor / IHA / UI_TEST
-    tracker=FlightTracker(Yazılım_ip="127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0.123"
+    tracker=FlightTracker(Yazılım_ip="10.0.0.123") #Yazılım bilgisayarı IP -> 10.0.0.123"
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()

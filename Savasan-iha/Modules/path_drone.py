@@ -16,7 +16,6 @@ import time
 from dronekit import connect, VehicleMode, LocationGlobalRelative, Command, LocationGlobal
 from pymavlink import mavutil
 
-
 class Plane():
     def __init__(self, connection_string=None, vehicle=None):
         """ Initialize the object

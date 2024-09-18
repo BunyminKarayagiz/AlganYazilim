@@ -472,7 +472,7 @@ class YerIstasyonu:
         mission_queue,mission_event=self.event_map["Gorev_verisi"]
         while True:
             if mission_event.is_set():
-                time.sleep(0.01)
+                time.sleep(0.2)
                 [mission_data,mission_type] = mission_queue.get()
                 if mission_type=="kilitlenme":
                     self.ana_sunucu.kilitlenme_postala(json.dumps(mission_data))
@@ -490,7 +490,7 @@ class YerIstasyonu:
         kamikaze_queue,kamikaze_time_event = self.event_map["Kamikaze_time"]
         qr_metni = None
         raw_kamikaze_time_packet=None
-        
+
         while True:
             try:
                 raw_kamikaze_time_packet=self.Server_KAMIKAZE_TIME.recv_tcp_message()
@@ -511,6 +511,7 @@ class YerIstasyonu:
                 cp.fatal(f"qr_metni : {qr_metni}")
             
             time.sleep(1)
+    
     def process_flow_manager(self):
         self.SV_MAIN()
         cp.fatal("SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE SV MAIN DONE")
@@ -679,7 +680,7 @@ class Frame_processing:
     def qr_oku(self, frame):
         qr_result = self.qr.file_operations(frame=frame)
         return qr_result ,frame
-    
+
     #!Frames
     def capture(self):
         process_name = mp.current_process().name
@@ -769,7 +770,7 @@ class Frame_processing:
             if not self.capture_queue.empty():
                 (frame,frame_id) = self.capture_queue.get()
 
-                if message == "kilitlenme" or message == "AUTO":
+                if message == "kilitlenme" or message == "AUTO" or message == "FBWA":
                     telemetri_verileri, kalman_data, processed_frame, lockedOrNot = self.yolo_model.model_predict(frame=frame,frame_id=frame_id)
                     telem_queue.put(telemetri_verileri)
                     telem_trigger.set()
@@ -846,7 +847,7 @@ class Frame_processing:
                     if not self.display_queue.full():
                         self.display_queue.put(processed_frame)
                 
-                elif message == "AUTO" or message == "FBWA" or message == "RTL":
+                elif message == "RTL":
                     if not self.display_queue.full():
                         self.display_queue.put(frame)
 
@@ -1050,9 +1051,9 @@ if __name__ == '__main__':
                                             )
 
     yer_istasyonu_obj = YerIstasyonu( #LOCAL 127.0.0.1
-                                    yonelim_ip="127.0.0.1", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
-                                    ana_sunucu_ip="127.0.0.1", ana_sunucu_port=10001, #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(int)-> 10001
-                                    mavlink_ip="127.0.0.1", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
+                                    yonelim_ip="10.0.0.180", #! Yönelim bilgisayarı ip(str) -> 10.0.0.180
+                                    ana_sunucu_ip="10.0.0.10", ana_sunucu_port=10001, #! Teknofest Sunucu ip(str)-> 10.0.0.10 , port(int)-> 10001
+                                    mavlink_ip="10.0.0.181", mavlink_port=14550, #! mission planner ip(str)-> 10.0.0.181 , mavlink_port(int) -> 14550
                                     takimNo=23,
                                     event_map=event_map,
                                     SHUTDOWN_KEY=SHUTDOWN_KEY,

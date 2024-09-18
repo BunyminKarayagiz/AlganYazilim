@@ -48,6 +48,7 @@ def get_hss_coord():
     }
     
     return jsonify(hava_savunma_sistemleri)
+
 def durum(cls, kod):
     if kod == 200:
         return "İstek baarili"
@@ -71,12 +72,14 @@ sunucusaati = {"saat": datetime.datetime.now().hour,
                }  # Test verileri
 
 qr_koordinati = {
-    "qrEnlem": 36.6287539,
-    "qrBoylam": 35.1864624,
+    "qrEnlem": 36.93928229,
+    "qrBoylam": 35.5619807,
 }
+
 #girisveri = [{"kadi": "algan", "sifre": "53SnwjQ2sQ"}
 girisveri = [{"kadi": "algan", "sifre": "Ea5ngUqWYV"},{"kadi": "rakip2", "sifre": "rakip2"},{"kadi": "rakip3", "sifre": "rakip3"},
              {"kadi": "rakip4", "sifre": "rakip4"},{"kadi": "rakip5", "sifre": "rakip5"}]
+
 veri1=[{
     "takim_numarasi": 1,
     "iha_enlem": 0.0,
@@ -211,15 +214,12 @@ def kamikaze():
     cprint(gelen,"red","on_white",attrs=["bold"]) #TODO EKLENECEK...
     return jsonify(gelen)
 
-
 """@app.route('/api/giris', methods=["POST"])
 def giris():
     pass"""
-
 
 @app.route('/api/cikis', methods=["GET"])
 def cikis():
     return "200"
 
-
-app.run(host='127.0.0.1', port=10001, debug=True, threaded=True)
+app.run(host='10.0.0.123', port=10001, debug=True, threaded=True)

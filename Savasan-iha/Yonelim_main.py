@@ -105,7 +105,7 @@ class FlightTracker:
         self.sifre = "53SnwjQ2sQ"
 
         self.Algan_ID = "1"
-        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://127.0.0.1:5000")
+        self.ana_sunucu = ana_sunucu_islemleri.sunucuApi("http://10.0.0.123:5000")
         self.ana_sunucu_status = False
 
         self.TCP_UI_TELEM=Server_Udp.data_Server(PORT=11000,name="UI-TELEM") #Yazılım bilgisayarından Sunucu_Cevabı alacak Client
@@ -356,7 +356,7 @@ class FlightTracker:
 
 if __name__ == "__main__":
     Mode = "IHA" #Monitor / IHA / UI_TEST
-    tracker=FlightTracker(Yazılım_ip="127.0.0.1") #Yazılım bilgisayarı IP -> 10.0.0."236"
+    tracker=FlightTracker(Yazılım_ip="10.0.0.123") #Yazılım bilgisayarı IP -> 10.0.0."236"
     main_op=threading.Thread(target=tracker.main_op,args=(Mode,))
     main_op.start()
     tracker.start_ui()

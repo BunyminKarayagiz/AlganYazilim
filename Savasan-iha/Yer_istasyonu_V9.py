@@ -453,7 +453,7 @@ class YerIstasyonu:
         mission_queue,mission_event=self.event_map["Gorev_verisi"]
         while True:
             if mission_event.is_set():
-                time.sleep(0.01)
+                time.sleep(0.2)
                 [mission_data,mission_type] = mission_queue.get()
                 if mission_type=="kilitlenme":
                     self.ana_sunucu.kilitlenme_postala(json.dumps(mission_data))
